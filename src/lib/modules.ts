@@ -246,42 +246,221 @@ export const MODULES: ModuleDef[] = [
   {
     id: "agua",
     title: "Água, Captação, Reservatório e Uso",
-    fields: [
-      { id: "corpo_hidrico", label: "Corpo hídrico receptor?", type: "boolean" },
-      { id: "tipo_captacao", label: "Tipo de captação", type: "multiselect", options: ["Superficial", "Subterrânea", "Rede pública"] },
-      { id: "consumo", label: "Estimativa de consumo", type: "number", unit: "m³/dia" },
-      { id: "reservatorio", label: "Possui reservatório?", type: "boolean" },
-      { id: "tamanho_reservatorio", label: "Tamanho do reservatório", type: "text" },
-      { id: "outorga_status", label: "Outorga / Dispensa", type: "select", options: ["Outorga", "Dispensa de outorga", "Não possui"] },
-      { id: "uso_agua", label: "Uso da água", type: "textarea" },
+    description: "Fontes, consumo, reservatório, uso da água e situação de outorga.",
+    fields: [],
+    subgroups: [
+      {
+        id: "corpo_hidrico",
+        title: "Corpo hídrico",
+        fields: [
+          { id: "corpo_hidrico", label: "Existe corpo hídrico receptor?", type: "boolean" },
+          { id: "corpo_hidrico_desc", label: "Identificação do corpo hídrico (nome / tipo)", type: "text" },
+          { id: "corpo_hidrico_obs", label: "Observações sobre o corpo hídrico", type: "textarea" },
+        ],
+      },
+      {
+        id: "captacao",
+        title: "Captação de água",
+        fields: [
+          { id: "tipo_captacao", label: "Tipo(s) de captação", type: "multiselect", options: ["Superficial", "Subterrânea", "Rede pública"] },
+          { id: "fornecedor_publico", label: "Concessionária (se rede pública)", type: "text" },
+          { id: "consumo", label: "Estimativa de consumo", type: "number", unit: "m³/dia" },
+          { id: "captacao_obs", label: "Observações da captação", type: "textarea" },
+        ],
+      },
+      {
+        id: "reservatorio",
+        title: "Reservatório de água",
+        fields: [
+          { id: "reservatorio", label: "Possui reservatório?", type: "boolean" },
+          { id: "tipo_reservatorio", label: "Tipo de reservatório", type: "select", options: ["Caixa elevada", "Cisterna", "Tanque", "Outro"] },
+          { id: "capacidade_reservatorio", label: "Capacidade do reservatório", type: "number", unit: "L" },
+          { id: "tamanho_reservatorio", label: "Descrição / dimensões", type: "text" },
+        ],
+      },
+      {
+        id: "uso",
+        title: "Uso da água",
+        fields: [
+          { id: "usos_agua", label: "Tipos de uso", type: "multiselect", options: ["Consumo humano", "Sanitário", "Processo industrial", "Limpeza", "Irrigação", "Resfriamento", "Outro"] },
+          { id: "uso_agua", label: "Descrição do uso da água no empreendimento", type: "textarea" },
+        ],
+      },
+      {
+        id: "outorga_situacao",
+        title: "Situação de outorga",
+        fields: [
+          { id: "outorga_status", label: "Situação", type: "select", options: ["Outorga", "Dispensa de outorga", "Não possui", "Em andamento"] },
+          { id: "outorga_numero", label: "Número da outorga / processo", type: "text" },
+          { id: "outorga_validade", label: "Validade da outorga", type: "date" },
+          { id: "outorga_obs", label: "Observações", type: "textarea" },
+        ],
+      },
     ],
   },
   {
     id: "pocos",
     title: "Poços",
-    fields: [
-      { id: "coord_poco", label: "Coordenadas do poço", type: "coords" },
-      { id: "profundidade", label: "Profundidade", type: "number", unit: "m" },
-      { id: "diametro", label: "Diâmetro", type: "number", unit: "mm" },
-      { id: "bomba", label: "CV / marca / modelo da bomba", type: "text" },
-      { id: "vazao_poco", label: "Vazão do poço", type: "number", unit: "m³/h" },
-      { id: "vazao_requerida", label: "Vazão requerida/dia", type: "number", unit: "m³/dia" },
+    description: "Dados técnicos do poço, bomba, captação e uso.",
+    fields: [],
+    subgroups: [
+      {
+        id: "coords_poco",
+        title: "Coordenadas do poço",
+        fields: [
+          { id: "coord_poco", label: "Coordenadas (latitude / longitude)", type: "coords" },
+        ],
+      },
+      {
+        id: "caracteristicas",
+        title: "Características do poço",
+        fields: [
+          { id: "profundidade", label: "Profundidade", type: "number", unit: "m" },
+          { id: "diametro", label: "Diâmetro", type: "number", unit: "mm" },
+          { id: "nivel_estatico", label: "Nível estático", type: "number", unit: "m" },
+          { id: "nivel_dinamico", label: "Nível dinâmico", type: "number", unit: "m" },
+          { id: "poco_obs", label: "Observações do poço", type: "textarea" },
+        ],
+      },
+      {
+        id: "bomba",
+        title: "Dados da bomba",
+        fields: [
+          { id: "bomba_cv", label: "Potência (CV)", type: "number", unit: "CV" },
+          { id: "bomba_marca", label: "Marca", type: "text" },
+          { id: "bomba_modelo", label: "Modelo", type: "text" },
+        ],
+      },
+      {
+        id: "vazao_captacao",
+        title: "Captação e vazão",
+        fields: [
+          { id: "vazao_poco", label: "Vazão produzida pelo poço", type: "number", unit: "m³/h" },
+          { id: "vazao_requerida", label: "Vazão requerida/dia", type: "number", unit: "m³/dia" },
+          { id: "tempo_captacao", label: "Tempo de captação", type: "number", unit: "h/dia" },
+        ],
+      },
     ],
   },
   {
     id: "vazao",
     title: "Medição de Vazão",
-    fields: [
-      { id: "largura_inicio", label: "Largura no início", type: "number", unit: "m" },
-      { id: "largura_meio", label: "Largura no meio", type: "number", unit: "m" },
-      { id: "largura_fim", label: "Largura no fim", type: "number", unit: "m" },
-      { id: "comprimento", label: "Comprimento", type: "number", unit: "m" },
-      { id: "area_secao", label: "Área da seção", type: "number", unit: "m²" },
-      { id: "prof_inicio", label: "Profundidades no início (cm, separadas por vírgula)", type: "text" },
-      { id: "prof_meio", label: "Profundidades no meio", type: "text" },
-      { id: "prof_fim", label: "Profundidades no fim", type: "text" },
-      { id: "tempos", label: "Tempos T1–T5 (s)", type: "text" },
-      { id: "obs_vazao", label: "Observações técnicas", type: "textarea" },
+    description: "Registro técnico da seção: largura, comprimento, profundidades e tempos.",
+    fields: [],
+    subgroups: [
+      {
+        id: "descricao_tecnica",
+        title: "Descrição técnica",
+        fields: [
+          { id: "descricao_assuntos", label: "Descrição dos assuntos abordados", type: "textarea" },
+        ],
+      },
+      {
+        id: "largura",
+        title: "Largura da seção",
+        fields: [
+          { id: "largura_inicio", label: "Largura no início", type: "number", unit: "m" },
+          { id: "largura_meio", label: "Largura no meio", type: "number", unit: "m" },
+          { id: "largura_fim", label: "Largura no fim", type: "number", unit: "m" },
+        ],
+      },
+      {
+        id: "comprimento_area",
+        title: "Comprimento e área",
+        fields: [
+          { id: "comprimento", label: "Comprimento", type: "number", unit: "m" },
+          { id: "area_secao", label: "Área da seção", type: "number", unit: "m²" },
+        ],
+      },
+      {
+        id: "prof_inicio",
+        title: "Profundidades no início",
+        fields: [
+          { id: "p1", label: "P1", type: "number", unit: "m" },
+          { id: "p2", label: "P2", type: "number", unit: "m" },
+          { id: "p3", label: "P3", type: "number", unit: "m" },
+        ],
+      },
+      {
+        id: "prof_meio",
+        title: "Profundidades no meio",
+        fields: [
+          { id: "p4", label: "P4", type: "number", unit: "m" },
+          { id: "p5", label: "P5", type: "number", unit: "m" },
+          { id: "p6", label: "P6", type: "number", unit: "m" },
+        ],
+      },
+      {
+        id: "prof_fim",
+        title: "Profundidades no fim",
+        fields: [
+          { id: "p7", label: "P7", type: "number", unit: "m" },
+          { id: "p8", label: "P8", type: "number", unit: "m" },
+          { id: "p9", label: "P9", type: "number", unit: "m" },
+        ],
+      },
+      {
+        id: "tempos",
+        title: "Velocidade / Tempo",
+        fields: [
+          { id: "t1", label: "T1", type: "number", unit: "s" },
+          { id: "t2", label: "T2", type: "number", unit: "s" },
+          { id: "t3", label: "T3", type: "number", unit: "s" },
+          { id: "t4", label: "T4", type: "number", unit: "s" },
+          { id: "t5", label: "T5", type: "number", unit: "s" },
+        ],
+      },
+      {
+        id: "obs",
+        title: "Observações",
+        fields: [
+          { id: "obs_vazao", label: "Observações técnicas da medição", type: "textarea" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "outorga",
+    title: "Outorga (dados específicos)",
+    description: "Dados complementares para o processo de outorga.",
+    fields: [],
+    subgroups: [
+      {
+        id: "situacao",
+        title: "Situação do processo",
+        fields: [
+          { id: "outorga_situacao", label: "Situação atual", type: "select", options: ["Não iniciado", "Em elaboração", "Protocolado", "Concedido", "Renovação", "Indeferido"] },
+          { id: "outorga_orgao", label: "Órgão responsável", type: "text" },
+          { id: "outorga_protocolo", label: "Nº protocolo / processo", type: "text" },
+          { id: "outorga_data_protocolo", label: "Data de protocolo", type: "date" },
+          { id: "outorga_validade", label: "Validade", type: "date" },
+        ],
+      },
+      {
+        id: "finalidade",
+        title: "Finalidade da outorga",
+        fields: [
+          { id: "finalidade", label: "Finalidade do uso", type: "multiselect", options: ["Abastecimento humano", "Industrial", "Irrigação", "Dessedentação animal", "Lançamento de efluentes", "Outro"] },
+          { id: "finalidade_obs", label: "Detalhamento da finalidade", type: "textarea" },
+        ],
+      },
+      {
+        id: "captacao_outorga",
+        title: "Captação solicitada",
+        fields: [
+          { id: "vazao_solicitada", label: "Vazão solicitada", type: "number", unit: "m³/h" },
+          { id: "volume_diario", label: "Volume diário", type: "number", unit: "m³/dia" },
+          { id: "tempo_diario", label: "Tempo de captação diário", type: "number", unit: "h/dia" },
+          { id: "dias_mes", label: "Dias de captação por mês", type: "number" },
+        ],
+      },
+      {
+        id: "obs_outorga",
+        title: "Observações",
+        fields: [
+          { id: "outorga_obs", label: "Observações gerais", type: "textarea" },
+        ],
+      },
     ],
   },
   {

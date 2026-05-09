@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { useDB } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, FileJson, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getModulesForType } from "@/lib/modules";
 import { SURVEY_TYPES, STATUS_LABELS } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -67,21 +67,11 @@ function ResumoPage() {
       lines.push(``);
     }
     lines.push(`## Validação`);
-    lines.push(`- Cliente: ${survey!.signatures.client ?? "—"}`);
-    lines.push(`- Técnico: ${survey!.signatures.technician ?? "—"}`);
-    lines.push(`- Data: ${survey!.signatures.date ?? "—"}`);
+    lines.push(`- Cliente: ${survey!.modules.validacao?.values.assinatura_cliente ?? "—"}`);
+    lines.push(`- Técnico: ${survey!.modules.validacao?.values.assinatura_tecnico ?? "—"}`);
+    lines.push(`- Data: ${survey!.modules.validacao?.values.data_validacao ?? "—"}`);
     return lines.join("\n");
   }
-
-  function download(filename: string, content: string, type: string) {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const md = buildMarkdown();
 
   return (
     <AppShell>
@@ -95,16 +85,8 @@ function ResumoPage() {
           <h1 className="text-2xl font-semibold">{survey.title}</h1>
           <div className="text-sm text-muted-foreground">{typeLabel}</div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => download(`${survey.title}.md`, md, "text/markdown")}>
-            <FileText className="h-4 w-4 mr-1" /> Markdown
-          </Button>
-          <Button variant="outline" onClick={() => download(`${survey.title}.json`, JSON.stringify({ survey, client, project }, null, 2), "application/json")}>
-            <FileJson className="h-4 w-4 mr-1" /> JSON
-          </Button>
-          <Button onClick={() => window.print()}>
-            <Download className="h-4 w-4 mr-1" /> Imprimir / PDF
-          </Button>
+        <div className="rounded-md border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
+          Resumo consolidado do preenchimento
         </div>
       </div>
 
@@ -189,10 +171,10 @@ function ResumoPage() {
 
         <Card><CardContent className="p-5">
           <h2 className="font-semibold mb-3">Validação e Encerramento</h2>
-          <div className="grid sm:grid-cols-3 gap-4 text-sm">
-            <div><div className="text-muted-foreground">Cliente</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.signatures.client ?? "—"}</div></div>
-            <div><div className="text-muted-foreground">Técnico</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.signatures.technician ?? "—"}</div></div>
-            <div><div className="text-muted-foreground">Data</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.signatures.date ?? "—"}</div></div>
+            <div className="grid sm:grid-cols-3 gap-4 text-sm">
+              <div><div className="text-muted-foreground">Cliente</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.modules.validacao?.values.assinatura_cliente ?? "—"}</div></div>
+              <div><div className="text-muted-foreground">Técnico</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.modules.validacao?.values.assinatura_tecnico ?? "—"}</div></div>
+              <div><div className="text-muted-foreground">Data</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.modules.validacao?.values.data_validacao ?? "—"}</div></div>
           </div>
         </CardContent></Card>
       </div>

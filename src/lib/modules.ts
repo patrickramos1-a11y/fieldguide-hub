@@ -1,44 +1,141 @@
 import type { ModuleDef, SurveyType } from "./types";
 
+const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 export const MODULES: ModuleDef[] = [
   {
     id: "identificacao",
     title: "Identificação do Levantamento",
     description: "Contexto da visita: data, horários, motivo e objetivo.",
-    fields: [
-      { id: "data_visita", label: "Data da visita", type: "date" },
-      { id: "hora_chegada", label: "Horário de chegada", type: "time" },
-      { id: "hora_saida", label: "Horário de saída", type: "time" },
-      { id: "objetivo", label: "Objetivo da visita", type: "textarea" },
-      { id: "motivo", label: "Motivo da visita", type: "multiselect", options: ["Fiscalização", "Levantamento de projetos", "Visita técnica", "Reunião"] },
+    fields: [],
+    subgroups: [
+      {
+        id: "visita",
+        title: "Dados da visita",
+        fields: [
+          { id: "data_visita", label: "Data da visita", type: "date" },
+          { id: "hora_chegada", label: "Horário de chegada", type: "time" },
+          { id: "hora_saida", label: "Horário de saída", type: "time" },
+          { id: "objetivo", label: "Objetivo da visita", type: "textarea" },
+        ],
+      },
+      {
+        id: "motivo",
+        title: "Motivo da visita",
+        fields: [
+          { id: "motivo", label: "Motivo (pode marcar mais de um)", type: "multiselect", options: ["Fiscalização", "Levantamento de projetos", "Visita técnica", "Reunião"] },
+          { id: "motivo_outro", label: "Outro motivo", type: "text" },
+        ],
+      },
+      {
+        id: "local",
+        title: "Identificação do local",
+        description: "Confirme dados do local visitado (podem diferir do cadastro do empreendimento).",
+        fields: [
+          { id: "local_nome", label: "Nome do local / empreendimento", type: "text" },
+          { id: "local_endereco", label: "Endereço", type: "text" },
+          { id: "local_bairro", label: "Bairro", type: "text" },
+          { id: "local_cidade", label: "Cidade", type: "text" },
+          { id: "local_uf", label: "UF", type: "select", options: UFS },
+          { id: "local_cep", label: "CEP", type: "text" },
+        ],
+      },
     ],
   },
   {
     id: "empreendimento",
     title: "Dados Cadastrais do Empreendimento",
-    fields: [
-      { id: "empresa", label: "Empresa / empreendimento", type: "text" },
-      { id: "cnpj_cpf", label: "CNPJ / CPF", type: "text" },
-      { id: "endereco", label: "Endereço", type: "text" },
-      { id: "bairro", label: "Bairro", type: "text" },
-      { id: "cidade", label: "Cidade", type: "text" },
-      { id: "uf", label: "UF", type: "text" },
-      { id: "cep", label: "CEP", type: "text" },
-      { id: "atividade", label: "Descrição da atividade", type: "textarea" },
+    description: "Confirme/complete os dados cadastrais utilizados neste levantamento.",
+    fields: [],
+    subgroups: [
+      {
+        id: "identificacao_empresa",
+        title: "Identificação da empresa",
+        fields: [
+          { id: "empresa", label: "Empresa / empreendimento", type: "text" },
+          { id: "cnpj_cpf", label: "CNPJ / CPF", type: "text" },
+          { id: "ie", label: "Inscrição Estadual", type: "text" },
+          { id: "im", label: "Inscrição Municipal", type: "text" },
+          { id: "atividade", label: "Descrição da atividade", type: "textarea" },
+          { id: "cnae", label: "CNAE", type: "text" },
+        ],
+      },
+      {
+        id: "endereco",
+        title: "Endereço",
+        fields: [
+          { id: "endereco", label: "Endereço (logradouro, nº, complemento)", type: "text" },
+          { id: "bairro", label: "Bairro", type: "text" },
+          { id: "cidade", label: "Cidade", type: "text" },
+          { id: "uf", label: "UF", type: "select", options: UFS },
+          { id: "cep", label: "CEP", type: "text" },
+        ],
+      },
+      {
+        id: "coords_emp",
+        title: "Coordenadas geográficas do empreendimento",
+        fields: [
+          { id: "coord_emp", label: "Coordenadas (latitude / longitude)", type: "coords" },
+        ],
+      },
+      {
+        id: "contato_local",
+        title: "Contato no local",
+        fields: [
+          { id: "contato_local", label: "Nome do contato no local", type: "text" },
+          { id: "telefone_local", label: "Telefone do local", type: "text" },
+          { id: "email_local", label: "E-mail do local", type: "text" },
+        ],
+      },
+      {
+        id: "rep_legal",
+        title: "Representante legal",
+        fields: [
+          { id: "rep_nome", label: "Nome do representante legal", type: "text" },
+          { id: "rep_rg", label: "RG", type: "text" },
+          { id: "rep_cpf", label: "CPF", type: "text" },
+          { id: "rep_cargo", label: "Cargo", type: "text" },
+          { id: "rep_endereco", label: "Endereço do representante", type: "text" },
+          { id: "rep_telefone", label: "Telefone", type: "text" },
+          { id: "rep_email", label: "E-mail", type: "text" },
+        ],
+      },
     ],
   },
   {
     id: "pessoas",
     title: "Pessoas Envolvidas",
-    fields: [
-      { id: "rep_nome", label: "Representante legal — nome", type: "text" },
-      { id: "rep_rg", label: "RG", type: "text" },
-      { id: "rep_cpf", label: "CPF", type: "text" },
-      { id: "rep_endereco", label: "Endereço do representante", type: "text" },
-      { id: "colab_nome", label: "Colaborador acompanhante — nome", type: "text" },
-      { id: "colab_cargo", label: "Cargo do colaborador", type: "text" },
-      { id: "tec_nome", label: "Técnico responsável", type: "text" },
-      { id: "tec_cargo", label: "Cargo do técnico", type: "text" },
+    description: "Pessoas que participaram desta visita.",
+    fields: [],
+    subgroups: [
+      {
+        id: "colaborador",
+        title: "Colaborador que acompanhou o levantamento",
+        fields: [
+          { id: "colab_nome", label: "Nome do colaborador", type: "text" },
+          { id: "colab_cargo", label: "Cargo do colaborador", type: "text" },
+          { id: "colab_telefone", label: "Telefone", type: "text" },
+          { id: "colab_email", label: "E-mail", type: "text" },
+        ],
+      },
+      {
+        id: "tecnico",
+        title: "Técnico responsável pelo levantamento",
+        fields: [
+          { id: "tec_nome", label: "Nome do técnico responsável", type: "text" },
+          { id: "tec_cargo", label: "Cargo do técnico", type: "text" },
+          { id: "tec_registro", label: "Registro profissional (CREA/CRQ/etc.)", type: "text" },
+          { id: "tec_telefone", label: "Telefone", type: "text" },
+          { id: "tec_email", label: "E-mail", type: "text" },
+        ],
+      },
+      {
+        id: "outros",
+        title: "Outras pessoas presentes",
+        fields: [
+          { id: "outros_presentes", label: "Outras pessoas presentes (nome / cargo / vínculo)", type: "textarea" },
+        ],
+      },
     ],
   },
   {
@@ -51,24 +148,99 @@ export const MODULES: ModuleDef[] = [
   {
     id: "operacionais",
     title: "Dados Operacionais",
-    fields: [
-      { id: "n_funcionarios", label: "Número de funcionários", type: "number" },
-      { id: "horario_func", label: "Horário de funcionamento", type: "text" },
-      { id: "alteracao_quadro", label: "Alteração no quadro de funcionários?", type: "boolean" },
-      { id: "alteracao_producao", label: "Alteração na produção?", type: "boolean" },
+    description: "Funcionamento, equipe e alterações operacionais.",
+    fields: [],
+    subgroups: [
+      {
+        id: "funcionamento",
+        title: "Funcionamento",
+        fields: [
+          { id: "horario_inicio", label: "Horário de início", type: "time" },
+          { id: "horario_fim", label: "Horário de término", type: "time" },
+          { id: "horario_func", label: "Observações sobre o horário (turnos, escalas)", type: "textarea" },
+          { id: "dias_semana", label: "Dias de funcionamento", type: "multiselect", options: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"] },
+        ],
+      },
+      {
+        id: "quadro",
+        title: "Quadro de funcionários",
+        fields: [
+          { id: "n_funcionarios", label: "Número de funcionários", type: "number" },
+          { id: "n_funcionarios_admin", label: "Funcionários administrativos", type: "number" },
+          { id: "n_funcionarios_oper", label: "Funcionários operacionais", type: "number" },
+          { id: "alteracao_quadro", label: "Houve alteração no quadro?", type: "boolean" },
+          { id: "alteracao_quadro_obs", label: "Descrição da alteração no quadro", type: "textarea" },
+        ],
+      },
+      {
+        id: "producao",
+        title: "Produção e operação",
+        fields: [
+          { id: "alteracao_producao", label: "Houve alteração na produção?", type: "boolean" },
+          { id: "alteracao_producao_obs", label: "Descrição da alteração na produção", type: "textarea" },
+          { id: "capacidade_produtiva", label: "Capacidade produtiva atual", type: "text" },
+          { id: "obs_operacionais", label: "Observações operacionais", type: "textarea" },
+        ],
+      },
     ],
   },
   {
     id: "areas",
     title: "Áreas, Dimensões e Terreno",
-    fields: [
-      { id: "area_total", label: "Área total", type: "number", unit: "m²" },
-      { id: "area_construida", label: "Área construída", type: "number", unit: "m²" },
-      { id: "area_a_construir", label: "Área a construir", type: "number", unit: "m²" },
-      { id: "topografia", label: "Topografia", type: "select", options: ["Plana", "Aclive", "Declive", "Irregular"] },
-      { id: "tipo_solo", label: "Tipo de solo", type: "text" },
-      { id: "vegetacao", label: "Vegetação", type: "textarea" },
-      { id: "limites", label: "Limites do terreno", type: "textarea" },
+    description: "Áreas do empreendimento e características físicas do terreno.",
+    fields: [],
+    subgroups: [
+      {
+        id: "areas_empreendimento",
+        title: "Áreas do empreendimento",
+        fields: [
+          { id: "area_total", label: "Área total", type: "number", unit: "m²" },
+          { id: "area_construida", label: "Área construída", type: "number", unit: "m²" },
+          { id: "area_a_construir", label: "Área a construir", type: "number", unit: "m²" },
+          { id: "area_livre", label: "Área livre / não edificada", type: "number", unit: "m²" },
+        ],
+      },
+      {
+        id: "dimensoes",
+        title: "Dimensões do terreno",
+        description: "Posicionando-se de frente para o terreno.",
+        fields: [
+          { id: "dim_frente", label: "Frente", type: "number", unit: "m" },
+          { id: "dim_fundos", label: "Fundos", type: "number", unit: "m" },
+          { id: "dim_lado_dir", label: "Lado direito", type: "number", unit: "m" },
+          { id: "dim_lado_esq", label: "Lado esquerdo", type: "number", unit: "m" },
+          { id: "regularidade", label: "Possui regularidade geométrica?", type: "boolean" },
+        ],
+      },
+      {
+        id: "limites",
+        title: "Limites do terreno (fechamento)",
+        fields: [
+          { id: "limite_frente", label: "Frente — tipo de fechamento", type: "select", options: ["Cerca", "Muro de alvenaria", "Muro de concreto", "Outro", "Inexistente"] },
+          { id: "limite_fundos", label: "Fundos — tipo de fechamento", type: "select", options: ["Cerca", "Muro de alvenaria", "Muro de concreto", "Outro", "Inexistente"] },
+          { id: "limite_lado_dir", label: "Lado direito — tipo de fechamento", type: "select", options: ["Cerca", "Muro de alvenaria", "Muro de concreto", "Outro", "Inexistente"] },
+          { id: "limite_lado_esq", label: "Lado esquerdo — tipo de fechamento", type: "select", options: ["Cerca", "Muro de alvenaria", "Muro de concreto", "Outro", "Inexistente"] },
+          { id: "limites_obs", label: "Observações sobre os limites", type: "textarea" },
+        ],
+      },
+      {
+        id: "topografia",
+        title: "Conformação / Topografia",
+        fields: [
+          { id: "topografia_existe", label: "Existe topografia atual?", type: "boolean" },
+          { id: "topografia", label: "Conformação predominante", type: "select", options: ["Plano", "Aclive suave", "Aclive acentuado", "Declive suave", "Declive acentuado", "Irregular"] },
+          { id: "desnivel", label: "Desnível frente–fundo", type: "number", unit: "m" },
+          { id: "topografia_obs", label: "Observações de topografia", type: "textarea" },
+        ],
+      },
+      {
+        id: "solo_vegetacao",
+        title: "Solo e vegetação",
+        fields: [
+          { id: "tipo_solo", label: "Tipo de solo", type: "text" },
+          { id: "vegetacao", label: "Descrição geral da vegetação", type: "textarea" },
+        ],
+      },
     ],
   },
   {

@@ -13,6 +13,7 @@ import { getModulesForType } from "@/lib/modules";
 import { FieldRenderer } from "@/components/FieldRenderer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { STATUS_LABELS, SURVEY_TYPES, type FieldStatus } from "@/lib/types";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/levantamentos/$id")({
   component: SurveyEditor,
@@ -109,18 +110,45 @@ function SurveyEditor() {
                 </Select>
               </div>
 
-              <div className="grid gap-3">
-                {current.fields.map((f) => (
-                  <FieldRenderer
-                    key={f.id}
-                    field={f}
-                    value={state.values[f.id]}
-                    status={state.fieldStatus[f.id] || "nao_iniciado"}
-                    onChange={(v) => setFieldValue(survey.id, current.id, f.id, v)}
-                    onStatus={(s) => setFieldStatus(survey.id, current.id, f.id, s)}
-                  />
-                ))}
-              </div>
+              {current.fields.length > 0 && (
+                <div className="grid gap-3">
+                  {current.fields.map((f) => (
+                    <FieldRenderer
+                      key={f.id}
+                      field={f}
+                      value={state.values[f.id]}
+                      status={state.fieldStatus[f.id] || "nao_iniciado"}
+                      onChange={(v) => setFieldValue(survey.id, current.id, f.id, v)}
+                      onStatus={(s) => setFieldStatus(survey.id, current.id, f.id, s)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {current.subgroups && current.subgroups.length > 0 && (
+                <Accordion type="multiple" defaultValue={current.subgroups.map((s) => s.id)} className="mt-2">
+                  {current.subgroups.map((sg) => (
+                    <AccordionItem key={sg.id} value={sg.id}>
+                      <AccordionTrigger className="text-sm font-medium">{sg.title}</AccordionTrigger>
+                      <AccordionContent>
+                        {sg.description && <p className="text-xs text-muted-foreground mb-2">{sg.description}</p>}
+                        <div className="grid gap-3">
+                          {sg.fields.map((f) => (
+                            <FieldRenderer
+                              key={f.id}
+                              field={f}
+                              value={state.values[f.id]}
+                              status={state.fieldStatus[f.id] || "nao_iniciado"}
+                              onChange={(v) => setFieldValue(survey.id, current.id, f.id, v)}
+                              onStatus={(s) => setFieldStatus(survey.id, current.id, f.id, s)}
+                            />
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
 
               <div className="mt-5 grid gap-3">
                 <div>

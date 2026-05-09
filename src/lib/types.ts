@@ -70,6 +70,14 @@ export interface ModuleDef {
   title: string;
   description?: string;
   fields: FieldDef[];
+  subgroups?: SubgroupDef[];
+}
+
+export interface SubgroupDef {
+  id: string;
+  title: string;
+  description?: string;
+  fields: FieldDef[];
 }
 
 export interface Client {

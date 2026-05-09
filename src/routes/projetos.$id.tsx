@@ -53,7 +53,7 @@ function ProjetoDetail() {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Levantamentos</h2>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Novo levantamento</Button></DialogTrigger>
+          <Button type="button" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Novo levantamento</Button>
           <DialogContent>
             <DialogHeader><DialogTitle>Novo levantamento</DialogTitle></DialogHeader>
             <div className="grid gap-3">

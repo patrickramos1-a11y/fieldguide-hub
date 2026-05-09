@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { useDB, addClient, deleteClient } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { ClienteForm, emptyClienteForm } from "@/components/ClienteForm";
@@ -33,7 +33,7 @@ function ClientesPage() {
           <p className="text-sm text-muted-foreground">{db.clients.length} cadastrados</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Novo cliente</Button></DialogTrigger>
+          <Button type="button" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Novo cliente</Button>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Cadastrar cliente</DialogTitle></DialogHeader>
             <ClienteForm value={form} onChange={setForm} />

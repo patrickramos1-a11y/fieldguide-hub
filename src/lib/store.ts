@@ -11,17 +11,53 @@ interface DB {
   surveys: Survey[];
 }
 
+const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [] };
+
+function createModuleState(): ModuleState {
+  return { status: "nao_iniciado", values: {}, fieldStatus: {}, attachments: [] };
+}
+
+function normalizeSurvey(survey: Survey): Survey {
+  const nextModules = { ...(survey.modules ?? {}) };
+
+  for (const mod of getModulesForType(survey.type)) {
+    const current = nextModules[mod.id];
+    nextModules[mod.id] = current
+      ? {
+          status: current.status ?? "nao_iniciado",
+          values: current.values ?? {},
+          fieldStatus: current.fieldStatus ?? {},
+          notes: current.notes,
+          attachments: Array.isArray(current.attachments) ? current.attachments : [],
+        }
+      : createModuleState();
+  }
+
+  return {
+    ...survey,
+    modules: nextModules,
+    pendencias: Array.isArray(survey.pendencias) ? survey.pendencias : [],
+    signatures: survey.signatures ?? {},
+  };
+}
+
+function normalizeDB(raw: Partial<DB> | null | undefined): DB {
+  return {
+    clients: Array.isArray(raw?.clients) ? raw.clients : [],
+    empreendimentos: Array.isArray(raw?.empreendimentos) ? raw.empreendimentos : [],
+    projects: Array.isArray(raw?.projects) ? raw.projects : [],
+    surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
+  };
+}
+
 function load(): DB {
-  if (typeof window === "undefined") return { clients: [], empreendimentos: [], projects: [], surveys: [] };
+  if (typeof window === "undefined") return EMPTY_DB;
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { clients: [], empreendimentos: [], projects: [], surveys: [] };
-    const parsed = JSON.parse(raw);
-    // migração leve: garantir array de empreendimentos
-    if (!Array.isArray(parsed.empreendimentos)) parsed.empreendimentos = [];
-    return parsed;
+    if (!raw) return EMPTY_DB;
+    return normalizeDB(JSON.parse(raw));
   } catch {
-    return { clients: [], empreendimentos: [], projects: [], surveys: [] };
+    return EMPTY_DB;
   }
 }
 
@@ -43,7 +79,7 @@ function getSnapshot() {
 }
 
 function getServerSnapshot(): DB {
-  return { clients: [], empreendimentos: [], projects: [], surveys: [] };
+  return EMPTY_DB;
 }
 
 export function useDB() {
@@ -136,7 +172,10 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
   return s;
 }
 export function updateSurvey(sid: string, data: Partial<Survey>) {
-  db = { ...db, surveys: db.surveys.map((s) => (s.id === sid ? { ...s, ...data } : s)) };
+  db = {
+    ...db,
+    surveys: db.surveys.map((s) => (s.id === sid ? normalizeSurvey({ ...s, ...data }) : s)),
+  };
   persist();
 }
 export function deleteSurvey(sid: string) {
@@ -149,7 +188,13 @@ export function updateModule(sid: string, modId: string, patch: Partial<ModuleSt
     ...db,
     surveys: db.surveys.map((s) =>
       s.id === sid
-        ? { ...s, modules: { ...s.modules, [modId]: { ...s.modules[modId], ...patch } } }
+        ? normalizeSurvey({
+            ...s,
+            modules: {
+              ...s.modules,
+              [modId]: { ...(s.modules[modId] ?? createModuleState()), ...patch },
+            },
+          })
         : s,
     ),
   };

@@ -1089,7 +1089,8 @@ export const MODULES_BY_TYPE: Record<SurveyType, string[]> = {
   geral: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "operacionais",
     "areas", "agua", "pocos", "processo", "emissoes", "residuos", "ete",
-    "fotos", "documentos", "observacoes", "validacao",
+    "politica", "rotinas", "infraestrutura", "vizinhanca", "croqui", "fotos",
+    "documentos", "observacoes", "validacao",
   ],
   ambiental: [
     "identificacao", "empreendimento", "pessoas", "politica", "residuos",
@@ -1101,7 +1102,7 @@ export const MODULES_BY_TYPE: Record<SurveyType, string[]> = {
   ],
   outorga: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "agua",
-    "pocos", "outorga", "operacionais", "documentos", "fotos", "validacao",
+    "pocos", "outorga", "operacionais", "documentos", "observacoes", "fotos", "validacao",
   ],
   terreno: [
     "identificacao", "empreendimento", "localizacao", "areas", "infraestrutura",

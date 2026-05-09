@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, ArrowLeft, FolderKanban, Building2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,7 +106,7 @@ function ClienteDetail() {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Empreendimentos</h2>
         <Dialog open={empOpen} onOpenChange={setEmpOpen}>
-          <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" /> Novo empreendimento</Button></DialogTrigger>
+          <Button type="button" size="sm" variant="outline" onClick={() => setEmpOpen(true)}><Plus className="h-4 w-4 mr-1" /> Novo empreendimento</Button>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Novo empreendimento</DialogTitle></DialogHeader>
             <div className="grid gap-3">
@@ -166,7 +166,7 @@ function ClienteDetail() {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Projetos</h2>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Novo projeto</Button></DialogTrigger>
+          <Button type="button" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Novo projeto</Button>
           <DialogContent>
             <DialogHeader><DialogTitle>Novo projeto</DialogTitle></DialogHeader>
             <div className="grid gap-3">

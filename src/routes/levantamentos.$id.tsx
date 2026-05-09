@@ -14,6 +14,7 @@ import { FieldRenderer } from "@/components/FieldRenderer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { STATUS_LABELS, SURVEY_TYPES, type FieldStatus } from "@/lib/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import type { ChangeEvent } from "react";
 
 export const Route = createFileRoute("/levantamentos/$id")({
   component: SurveyEditor,
@@ -39,7 +40,7 @@ function SurveyEditor() {
   const validacaoState = survey.modules.validacao;
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files) return;
     Array.from(files).forEach((f) => {

@@ -1,23 +1,27 @@
 import { useSyncExternalStore } from "react";
-import type { Client, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment } from "./types";
+import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment } from "./types";
 import { getModulesForType } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
 
 interface DB {
   clients: Client[];
+  empreendimentos: Empreendimento[];
   projects: Project[];
   surveys: Survey[];
 }
 
 function load(): DB {
-  if (typeof window === "undefined") return { clients: [], projects: [], surveys: [] };
+  if (typeof window === "undefined") return { clients: [], empreendimentos: [], projects: [], surveys: [] };
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { clients: [], projects: [], surveys: [] };
-    return JSON.parse(raw);
+    if (!raw) return { clients: [], empreendimentos: [], projects: [], surveys: [] };
+    const parsed = JSON.parse(raw);
+    // migração leve: garantir array de empreendimentos
+    if (!Array.isArray(parsed.empreendimentos)) parsed.empreendimentos = [];
+    return parsed;
   } catch {
-    return { clients: [], projects: [], surveys: [] };
+    return { clients: [], empreendimentos: [], projects: [], surveys: [] };
   }
 }
 
@@ -39,7 +43,7 @@ function getSnapshot() {
 }
 
 function getServerSnapshot(): DB {
-  return { clients: [], projects: [], surveys: [] };
+  return { clients: [], empreendimentos: [], projects: [], surveys: [] };
 }
 
 export function useDB() {
@@ -61,12 +65,34 @@ export function updateClient(cid: string, data: Partial<Client>) {
 }
 export function deleteClient(cid: string) {
   db = {
+    ...db,
     clients: db.clients.filter((c) => c.id !== cid),
+    empreendimentos: db.empreendimentos.filter((e) => e.clientId !== cid),
     projects: db.projects.filter((p) => p.clientId !== cid),
     surveys: db.surveys.filter((s) => {
       const proj = db.projects.find((p) => p.id === s.projectId);
       return proj && proj.clientId !== cid;
     }),
+  };
+  persist();
+}
+
+// Empreendimentos
+export function addEmpreendimento(data: Omit<Empreendimento, "id" | "createdAt">) {
+  const e: Empreendimento = { ...data, id: id(), createdAt: new Date().toISOString() };
+  db = { ...db, empreendimentos: [e, ...db.empreendimentos] };
+  persist();
+  return e;
+}
+export function updateEmpreendimento(eid: string, data: Partial<Empreendimento>) {
+  db = { ...db, empreendimentos: db.empreendimentos.map((e) => (e.id === eid ? { ...e, ...data } : e)) };
+  persist();
+}
+export function deleteEmpreendimento(eid: string) {
+  db = {
+    ...db,
+    empreendimentos: db.empreendimentos.filter((e) => e.id !== eid),
+    projects: db.projects.map((p) => (p.empreendimentoId === eid ? { ...p, empreendimentoId: undefined } : p)),
   };
   persist();
 }

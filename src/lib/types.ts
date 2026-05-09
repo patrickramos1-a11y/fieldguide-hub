@@ -75,17 +75,53 @@ export interface ModuleDef {
 export interface Client {
   id: string;
   name: string;
+  personType?: "PJ" | "PF";
   cnpjCpf?: string;
+  ie?: string;
+  im?: string;
   address?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
   contact?: string;
   phone?: string;
   email?: string;
+  // Representante legal (para o caso PJ)
+  repNome?: string;
+  repRg?: string;
+  repCpf?: string;
+  repCargo?: string;
+  repEmail?: string;
+  repPhone?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Empreendimento {
+  id: string;
+  clientId: string;
+  name: string;
+  cnpjCpf?: string;
+  atividade?: string;
+  cnae?: string;
+  endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  latitude?: string;
+  longitude?: string;
+  contatoLocal?: string;
+  telefoneLocal?: string;
+  notes?: string;
   createdAt: string;
 }
 
 export interface Project {
   id: string;
   clientId: string;
+  empreendimentoId?: string;
   name: string;
   description?: string;
   createdAt: string;

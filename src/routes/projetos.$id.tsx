@@ -20,6 +20,7 @@ function ProjetoDetail() {
   const nav = useNavigate();
   const project = db.projects.find((p) => p.id === id);
   const client = project ? db.clients.find((c) => c.id === project.clientId) : null;
+  const empreendimento = project?.empreendimentoId ? db.empreendimentos.find((e) => e.id === project.empreendimentoId) : null;
   const surveys = db.surveys.filter((s) => s.projectId === id);
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<SurveyType>("geral");
@@ -42,6 +43,9 @@ function ProjetoDetail() {
         <CardHeader>
           <div className="text-xs text-muted-foreground">{client?.name}</div>
           <CardTitle>{project.name}</CardTitle>
+          {empreendimento && (
+            <div className="text-xs text-muted-foreground mt-1">Empreendimento: {empreendimento.name}</div>
+          )}
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">{project.description || "Sem descrição."}</CardContent>
       </Card>

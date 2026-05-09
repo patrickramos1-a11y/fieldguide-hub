@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { useDB, addClient, deleteClient } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { ClienteForm, emptyClienteForm } from "@/components/ClienteForm";

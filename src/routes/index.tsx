@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB } from "@/lib/store";
+import { useDBSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, FolderKanban, Users, Plus, ArrowRight, Building2 } from "lucide-react";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const db = useDB();
+  const db = useDBSelector((state) => state);
   const stats = [
     { label: "Clientes", value: db.clients.length, icon: Users, to: "/clientes" as const },
     { label: "Empreendimentos", value: db.empreendimentos.length, icon: Building2, to: "/clientes" as const },

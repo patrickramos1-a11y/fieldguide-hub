@@ -40,19 +40,19 @@ const ClientesIndexRoute = ClientesIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjetosIdRoute = ProjetosIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ProjetosRoute,
+  id: '/projetos/$id',
+  path: '/projetos/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LevantamentosNovoRoute = LevantamentosNovoRouteImport.update({
-  id: '/novo',
-  path: '/novo',
-  getParentRoute: () => LevantamentosRoute,
+  id: '/levantamentos/novo',
+  path: '/levantamentos/novo',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ClientesIdRoute = ClientesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ClientesRoute,
+  id: '/clientes/$id',
+  path: '/clientes/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LevantamentosIdIndexRoute = LevantamentosIdIndexRouteImport.update({
   id: '/levantamentos/$id/',
@@ -60,9 +60,9 @@ const LevantamentosIdIndexRoute = LevantamentosIdIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const LevantamentosIdResumoRoute = LevantamentosIdResumoRouteImport.update({
-  id: '/resumo',
-  path: '/resumo',
-  getParentRoute: () => LevantamentosIdRoute,
+  id: '/levantamentos/$id/resumo',
+  path: '/levantamentos/$id/resumo',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -137,9 +137,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClientesIdRoute: typeof ClientesIdRoute
+  LevantamentosNovoRoute: typeof LevantamentosNovoRoute
+  ProjetosIdRoute: typeof ProjetosIdRoute
   ClientesIndexRoute: typeof ClientesIndexRoute
   LevantamentosIndexRoute: typeof LevantamentosIndexRoute
   ProjetosIndexRoute: typeof ProjetosIndexRoute
+  LevantamentosIdResumoRoute: typeof LevantamentosIdResumoRoute
   LevantamentosIdIndexRoute: typeof LevantamentosIdIndexRoute
 }
 
@@ -175,24 +179,24 @@ declare module '@tanstack/react-router' {
     }
     '/projetos/$id': {
       id: '/projetos/$id'
-      path: '/$id'
+      path: '/projetos/$id'
       fullPath: '/projetos/$id'
       preLoaderRoute: typeof ProjetosIdRouteImport
-      parentRoute: typeof ProjetosRoute
+      parentRoute: typeof rootRouteImport
     }
     '/levantamentos/novo': {
       id: '/levantamentos/novo'
-      path: '/novo'
+      path: '/levantamentos/novo'
       fullPath: '/levantamentos/novo'
       preLoaderRoute: typeof LevantamentosNovoRouteImport
-      parentRoute: typeof LevantamentosRoute
+      parentRoute: typeof rootRouteImport
     }
     '/clientes/$id': {
       id: '/clientes/$id'
-      path: '/$id'
+      path: '/clientes/$id'
       fullPath: '/clientes/$id'
       preLoaderRoute: typeof ClientesIdRouteImport
-      parentRoute: typeof ClientesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/levantamentos/$id/': {
       id: '/levantamentos/$id/'
@@ -203,19 +207,23 @@ declare module '@tanstack/react-router' {
     }
     '/levantamentos/$id/resumo': {
       id: '/levantamentos/$id/resumo'
-      path: '/resumo'
+      path: '/levantamentos/$id/resumo'
       fullPath: '/levantamentos/$id/resumo'
       preLoaderRoute: typeof LevantamentosIdResumoRouteImport
-      parentRoute: typeof LevantamentosIdRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClientesIdRoute: ClientesIdRoute,
+  LevantamentosNovoRoute: LevantamentosNovoRoute,
+  ProjetosIdRoute: ProjetosIdRoute,
   ClientesIndexRoute: ClientesIndexRoute,
   LevantamentosIndexRoute: LevantamentosIndexRoute,
   ProjetosIndexRoute: ProjetosIndexRoute,
+  LevantamentosIdResumoRoute: LevantamentosIdResumoRoute,
   LevantamentosIdIndexRoute: LevantamentosIdIndexRoute,
 }
 export const routeTree = rootRouteImport

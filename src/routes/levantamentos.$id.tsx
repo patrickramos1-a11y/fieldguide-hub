@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB, updateModule, setFieldValue, setFieldStatus, addAttachment, removeAttachment, addPendencia, removePendencia, updateSurvey } from "@/lib/store";
+import { useDB, updateModule, setFieldValue, setFieldStatus, addAttachment, removeAttachment, addPendencia, removePendencia } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

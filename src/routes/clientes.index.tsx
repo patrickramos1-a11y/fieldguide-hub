@@ -8,7 +8,7 @@ import { Plus, Trash2, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { ClienteForm, emptyClienteForm } from "@/components/ClienteForm";
 
-export const Route = createFileRoute("/clientes")({
+export const Route = createFileRoute("/clientes/")({
   head: () => ({ meta: [{ title: "Clientes — Ramos Engenharia" }] }),
   component: ClientesPage,
 });

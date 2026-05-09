@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ClipboardList } from "lucide-react";
 import { SURVEY_TYPES } from "@/lib/types";
 
-export const Route = createFileRoute("/levantamentos")({
+export const Route = createFileRoute("/levantamentos/")({
   head: () => ({ meta: [{ title: "Levantamentos — Ramos Engenharia" }] }),
   component: ListPage,
 });

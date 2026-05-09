@@ -16,7 +16,7 @@ import { STATUS_LABELS, SURVEY_TYPES, type FieldStatus } from "@/lib/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { ChangeEvent } from "react";
 
-export const Route = createFileRoute("/levantamentos/$id")({
+export const Route = createFileRoute("/levantamentos/$id/")({
   component: SurveyEditor,
 });
 

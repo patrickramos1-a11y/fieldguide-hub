@@ -4,7 +4,7 @@ import { useDB } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { FolderKanban, ArrowRight } from "lucide-react";
 
-export const Route = createFileRoute("/projetos")({
+export const Route = createFileRoute("/projetos/")({
   head: () => ({ meta: [{ title: "Projetos — Ramos Engenharia" }] }),
   component: ProjetosPage,
 });

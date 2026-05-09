@@ -1,8 +1,9 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment } from "./types";
 import { getModulesForType } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
+const STORAGE_FLUSH_DELAY = 180;
 
 interface DB {
   clients: Client[];
@@ -17,20 +18,22 @@ function createModuleState(): ModuleState {
   return { status: "nao_iniciado", values: {}, fieldStatus: {}, attachments: [] };
 }
 
+function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState {
+  return {
+    status: module?.status ?? "nao_iniciado",
+    values: module?.values ?? {},
+    fieldStatus: module?.fieldStatus ?? {},
+    notes: module?.notes,
+    attachments: Array.isArray(module?.attachments) ? module.attachments : [],
+  };
+}
+
 function normalizeSurvey(survey: Survey): Survey {
   const nextModules = { ...(survey.modules ?? {}) };
 
   for (const mod of getModulesForType(survey.type)) {
     const current = nextModules[mod.id];
-    nextModules[mod.id] = current
-      ? {
-          status: current.status ?? "nao_iniciado",
-          values: current.values ?? {},
-          fieldStatus: current.fieldStatus ?? {},
-          notes: current.notes,
-          attachments: Array.isArray(current.attachments) ? current.attachments : [],
-        }
-      : createModuleState();
+    nextModules[mod.id] = current ? normalizeModuleState(current) : createModuleState();
   }
 
   return {
@@ -63,9 +66,37 @@ function load(): DB {
 
 let db: DB = load();
 const listeners = new Set<() => void>();
+let persistTimer: number | null = null;
+
+function flushToStorage() {
+  if (typeof window === "undefined") return;
+  if (persistTimer !== null) {
+    window.clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  localStorage.setItem(KEY, JSON.stringify(db));
+}
+
+function scheduleStorageWrite() {
+  if (typeof window === "undefined") return;
+  if (persistTimer !== null) window.clearTimeout(persistTimer);
+  persistTimer = window.setTimeout(() => {
+    persistTimer = null;
+    localStorage.setItem(KEY, JSON.stringify(db));
+  }, STORAGE_FLUSH_DELAY);
+}
+
+const persistLifecycle = globalThis as typeof globalThis & { __ramosPersistLifecycleBound?: boolean };
+if (typeof window !== "undefined" && !persistLifecycle.__ramosPersistLifecycleBound) {
+  window.addEventListener("beforeunload", flushToStorage);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushToStorage();
+  });
+  persistLifecycle.__ramosPersistLifecycleBound = true;
+}
 
 function persist() {
-  if (typeof window !== "undefined") localStorage.setItem(KEY, JSON.stringify(db));
+  scheduleStorageWrite();
   listeners.forEach((l) => l());
 }
 
@@ -84,6 +115,36 @@ function getServerSnapshot(): DB {
 
 export function useDB() {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+export function useDBSelector<T>(selector: (state: DB) => T, isEqual: (a: T, b: T) => boolean = Object.is) {
+  const [selected, setSelected] = useState(() => selector(db));
+  const selectedRef = useRef(selected);
+  const selectorRef = useRef(selector);
+  const isEqualRef = useRef(isEqual);
+
+  selectorRef.current = selector;
+  isEqualRef.current = isEqual;
+
+  useEffect(() => {
+    const next = selector(db);
+    if (!isEqualRef.current(selectedRef.current, next)) {
+      selectedRef.current = next;
+      setSelected(next);
+    }
+  }, [selector]);
+
+  useEffect(() => {
+    return subscribe(() => {
+      const next = selectorRef.current(db);
+      if (!isEqualRef.current(selectedRef.current, next)) {
+        selectedRef.current = next;
+        setSelected(next);
+      }
+    });
+  }, []);
+
+  return selected;
 }
 
 const id = () => Math.random().toString(36).slice(2, 11);
@@ -188,13 +249,13 @@ export function updateModule(sid: string, modId: string, patch: Partial<ModuleSt
     ...db,
     surveys: db.surveys.map((s) =>
       s.id === sid
-        ? normalizeSurvey({
+        ? {
             ...s,
             modules: {
               ...s.modules,
-              [modId]: { ...(s.modules[modId] ?? createModuleState()), ...patch },
+              [modId]: normalizeModuleState({ ...(s.modules[modId] ?? createModuleState()), ...patch }),
             },
-          })
+          }
         : s,
     ),
   };

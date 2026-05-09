@@ -172,7 +172,10 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
   return s;
 }
 export function updateSurvey(sid: string, data: Partial<Survey>) {
-  db = { ...db, surveys: db.surveys.map((s) => (s.id === sid ? { ...s, ...data } : s)) };
+  db = {
+    ...db,
+    surveys: db.surveys.map((s) => (s.id === sid ? normalizeSurvey({ ...s, ...data }) : s)),
+  };
   persist();
 }
 export function deleteSurvey(sid: string) {
@@ -185,7 +188,13 @@ export function updateModule(sid: string, modId: string, patch: Partial<ModuleSt
     ...db,
     surveys: db.surveys.map((s) =>
       s.id === sid
-        ? { ...s, modules: { ...s.modules, [modId]: { ...s.modules[modId], ...patch } } }
+        ? normalizeSurvey({
+            ...s,
+            modules: {
+              ...s.modules,
+              [modId]: { ...(s.modules[modId] ?? createModuleState()), ...patch },
+            },
+          })
         : s,
     ),
   };

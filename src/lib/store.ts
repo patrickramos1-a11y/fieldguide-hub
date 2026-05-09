@@ -102,7 +102,9 @@ function persist() {
 
 function subscribe(l: () => void) {
   listeners.add(l);
-  return () => listeners.delete(l);
+  return () => {
+    listeners.delete(l);
+  };
 }
 
 function getSnapshot() {

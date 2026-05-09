@@ -33,46 +33,6 @@ function ResumoPage() {
   const modules = getModulesForType(survey.type);
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
 
-  function buildMarkdown() {
-    const lines: string[] = [];
-    lines.push(`# Levantamento: ${survey!.title}`);
-    lines.push(``);
-    lines.push(`- **Tipo:** ${typeLabel}`);
-    lines.push(`- **Cliente:** ${client?.name ?? "—"}`);
-    lines.push(`- **Projeto:** ${project?.name ?? "—"}`);
-    lines.push(`- **Data:** ${survey!.date}`);
-    lines.push(``);
-    modules.forEach((m) => {
-      const st = survey!.modules[m.id];
-      lines.push(`## ${m.title}`);
-      lines.push(`Status: ${STATUS_LABELS[st.status]}`);
-      lines.push(``);
-      m.fields.forEach((f) => {
-        lines.push(`- **${f.label}:** ${fmtVal(st.values[f.id])}`);
-      });
-      m.subgroups?.forEach((sg) => {
-        lines.push(`### ${sg.title}`);
-        sg.fields.forEach((f) => {
-          lines.push(`- **${f.label}:** ${fmtVal(st.values[f.id])}`);
-        });
-        lines.push(``);
-      });
-      if (st.notes) lines.push(`\nObservações: ${st.notes}`);
-      if (st.attachments.length) lines.push(`\nAnexos: ${st.attachments.map((a) => a.name).join(", ")}`);
-      lines.push(``);
-    });
-    if (survey!.pendencias.length) {
-      lines.push(`## Pendências`);
-      survey!.pendencias.forEach((p) => lines.push(`- [${STATUS_LABELS[p.status]}] (${p.module}) ${p.description}${p.responsible ? ` — ${p.responsible}` : ""}`));
-      lines.push(``);
-    }
-    lines.push(`## Validação`);
-    lines.push(`- Cliente: ${survey!.modules.validacao?.values.assinatura_cliente ?? "—"}`);
-    lines.push(`- Técnico: ${survey!.modules.validacao?.values.assinatura_tecnico ?? "—"}`);
-    lines.push(`- Data: ${survey!.modules.validacao?.values.data_validacao ?? "—"}`);
-    return lines.join("\n");
-  }
-
   return (
     <AppShell>
       <Link to="/levantamentos/$id" params={{ id }} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">

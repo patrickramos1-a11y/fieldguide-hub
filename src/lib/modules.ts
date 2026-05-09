@@ -606,7 +606,7 @@ export const MODULES_BY_TYPE: Record<SurveyType, string[]> = {
   ],
   outorga: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "agua",
-    "pocos", "documentos", "fotos", "validacao",
+    "pocos", "outorga", "operacionais", "documentos", "fotos", "validacao",
   ],
   terreno: [
     "identificacao", "empreendimento", "localizacao", "areas", "infraestrutura",

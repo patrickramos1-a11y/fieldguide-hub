@@ -18,14 +18,27 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const db = useDBSelector((state) => state);
+  const { clientCount, empreendimentoCount, projectCount, surveys, recent } = useDBSelector(
+    (state) => ({
+      clientCount: state.clients.length,
+      empreendimentoCount: state.empreendimentos.length,
+      projectCount: state.projects.length,
+      surveys: state.surveys,
+      recent: state.surveys.slice(0, 5),
+    }),
+    (prev, next) =>
+      prev.clientCount === next.clientCount &&
+      prev.empreendimentoCount === next.empreendimentoCount &&
+      prev.projectCount === next.projectCount &&
+      prev.surveys === next.surveys &&
+      prev.recent === next.recent,
+  );
   const stats = [
-    { label: "Clientes", value: db.clients.length, icon: Users, to: "/clientes" as const },
-    { label: "Empreendimentos", value: db.empreendimentos.length, icon: Building2, to: "/clientes" as const },
-    { label: "Projetos", value: db.projects.length, icon: FolderKanban, to: "/projetos" as const },
-    { label: "Levantamentos", value: db.surveys.length, icon: ClipboardList, to: "/levantamentos" as const },
+    { label: "Clientes", value: clientCount, icon: Users, to: "/clientes" as const },
+    { label: "Empreendimentos", value: empreendimentoCount, icon: Building2, to: "/clientes" as const },
+    { label: "Projetos", value: projectCount, icon: FolderKanban, to: "/projetos" as const },
+    { label: "Levantamentos", value: surveys.length, icon: ClipboardList, to: "/levantamentos" as const },
   ];
-  const recent = db.surveys.slice(0, 5);
   return (
     <AppShell>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">

@@ -36,6 +36,7 @@ function SurveyEditor() {
   const modules = getModulesForType(survey.type);
   const current = modules.find((m) => m.id === activeMod) || modules[0];
   const state = survey.modules[current.id];
+  const validacaoState = survey.modules.validacao;
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -71,7 +72,7 @@ function SurveyEditor() {
         </div>
         <div className="flex gap-2">
           <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
-            <Button variant="outline"><FileDown className="h-4 w-4 mr-1" /> Resumo / Exportar</Button>
+            <Button variant="outline"><FileDown className="h-4 w-4 mr-1" /> Ver resumo</Button>
           </Link>
         </div>
       </div>
@@ -224,9 +225,9 @@ function SurveyEditor() {
 
           <Card>
             <CardContent className="p-5 grid sm:grid-cols-3 gap-3">
-              <div><Label>Assinatura cliente</Label><Input value={survey.signatures.client ?? ""} onChange={(e) => updateSurvey(survey.id, { signatures: { ...survey.signatures, client: e.target.value } })} placeholder="Nome de quem assinou" /></div>
-              <div><Label>Assinatura técnico</Label><Input value={survey.signatures.technician ?? ""} onChange={(e) => updateSurvey(survey.id, { signatures: { ...survey.signatures, technician: e.target.value } })} /></div>
-              <div><Label>Data</Label><Input type="date" value={survey.signatures.date ?? ""} onChange={(e) => updateSurvey(survey.id, { signatures: { ...survey.signatures, date: e.target.value } })} /></div>
+              <div><Label>Assinatura cliente</Label><Input value={validacaoState?.values.assinatura_cliente ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_cliente", e.target.value)} placeholder="Nome de quem assinou" /></div>
+              <div><Label>Assinatura técnico</Label><Input value={validacaoState?.values.assinatura_tecnico ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_tecnico", e.target.value)} /></div>
+              <div><Label>Data</Label><Input type="date" value={validacaoState?.values.data_validacao ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "data_validacao", e.target.value)} /></div>
               <div className="sm:col-span-3 flex justify-end">
                 <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
                   <Button><CheckCircle2 className="h-4 w-4 mr-1" /> Ver resumo final</Button>

@@ -572,16 +572,6 @@ export const MODULES: ModuleDef[] = [
     ],
   },
   {
-    id: "emissoes",
-    title: "Emissões",
-    fields: [
-      { id: "ruidos", label: "Ruídos", type: "textarea" },
-      { id: "liquidos", label: "Emissões líquidas", type: "textarea" },
-      { id: "solidos", label: "Emissões sólidas", type: "textarea" },
-      { id: "gasosos", label: "Emissões gasosas", type: "textarea" },
-    ],
-  },
-  {
     id: "residuos",
     title: "Resíduos Sólidos",
     description: "Tipos de resíduos gerados, gerenciamento e coleta.",

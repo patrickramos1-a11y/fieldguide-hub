@@ -466,12 +466,98 @@ export const MODULES: ModuleDef[] = [
   {
     id: "ete",
     title: "ETE e Efluentes",
-    fields: [
-      { id: "possui_ete", label: "Possui ETE?", type: "boolean" },
-      { id: "funcionamento_ete", label: "Funcionamento da ETE", type: "select", options: ["Adequado", "Com problemas", "Parada"] },
-      { id: "produtos_ete", label: "Produtos utilizados", type: "textarea" },
-      { id: "tratamento", label: "Situação do tratamento", type: "textarea" },
-      { id: "treinamento_ete", label: "Necessita treinamento?", type: "boolean" },
+    description: "Estação de Tratamento de Efluentes: existência, operação, produtos e treinamento.",
+    fields: [],
+    subgroups: [
+      {
+        id: "existencia",
+        title: "Existência da ETE",
+        fields: [
+          { id: "possui_ete", label: "Possui ETE?", type: "select", options: ["Tem ETE", "Não tem ETE", "Esperando obra", "Esperando reforma", "Em projeto"] },
+        ],
+      },
+      {
+        id: "operacao",
+        title: "Operação da ETE",
+        description: "Preencher se possui ETE.",
+        fields: [
+          { id: "problema_ete", label: "Algum problema na operação da ETE?", type: "select", options: ["Sim", "Não", "Não se aplica"] },
+          { id: "problema_ete_desc", label: "Descrição do problema", type: "textarea" },
+          { id: "funcionamento_ete", label: "Funcionamento da ETE", type: "select", options: ["Adequado", "Com problemas", "Parada"] },
+        ],
+      },
+      {
+        id: "produtos",
+        title: "Produtos utilizados na ETE",
+        fields: [
+          { id: "produtos_ete", label: "Produtos utilizados", type: "multiselect", options: ["Não utiliza", "Cloro em pó", "Cal", "Alcalinizante", "Coagulante", "Floculante", "Reagente biológico"] },
+          { id: "produtos_ete_outros", label: "Outros produtos (especificar)", type: "textarea" },
+        ],
+      },
+      {
+        id: "treinamento",
+        title: "Treinamento de operador",
+        fields: [
+          { id: "treinamento_ete", label: "Há necessidade de treinar um novo operador da ETE?", type: "select", options: ["Sim", "Não", "Não se aplica ainda"] },
+          { id: "treinamento_obs", label: "Observações sobre treinamento", type: "textarea" },
+        ],
+      },
+      {
+        id: "tratamento_efluentes",
+        title: "Tratamento de efluentes",
+        fields: [
+          { id: "ha_tratamento", label: "Há tratamento de efluentes?", type: "multiselect", options: ["Sim", "Não", "Precisará de projeto", "Não está funcionando"] },
+          { id: "tipo_efluente", label: "Tipo de efluente líquido", type: "multiselect", options: ["Industrial", "Doméstico", "ETE", "Fossa"] },
+          { id: "tratamento", label: "Situação / observações sobre o tratamento", type: "textarea" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "emissoes",
+    title: "Emissões",
+    description: "Ruídos, emissões líquidas, sólidas e gasosas.",
+    fields: [],
+    subgroups: [
+      {
+        id: "ruidos",
+        title: "Ruídos",
+        fields: [
+          { id: "ruidos_status", label: "Situação", type: "select", options: ["Houve teste", "Falta fazer", "Não se aplica"] },
+          { id: "ruidos", label: "Descrição / observações", type: "textarea" },
+        ],
+      },
+      {
+        id: "liquidos",
+        title: "Emissões líquidas",
+        fields: [
+          { id: "tipo_efluente_liquido", label: "Tipo de efluente líquido", type: "multiselect", options: ["Industrial", "Doméstico", "ETE", "Fossa"] },
+          { id: "liquidos", label: "Observações", type: "textarea" },
+        ],
+      },
+      {
+        id: "solidos",
+        title: "Emissões sólidas",
+        fields: [
+          { id: "destinacao_solidos", label: "Destinação dos sólidos", type: "multiselect", options: ["Coleta pública", "Empresa terceirizada", "Mistura com demais resíduos"] },
+          { id: "solidos", label: "Observações", type: "textarea" },
+        ],
+      },
+      {
+        id: "gasosos",
+        title: "Emissões gasosas",
+        fields: [
+          { id: "emissao_gasosa", label: "Existência de emissão gasosa", type: "select", options: ["Há chaminé", "Há emissão difusa", "Não se aplica"] },
+          { id: "gasosos", label: "Observações", type: "textarea" },
+        ],
+      },
+      {
+        id: "obs",
+        title: "Observações gerais sobre emissões",
+        fields: [
+          { id: "obs_emissoes", label: "Observações", type: "textarea" },
+        ],
+      },
     ],
   },
   {
@@ -486,45 +572,205 @@ export const MODULES: ModuleDef[] = [
     ],
   },
   {
-    id: "emissoes",
-    title: "Emissões",
-    fields: [
-      { id: "ruidos", label: "Ruídos", type: "textarea" },
-      { id: "liquidos", label: "Emissões líquidas", type: "textarea" },
-      { id: "solidos", label: "Emissões sólidas", type: "textarea" },
-      { id: "gasosos", label: "Emissões gasosas", type: "textarea" },
-    ],
-  },
-  {
     id: "residuos",
     title: "Resíduos Sólidos",
-    fields: [
-      { id: "tipos", label: "Tipos de resíduos", type: "multiselect", options: ["Papel", "Plástico", "Vidro", "Metal", "Orgânicos", "Perigosos", "Outros"] },
-      { id: "acondicionamento", label: "Acondicionamento", type: "textarea" },
-      { id: "destinacao", label: "Destinação", type: "textarea" },
-      { id: "coleta_terceirizada", label: "Coleta terceirizada?", type: "boolean" },
-      { id: "empresa_coleta", label: "Empresa de coleta", type: "text" },
-      { id: "periodicidade", label: "Periodicidade da coleta", type: "text" },
+    description: "Tipos de resíduos gerados, gerenciamento e coleta.",
+    fields: [],
+    subgroups: [
+      {
+        id: "tipos",
+        title: "Tipos de resíduos gerados",
+        fields: [
+          { id: "tipos", label: "Categorias geradas", type: "multiselect", options: ["Papel", "Plástico", "Vidro", "Metal", "Orgânicos", "Perigosos", "Outros"] },
+        ],
+      },
+      {
+        id: "papel",
+        title: "Papel",
+        fields: [
+          { id: "papel_qtd", label: "Quantidade", type: "number", unit: "kg" },
+          { id: "papel_periodo", label: "Período / frequência", type: "text" },
+          { id: "papel_acond", label: "Acondicionamento", type: "text" },
+          { id: "papel_destino", label: "Destinação", type: "text" },
+          { id: "papel_coletor", label: "Quem coleta", type: "text" },
+        ],
+      },
+      {
+        id: "plastico",
+        title: "Plástico",
+        fields: [
+          { id: "plastico_qtd", label: "Quantidade", type: "number", unit: "kg" },
+          { id: "plastico_periodo", label: "Período / frequência", type: "text" },
+          { id: "plastico_acond", label: "Acondicionamento", type: "text" },
+          { id: "plastico_destino", label: "Destinação", type: "text" },
+          { id: "plastico_coletor", label: "Quem coleta", type: "text" },
+        ],
+      },
+      {
+        id: "vidro",
+        title: "Vidro",
+        fields: [
+          { id: "vidro_qtd", label: "Quantidade", type: "number", unit: "kg" },
+          { id: "vidro_periodo", label: "Período / frequência", type: "text" },
+          { id: "vidro_acond", label: "Acondicionamento", type: "text" },
+          { id: "vidro_destino", label: "Destinação", type: "text" },
+          { id: "vidro_coletor", label: "Quem coleta", type: "text" },
+        ],
+      },
+      {
+        id: "metal",
+        title: "Metal",
+        fields: [
+          { id: "metal_qtd", label: "Quantidade", type: "number", unit: "kg" },
+          { id: "metal_periodo", label: "Período / frequência", type: "text" },
+          { id: "metal_acond", label: "Acondicionamento", type: "text" },
+          { id: "metal_destino", label: "Destinação", type: "text" },
+          { id: "metal_coletor", label: "Quem coleta", type: "text" },
+        ],
+      },
+      {
+        id: "organicos",
+        title: "Orgânicos",
+        fields: [
+          { id: "org_qtd", label: "Quantidade", type: "number", unit: "kg" },
+          { id: "org_periodo", label: "Período / frequência", type: "text" },
+          { id: "org_acond", label: "Acondicionamento", type: "text" },
+          { id: "org_destino", label: "Destinação", type: "text" },
+          { id: "org_coletor", label: "Quem coleta", type: "text" },
+        ],
+      },
+      {
+        id: "perigosos",
+        title: "Perigosos",
+        fields: [
+          { id: "per_qtd", label: "Quantidade", type: "number", unit: "kg" },
+          { id: "per_periodo", label: "Período / frequência", type: "text" },
+          { id: "per_acond", label: "Acondicionamento", type: "text" },
+          { id: "per_destino", label: "Destinação", type: "text" },
+          { id: "per_coletor", label: "Quem coleta", type: "text" },
+        ],
+      },
+      {
+        id: "outros",
+        title: "Outros resíduos",
+        fields: [
+          { id: "outros_desc", label: "Descrição do resíduo", type: "text" },
+          { id: "outros_qtd", label: "Quantidade", type: "number", unit: "kg" },
+          { id: "outros_periodo", label: "Período / frequência", type: "text" },
+          { id: "outros_acond", label: "Acondicionamento", type: "text" },
+          { id: "outros_destino", label: "Destinação", type: "text" },
+          { id: "outros_coletor", label: "Quem coleta", type: "text" },
+        ],
+      },
+      {
+        id: "coleta",
+        title: "Coleta de resíduos",
+        fields: [
+          { id: "coleta_tipo", label: "Como se aplica a coleta", type: "multiselect", options: ["Coleta pública", "Empresa terceirizada", "Outro"] },
+          { id: "empresa_coleta", label: "Empresa terceirizada (nome / CNPJ)", type: "text" },
+          { id: "outro_coleta", label: "Outro tipo de coleta (especificar)", type: "text" },
+          { id: "periodicidade", label: "Periodicidade geral da coleta", type: "text" },
+        ],
+      },
+      {
+        id: "gerenciamento",
+        title: "Gerenciamento de resíduos sólidos",
+        fields: [
+          { id: "gerenciamento", label: "Está ocorrendo de forma correta?", type: "select", options: ["Sim", "Não", "Falta estruturar", "Precisa de local adequado", "Não há lixeiras suficientes", "Não se aplica"] },
+          { id: "lixeiras", label: "As lixeiras estão sendo utilizadas adequadamente?", type: "select", options: ["Sim", "Não", "Parcialmente", "Faltam lixeiras", "Não foi avaliado"] },
+          { id: "dificuldade_coleta", label: "Alguma dificuldade na coleta?", type: "select", options: ["Sim", "Não"] },
+          { id: "dificuldade_coleta_desc", label: "Descrição da dificuldade", type: "textarea" },
+          { id: "gerenciamento_obs", label: "Observações", type: "textarea" },
+        ],
+      },
     ],
   },
   {
     id: "politica",
     title: "Política e Gestão Ambiental",
-    fields: [
-      { id: "politica_ambiental", label: "Política ambiental implantada?", type: "boolean" },
-      { id: "educacao", label: "Necessita educação ambiental?", type: "boolean" },
-      { id: "palestras", label: "Palestras / orientações realizadas", type: "textarea" },
-      { id: "conformidade", label: "Conformidade operacional", type: "textarea" },
+    description: "Atendimento à política ambiental, educação ambiental e demandas de projeto.",
+    fields: [],
+    subgroups: [
+      {
+        id: "respeito",
+        title: "Respeito à política ambiental",
+        fields: [
+          { id: "politica_status", label: "A política ambiental está sendo respeitada pelos colaboradores?", type: "select", options: ["Sim", "Não", "Parcialmente", "Em implantação", "Falta mais avisos", "Não há política", "Não foi avaliado"] },
+          { id: "politica_obs", label: "Observações", type: "textarea" },
+        ],
+      },
+      {
+        id: "coleta_recicl",
+        title: "Coleta de resíduos recicláveis e não recicláveis",
+        fields: [
+          { id: "coleta_recicl_status", label: "Está sendo realizada?", type: "select", options: ["Sim", "Não", "Parcialmente", "Em fase de contratação", "Não há", "Não se aplica a essa visita"] },
+        ],
+      },
+      {
+        id: "educacao",
+        title: "Educação ambiental",
+        fields: [
+          { id: "educacao_status", label: "Há necessidade de novas palestras?", type: "select", options: ["Sim", "Não", "Houve agendamento", "Não se aplica", "Não há perspectiva no momento", "Irá contactar o escritório havendo necessidade"] },
+          { id: "palestras", label: "Palestras / orientações realizadas", type: "textarea" },
+        ],
+      },
+      {
+        id: "demandas",
+        title: "Levantamento de informações para projeto",
+        fields: [
+          { id: "ha_demanda_projeto", label: "Há levantamento de informações para projeto?", type: "select", options: ["Sim", "Não"] },
+          { id: "tipo_demanda", label: "Tipo(s) de demanda / documento", type: "multiselect", options: ["OUTORGA", "PEA", "CAR", "PCA", "RCA", "PGRS", "RIAA"] },
+          { id: "demanda_obs", label: "Observações sobre a demanda", type: "textarea" },
+        ],
+      },
+      {
+        id: "conformidade",
+        title: "Conformidade operacional",
+        fields: [
+          { id: "conformidade", label: "Observações de conformidade", type: "textarea" },
+        ],
+      },
     ],
   },
   {
     id: "rotinas",
     title: "Rotinas de Monitoramento",
-    fields: [
-      { id: "hidrometro", label: "Leitura do hidrômetro", type: "text" },
-      { id: "coletas_agua", label: "Coletas de água", type: "textarea" },
-      { id: "coletas_efluente", label: "Coletas de efluente", type: "textarea" },
-      { id: "acompanhamento_ete", label: "Acompanhamento da ETE", type: "textarea" },
+    description: "Hidrômetro, coletas de água, coletas de efluente e acompanhamento operacional.",
+    fields: [],
+    subgroups: [
+      {
+        id: "hidrometro",
+        title: "Leitura do hidrômetro",
+        fields: [
+          { id: "hidrometro_status", label: "Está havendo leitura diária do hidrômetro?", type: "select", options: ["Sim", "Não", "Não há tabela", "Não se aplica", "O colaborador não está fazendo o acompanhamento"] },
+          { id: "hidrometro", label: "Leitura registrada nesta visita", type: "text" },
+          { id: "hidrometro_obs", label: "Observações", type: "textarea" },
+        ],
+      },
+      {
+        id: "coleta_agua",
+        title: "Coleta de água do poço",
+        fields: [
+          { id: "coleta_agua_visita", label: "Houve coleta de água do poço para análise nesta visita?", type: "select", options: ["Sim", "Não"] },
+          { id: "coletas_agua", label: "Detalhes da coleta", type: "textarea" },
+        ],
+      },
+      {
+        id: "coleta_efluente",
+        title: "Coleta de efluente na ETE",
+        fields: [
+          { id: "coleta_efluente_visita", label: "Houve coleta de efluente na ETE para análise nesta visita?", type: "select", options: ["Sim", "Não"] },
+          { id: "coletas_efluente", label: "Detalhes da coleta", type: "textarea" },
+        ],
+      },
+      {
+        id: "acompanhamento",
+        title: "Acompanhamento operacional",
+        fields: [
+          { id: "acompanhamento_ete", label: "Acompanhamento da ETE", type: "textarea" },
+          { id: "acompanhamento_obs", label: "Outras rotinas observadas", type: "textarea" },
+        ],
+      },
     ],
   },
   {

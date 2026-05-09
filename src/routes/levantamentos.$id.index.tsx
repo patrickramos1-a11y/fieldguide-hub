@@ -24,15 +24,21 @@ const STATUSES: FieldStatus[] = ["nao_iniciado", "em_andamento", "concluido", "p
 
 function SurveyEditor() {
   const { id } = Route.useParams();
-  const survey = useDBSelector((state) => state.surveys.find((s) => s.id === id));
+  const { survey, project, client } = useDBSelector(
+    (state) => {
+      const currentSurvey = state.surveys.find((s) => s.id === id);
+      const currentProject = currentSurvey ? state.projects.find((p) => p.id === currentSurvey.projectId) ?? null : null;
+      const currentClient = currentProject ? state.clients.find((c) => c.id === currentProject.clientId) ?? null : null;
+      return { survey: currentSurvey, project: currentProject, client: currentClient };
+    },
+    (prev, next) => prev.survey === next.survey && prev.project === next.project && prev.client === next.client,
+  );
   const [activeMod, setActiveMod] = useState<string>("identificacao");
   const [pendOpen, setPendOpen] = useState(false);
   const [pendForm, setPendForm] = useState({ description: "", responsible: "" });
 
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
 
-  const project = useDBSelector((state) => state.projects.find((p) => p.id === survey.projectId) ?? null);
-  const client = useDBSelector((state) => project ? state.clients.find((c) => c.id === project.clientId) ?? null : null);
   const modules = getModulesForType(survey.type);
   const current = modules.find((m) => m.id === activeMod) || modules[0];
   const state = survey.modules[current.id];

@@ -43,7 +43,8 @@ function NovoPage() {
                 <SelectContent>
                   {db.projects.map((p) => {
                     const c = db.clients.find((c) => c.id === p.clientId);
-                    return <SelectItem key={p.id} value={p.id}>{c?.name} — {p.name}</SelectItem>;
+                    const e = p.empreendimentoId ? db.empreendimentos.find((e) => e.id === p.empreendimentoId) : null;
+                    return <SelectItem key={p.id} value={p.id}>{c?.name} — {p.name}{e ? ` (${e.name})` : ""}</SelectItem>;
                   })}
                 </SelectContent>
               </Select>

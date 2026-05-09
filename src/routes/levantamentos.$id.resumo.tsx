@@ -50,6 +50,13 @@ function ResumoPage() {
       m.fields.forEach((f) => {
         lines.push(`- **${f.label}:** ${fmtVal(st.values[f.id])}`);
       });
+      m.subgroups?.forEach((sg) => {
+        lines.push(`### ${sg.title}`);
+        sg.fields.forEach((f) => {
+          lines.push(`- **${f.label}:** ${fmtVal(st.values[f.id])}`);
+        });
+        lines.push(``);
+      });
       if (st.notes) lines.push(`\nObservações: ${st.notes}`);
       if (st.attachments.length) lines.push(`\nAnexos: ${st.attachments.map((a) => a.name).join(", ")}`);
       lines.push(``);
@@ -119,6 +126,26 @@ function ResumoPage() {
                     </div>
                   ))}
                 </dl>
+                {m.subgroups?.length ? (
+                  <div className="mt-4 space-y-4">
+                    {m.subgroups.map((sg) => (
+                      <div key={sg.id} className="rounded-md border border-border/60 p-4">
+                        <div className="mb-2">
+                          <h3 className="text-sm font-semibold">{sg.title}</h3>
+                          {sg.description ? <p className="text-xs text-muted-foreground">{sg.description}</p> : null}
+                        </div>
+                        <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                          {sg.fields.map((f) => (
+                            <div key={f.id} className="flex justify-between gap-3 border-b border-border/50 py-1">
+                              <dt className="text-muted-foreground">{f.label}</dt>
+                              <dd className="text-right font-medium">{fmtVal(st.values[f.id])}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {st.notes && <p className="text-sm mt-3 text-muted-foreground italic">{st.notes}</p>}
                 {st.attachments.length > 0 && (
                   <div className="mt-3 grid sm:grid-cols-3 gap-2">
@@ -132,9 +159,11 @@ function ResumoPage() {
           );
         })}
 
-        {survey.pendencias.length > 0 && (
-          <Card><CardContent className="p-5">
-            <h2 className="font-semibold mb-3">Pendências</h2>
+        <Card><CardContent className="p-5">
+          <h2 className="font-semibold mb-3">Pendências consolidadas</h2>
+          {survey.pendencias.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma pendência registrada neste levantamento.</p>
+          ) : (
             <ul className="space-y-2 text-sm">
               {survey.pendencias.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2 border-b border-border/50 py-1">
@@ -142,6 +171,18 @@ function ResumoPage() {
                   <StatusBadge status={p.status} />
                 </li>
               ))}
+            </ul>
+          )}
+        </CardContent></Card>
+
+        {survey.pendencias.length > 0 && (
+          <Card><CardContent className="p-5">
+            <h2 className="font-semibold mb-3">Resumo de pendências por módulo</h2>
+            <ul className="space-y-2 text-sm">
+              {Array.from(new Set(survey.pendencias.map((p) => p.module))).map((moduleName) => {
+                const count = survey.pendencias.filter((p) => p.module === moduleName).length;
+                return <li key={moduleName} className="flex items-center justify-between border-b border-border/50 py-1"><span>{moduleName}</span><span className="font-medium">{count}</span></li>;
+              })}
             </ul>
           </CardContent></Card>
         )}

@@ -14,6 +14,7 @@ import { Route as LevantamentosRouteImport } from './routes/levantamentos'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
+import { Route as LevantamentosNovoRouteImport } from './routes/levantamentos.novo'
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 
 const ProjetosRoute = ProjetosRouteImport.update({
@@ -41,6 +42,11 @@ const ProjetosIdRoute = ProjetosIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ProjetosRoute,
 } as any)
+const LevantamentosNovoRoute = LevantamentosNovoRouteImport.update({
+  id: '/novo',
+  path: '/novo',
+  getParentRoute: () => LevantamentosRoute,
+} as any)
 const ClientesIdRoute = ClientesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -50,26 +56,29 @@ const ClientesIdRoute = ClientesIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRouteWithChildren
-  '/levantamentos': typeof LevantamentosRoute
+  '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
+  '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRouteWithChildren
-  '/levantamentos': typeof LevantamentosRoute
+  '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
+  '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRouteWithChildren
-  '/levantamentos': typeof LevantamentosRoute
+  '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
+  '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/levantamentos'
     | '/projetos'
     | '/clientes/$id'
+    | '/levantamentos/novo'
     | '/projetos/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/levantamentos'
     | '/projetos'
     | '/clientes/$id'
+    | '/levantamentos/novo'
     | '/projetos/$id'
   id:
     | '__root__'
@@ -96,13 +107,14 @@ export interface FileRouteTypes {
     | '/levantamentos'
     | '/projetos'
     | '/clientes/$id'
+    | '/levantamentos/novo'
     | '/projetos/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientesRoute: typeof ClientesRouteWithChildren
-  LevantamentosRoute: typeof LevantamentosRoute
+  LevantamentosRoute: typeof LevantamentosRouteWithChildren
   ProjetosRoute: typeof ProjetosRouteWithChildren
 }
 
@@ -143,6 +155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjetosIdRouteImport
       parentRoute: typeof ProjetosRoute
     }
+    '/levantamentos/novo': {
+      id: '/levantamentos/novo'
+      path: '/novo'
+      fullPath: '/levantamentos/novo'
+      preLoaderRoute: typeof LevantamentosNovoRouteImport
+      parentRoute: typeof LevantamentosRoute
+    }
     '/clientes/$id': {
       id: '/clientes/$id'
       path: '/$id'
@@ -165,6 +184,18 @@ const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
   ClientesRouteChildren,
 )
 
+interface LevantamentosRouteChildren {
+  LevantamentosNovoRoute: typeof LevantamentosNovoRoute
+}
+
+const LevantamentosRouteChildren: LevantamentosRouteChildren = {
+  LevantamentosNovoRoute: LevantamentosNovoRoute,
+}
+
+const LevantamentosRouteWithChildren = LevantamentosRoute._addFileChildren(
+  LevantamentosRouteChildren,
+)
+
 interface ProjetosRouteChildren {
   ProjetosIdRoute: typeof ProjetosIdRoute
 }
@@ -180,7 +211,7 @@ const ProjetosRouteWithChildren = ProjetosRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientesRoute: ClientesRouteWithChildren,
-  LevantamentosRoute: LevantamentosRoute,
+  LevantamentosRoute: LevantamentosRouteWithChildren,
   ProjetosRoute: ProjetosRouteWithChildren,
 }
 export const routeTree = rootRouteImport

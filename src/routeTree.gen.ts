@@ -15,6 +15,7 @@ import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as LevantamentosNovoRouteImport } from './routes/levantamentos.novo'
+import { Route as LevantamentosIdRouteImport } from './routes/levantamentos.$id'
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 
 const ProjetosRoute = ProjetosRouteImport.update({
@@ -47,6 +48,11 @@ const LevantamentosNovoRoute = LevantamentosNovoRouteImport.update({
   path: '/novo',
   getParentRoute: () => LevantamentosRoute,
 } as any)
+const LevantamentosIdRoute = LevantamentosIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => LevantamentosRoute,
+} as any)
 const ClientesIdRoute = ClientesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
+  '/levantamentos/$id': typeof LevantamentosIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
+  '/levantamentos/$id': typeof LevantamentosIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
+  '/levantamentos/$id': typeof LevantamentosIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/levantamentos'
     | '/projetos'
     | '/clientes/$id'
+    | '/levantamentos/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/levantamentos'
     | '/projetos'
     | '/clientes/$id'
+    | '/levantamentos/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/levantamentos'
     | '/projetos'
     | '/clientes/$id'
+    | '/levantamentos/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
   fileRoutesById: FileRoutesById
@@ -162,6 +174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LevantamentosNovoRouteImport
       parentRoute: typeof LevantamentosRoute
     }
+    '/levantamentos/$id': {
+      id: '/levantamentos/$id'
+      path: '/$id'
+      fullPath: '/levantamentos/$id'
+      preLoaderRoute: typeof LevantamentosIdRouteImport
+      parentRoute: typeof LevantamentosRoute
+    }
     '/clientes/$id': {
       id: '/clientes/$id'
       path: '/$id'
@@ -185,10 +204,12 @@ const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
 )
 
 interface LevantamentosRouteChildren {
+  LevantamentosIdRoute: typeof LevantamentosIdRoute
   LevantamentosNovoRoute: typeof LevantamentosNovoRoute
 }
 
 const LevantamentosRouteChildren: LevantamentosRouteChildren = {
+  LevantamentosIdRoute: LevantamentosIdRoute,
   LevantamentosNovoRoute: LevantamentosNovoRoute,
 }
 
@@ -217,3 +238,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

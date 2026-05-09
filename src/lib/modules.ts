@@ -1110,7 +1110,16 @@ export const MODULES_BY_TYPE: Record<SurveyType, string[]> = {
   ],
 };
 
+const MODULES_INDEX = new Map(MODULES.map((module) => [module.id, module]));
+
+const MODULES_BY_TYPE_CACHE: Record<SurveyType, typeof MODULES> = {
+  geral: MODULES_BY_TYPE.geral.map((id) => MODULES_INDEX.get(id)!).filter(Boolean),
+  ambiental: MODULES_BY_TYPE.ambiental.map((id) => MODULES_INDEX.get(id)!).filter(Boolean),
+  vazao: MODULES_BY_TYPE.vazao.map((id) => MODULES_INDEX.get(id)!).filter(Boolean),
+  outorga: MODULES_BY_TYPE.outorga.map((id) => MODULES_INDEX.get(id)!).filter(Boolean),
+  terreno: MODULES_BY_TYPE.terreno.map((id) => MODULES_INDEX.get(id)!).filter(Boolean),
+};
+
 export function getModulesForType(type: SurveyType) {
-  const ids = MODULES_BY_TYPE[type];
-  return ids.map((id) => MODULES.find((m) => m.id === id)!).filter(Boolean);
+  return MODULES_BY_TYPE_CACHE[type];
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB, updateModule, setFieldValue, setFieldStatus, addAttachment, removeAttachment, addPendencia, removePendencia } from "@/lib/store";
+import { useCallback, useMemo, useState } from "react";
+import { useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment, removeAttachment, addPendencia, removePendencia } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, FileText, Paperclip, Plus, Trash2, AlertTriangle, CheckCircle2, FileDown } from "lucide-react";
-import { useState } from "react";
 import { getModulesForType } from "@/lib/modules";
 import { FieldRenderer } from "@/components/FieldRenderer";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -24,21 +24,47 @@ const STATUSES: FieldStatus[] = ["nao_iniciado", "em_andamento", "concluido", "p
 
 function SurveyEditor() {
   const { id } = Route.useParams();
-  const db = useDB();
-  const survey = db.surveys.find((s) => s.id === id);
+  const { survey, project, client } = useDBSelector(
+    (state) => {
+      const currentSurvey = state.surveys.find((s) => s.id === id);
+      const currentProject = currentSurvey ? state.projects.find((p) => p.id === currentSurvey.projectId) ?? null : null;
+      const currentClient = currentProject ? state.clients.find((c) => c.id === currentProject.clientId) ?? null : null;
+      return { survey: currentSurvey, project: currentProject, client: currentClient };
+    },
+    (prev, next) => prev.survey === next.survey && prev.project === next.project && prev.client === next.client,
+  );
   const [activeMod, setActiveMod] = useState<string>("identificacao");
   const [pendOpen, setPendOpen] = useState(false);
   const [pendForm, setPendForm] = useState({ description: "", responsible: "" });
 
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
 
-  const project = db.projects.find((p) => p.id === survey.projectId);
-  const client = project ? db.clients.find((c) => c.id === project.clientId) : null;
   const modules = getModulesForType(survey.type);
   const current = modules.find((m) => m.id === activeMod) || modules[0];
   const state = survey.modules[current.id];
   const validacaoState = survey.modules.validacao;
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
+  const currentValues = state.values;
+  const currentFieldStatus = state.fieldStatus;
+
+  const handleFieldChange = useCallback((fieldId: string, value: unknown) => {
+    setFieldValue(survey.id, current.id, fieldId, value);
+  }, [survey.id, current.id]);
+
+  const handleFieldStatus = useCallback((fieldId: string, status: FieldStatus) => {
+    setFieldStatus(survey.id, current.id, fieldId, status);
+  }, [survey.id, current.id]);
+
+  const renderedFields = useMemo(() => current.fields.map((f) => (
+    <FieldRenderer
+      key={f.id}
+      field={f}
+      value={currentValues[f.id]}
+      status={currentFieldStatus[f.id] || "nao_iniciado"}
+      onChange={(v) => handleFieldChange(f.id, v)}
+      onStatus={(s) => handleFieldStatus(f.id, s)}
+    />
+  )), [current.fields, currentFieldStatus, currentValues, handleFieldChange, handleFieldStatus]);
 
   function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -113,18 +139,7 @@ function SurveyEditor() {
               </div>
 
               {current.fields.length > 0 && (
-                <div className="grid gap-3">
-                  {current.fields.map((f) => (
-                    <FieldRenderer
-                      key={f.id}
-                      field={f}
-                      value={state.values[f.id]}
-                      status={state.fieldStatus[f.id] || "nao_iniciado"}
-                      onChange={(v) => setFieldValue(survey.id, current.id, f.id, v)}
-                      onStatus={(s) => setFieldStatus(survey.id, current.id, f.id, s)}
-                    />
-                  ))}
-                </div>
+                <div className="grid gap-3">{renderedFields}</div>
               )}
 
               {current.subgroups && current.subgroups.length > 0 && (
@@ -139,10 +154,10 @@ function SurveyEditor() {
                             <FieldRenderer
                               key={f.id}
                               field={f}
-                              value={state.values[f.id]}
-                              status={state.fieldStatus[f.id] || "nao_iniciado"}
-                              onChange={(v) => setFieldValue(survey.id, current.id, f.id, v)}
-                              onStatus={(s) => setFieldStatus(survey.id, current.id, f.id, s)}
+                              value={currentValues[f.id]}
+                              status={currentFieldStatus[f.id] || "nao_iniciado"}
+                              onChange={(v) => handleFieldChange(f.id, v)}
+                              onStatus={(s) => handleFieldStatus(f.id, s)}
                             />
                           ))}
                         </div>

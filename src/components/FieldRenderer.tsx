@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { FieldDef, FieldStatus } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ const STATUS_OPTIONS: FieldStatus[] = [
   "nao_se_aplica", "aguardando_documento", "aguardando_empresa", "requer_retorno",
 ];
 
-export function FieldRenderer({ field, value, status, onChange, onStatus }: Props) {
+function FieldRendererComponent({ field, value, status, onChange, onStatus }: Props) {
   function captureCoords() {
     if (!navigator.geolocation) return alert("Geolocalização não disponível");
     navigator.geolocation.getCurrentPosition(
@@ -85,3 +86,7 @@ export function FieldRenderer({ field, value, status, onChange, onStatus }: Prop
     </div>
   );
 }
+
+export const FieldRenderer = memo(FieldRendererComponent, (prev, next) => {
+  return prev.field === next.field && prev.status === next.status && Object.is(prev.value, next.value);
+});

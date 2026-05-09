@@ -4,7 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { useDB } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, FolderKanban, Users, Plus, ArrowRight } from "lucide-react";
+import { ClipboardList, FolderKanban, Users, Plus, ArrowRight, Building2 } from "lucide-react";
 import { SURVEY_TYPES } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
@@ -21,6 +21,7 @@ function Index() {
   const db = useDB();
   const stats = [
     { label: "Clientes", value: db.clients.length, icon: Users, to: "/clientes" as const },
+    { label: "Empreendimentos", value: db.empreendimentos.length, icon: Building2, to: "/clientes" as const },
     { label: "Projetos", value: db.projects.length, icon: FolderKanban, to: "/projetos" as const },
     { label: "Levantamentos", value: db.surveys.length, icon: ClipboardList, to: "/levantamentos" as const },
   ];
@@ -37,7 +38,7 @@ function Index() {
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         {stats.map((s) => (
           <Link key={s.label} to={s.to}>
             <Card className="hover:border-primary transition-colors">

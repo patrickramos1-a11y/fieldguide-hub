@@ -17,6 +17,7 @@ import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as LevantamentosNovoRouteImport } from './routes/levantamentos.novo'
 import { Route as LevantamentosIdRouteImport } from './routes/levantamentos.$id'
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
+import { Route as LevantamentosIdResumoRouteImport } from './routes/levantamentos.$id.resumo'
 
 const ProjetosRoute = ProjetosRouteImport.update({
   id: '/projetos',
@@ -58,6 +59,11 @@ const ClientesIdRoute = ClientesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ClientesRoute,
 } as any)
+const LevantamentosIdResumoRoute = LevantamentosIdResumoRouteImport.update({
+  id: '/resumo',
+  path: '/resumo',
+  getParentRoute: () => LevantamentosIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -65,9 +71,10 @@ export interface FileRoutesByFullPath {
   '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
-  '/levantamentos/$id': typeof LevantamentosIdRoute
+  '/levantamentos/$id': typeof LevantamentosIdRouteWithChildren
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,9 +82,10 @@ export interface FileRoutesByTo {
   '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
-  '/levantamentos/$id': typeof LevantamentosIdRoute
+  '/levantamentos/$id': typeof LevantamentosIdRouteWithChildren
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +94,10 @@ export interface FileRoutesById {
   '/levantamentos': typeof LevantamentosRouteWithChildren
   '/projetos': typeof ProjetosRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
-  '/levantamentos/$id': typeof LevantamentosIdRoute
+  '/levantamentos/$id': typeof LevantamentosIdRouteWithChildren
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/levantamentos/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
+    | '/levantamentos/$id/resumo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/levantamentos/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
+    | '/levantamentos/$id/resumo'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/levantamentos/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
+    | '/levantamentos/$id/resumo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -188,6 +200,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesIdRouteImport
       parentRoute: typeof ClientesRoute
     }
+    '/levantamentos/$id/resumo': {
+      id: '/levantamentos/$id/resumo'
+      path: '/resumo'
+      fullPath: '/levantamentos/$id/resumo'
+      preLoaderRoute: typeof LevantamentosIdResumoRouteImport
+      parentRoute: typeof LevantamentosIdRoute
+    }
   }
 }
 
@@ -203,13 +222,25 @@ const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
   ClientesRouteChildren,
 )
 
+interface LevantamentosIdRouteChildren {
+  LevantamentosIdResumoRoute: typeof LevantamentosIdResumoRoute
+}
+
+const LevantamentosIdRouteChildren: LevantamentosIdRouteChildren = {
+  LevantamentosIdResumoRoute: LevantamentosIdResumoRoute,
+}
+
+const LevantamentosIdRouteWithChildren = LevantamentosIdRoute._addFileChildren(
+  LevantamentosIdRouteChildren,
+)
+
 interface LevantamentosRouteChildren {
-  LevantamentosIdRoute: typeof LevantamentosIdRoute
+  LevantamentosIdRoute: typeof LevantamentosIdRouteWithChildren
   LevantamentosNovoRoute: typeof LevantamentosNovoRoute
 }
 
 const LevantamentosRouteChildren: LevantamentosRouteChildren = {
-  LevantamentosIdRoute: LevantamentosIdRoute,
+  LevantamentosIdRoute: LevantamentosIdRouteWithChildren,
   LevantamentosNovoRoute: LevantamentosNovoRoute,
 }
 

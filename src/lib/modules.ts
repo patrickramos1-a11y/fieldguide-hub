@@ -235,10 +235,49 @@ export const MODULES: ModuleDef[] = [
       },
       {
         id: "solo_vegetacao",
-        title: "Solo e vegetação",
+        title: "Solo",
         fields: [
           { id: "tipo_solo", label: "Tipo de solo", type: "text" },
-          { id: "vegetacao", label: "Descrição geral da vegetação", type: "textarea" },
+          { id: "descricao_solo", label: "Descrição do solo", type: "textarea" },
+          { id: "localizacao_solo", label: "Localização do solo no terreno", type: "text" },
+          { id: "sondagem", label: "Sondagem existente?", type: "select", options: ["Existente", "Não existente"] },
+        ],
+      },
+      {
+        id: "vegetacao",
+        title: "Vegetação",
+        fields: [
+          { id: "veg_arbustiva", label: "Vegetação arbustiva", type: "multiselect", options: ["Pequena", "Média", "Grande"] },
+          { id: "veg_arbustiva_densidade", label: "Tipo / densidade arbustiva (un/m²)", type: "text" },
+          { id: "veg_arborea", label: "Vegetação arbórea", type: "multiselect", options: ["Porte pequeno", "Porte médio", "Grande porte"] },
+          { id: "veg_arborea_densidade", label: "Tipo / densidade arbórea (un/m²)", type: "text" },
+          { id: "sem_vegetacao", label: "Não há vegetação", type: "boolean" },
+          { id: "vegetacao_obs", label: "Observações sobre a vegetação", type: "textarea" },
+        ],
+      },
+      {
+        id: "obstrucoes",
+        title: "Obstruções naturais",
+        fields: [
+          { id: "obstrucoes", label: "Obstruções identificadas", type: "multiselect", options: ["Córrego", "Nascente", "Poço", "Aluvião"] },
+          { id: "outras_obstrucoes", label: "Outras obstruções naturais", type: "text" },
+        ],
+      },
+      {
+        id: "construcoes",
+        title: "Construções existentes",
+        fields: [
+          { id: "constr_alvenaria", label: "Construção em alvenaria?", type: "boolean" },
+          { id: "area_alvenaria", label: "Área aproximada de alvenaria", type: "number", unit: "m²" },
+          { id: "constr_madeira", label: "Construção em madeira?", type: "boolean" },
+          { id: "area_madeira", label: "Área aproximada de madeira", type: "number", unit: "m²" },
+          { id: "constr_residuos", label: "Há resíduos no terreno?", type: "boolean" },
+          { id: "constr_residuos_desc", label: "Descrição dos resíduos", type: "text" },
+          { id: "patrimonio", label: "Patrimônio histórico?", type: "boolean" },
+          { id: "area_patrimonio", label: "Área aproximada do patrimônio", type: "number", unit: "m²" },
+          { id: "invasao", label: "Há invasão?", type: "boolean" },
+          { id: "area_invasao", label: "Área aproximada de invasão", type: "number", unit: "m²" },
+          { id: "sem_construcoes", label: "Não existem construções", type: "boolean" },
         ],
       },
     ],
@@ -563,12 +602,55 @@ export const MODULES: ModuleDef[] = [
   {
     id: "processo",
     title: "Processo Produtivo",
-    fields: [
-      { id: "materia_prima", label: "Matéria-prima", type: "textarea" },
-      { id: "equipamentos", label: "Equipamentos", type: "textarea" },
-      { id: "etapas", label: "Etapas do processo", type: "textarea" },
-      { id: "produtos_quimicos", label: "Produtos químicos utilizados", type: "textarea" },
-      { id: "frota", label: "Frota / veículos", type: "textarea" },
+    description: "Levantamento técnico: matéria-prima, equipamentos, etapas e entorno produtivo.",
+    fields: [],
+    subgroups: [
+      {
+        id: "geral",
+        title: "Informações gerais",
+        fields: [
+          { id: "relatorio_fotografico", label: "Relatório fotográfico", type: "select", options: ["Realizado", "Falta fazer"] },
+          { id: "materia_prima", label: "Matéria-prima utilizada", type: "textarea" },
+        ],
+      },
+      {
+        id: "equipamentos",
+        title: "Equipamentos",
+        fields: [
+          { id: "equipamentos", label: "Equipamentos existentes", type: "textarea" },
+          { id: "qtd_equipamentos", label: "Quantidade de equipamentos", type: "number" },
+          { id: "tipos_equipamentos", label: "Tipos de equipamentos", type: "textarea" },
+        ],
+      },
+      {
+        id: "etapas",
+        title: "Etapas do processo produtivo",
+        fields: [
+          { id: "etapa_1", label: "Etapa 1", type: "text" },
+          { id: "etapa_2", label: "Etapa 2", type: "text" },
+          { id: "etapa_3", label: "Etapa 3", type: "text" },
+          { id: "etapa_4", label: "Etapa 4", type: "text" },
+          { id: "etapa_5", label: "Etapa 5", type: "text" },
+          { id: "etapas_obs", label: "Observações sobre as etapas", type: "textarea" },
+        ],
+      },
+      {
+        id: "quimicos_frota",
+        title: "Produtos químicos e frota",
+        fields: [
+          { id: "ha_quimicos", label: "Há produtos químicos?", type: "boolean" },
+          { id: "produtos_quimicos", label: "Produtos químicos utilizados", type: "textarea" },
+          { id: "ha_frota", label: "Possui frota de veículos?", type: "boolean" },
+          { id: "frota", label: "Descrição da frota / veículos", type: "textarea" },
+        ],
+      },
+      {
+        id: "entorno",
+        title: "Caracterização do entorno",
+        fields: [
+          { id: "entorno_empresa", label: "Caracterização da área do entorno da empresa", type: "textarea" },
+        ],
+      },
     ],
   },
   {
@@ -776,23 +858,127 @@ export const MODULES: ModuleDef[] = [
   {
     id: "vizinhanca",
     title: "Vizinhança e Entorno",
-    fields: [
-      { id: "terrenos_vizinhos", label: "Terrenos vizinhos", type: "textarea" },
-      { id: "mercado_local", label: "Mercado local", type: "textarea" },
-      { id: "obras_proximas", label: "Obras próximas", type: "textarea" },
-      { id: "necessita_laudo", label: "Necessita laudo?", type: "boolean" },
+    description: "Terrenos vizinhos por posição, mercado local e obras próximas.",
+    fields: [],
+    subgroups: [
+      {
+        id: "viz_fundos",
+        title: "Vizinho — Fundos",
+        fields: [
+          { id: "vf_material", label: "Material", type: "select", options: ["Madeira", "Alvenaria", "Misto", "Outro"] },
+          { id: "vf_estado", label: "Estado", type: "select", options: ["Bom", "Ruim"] },
+          { id: "vf_pavs", label: "Nº de pavimentos", type: "number" },
+          { id: "vf_habitado", label: "Habitado?", type: "boolean" },
+          { id: "vf_utilizacao", label: "Utilização", type: "select", options: ["Industrial", "Comercial", "Habitacional", "Misto"] },
+          { id: "vf_classe", label: "Classe social", type: "select", options: ["Alta", "Média", "Baixa"] },
+          { id: "vf_posicao", label: "Posição", type: "select", options: ["Afastada", "Próxima", "Encostada"] },
+          { id: "vf_reforco", label: "Necessita reforço?", type: "boolean" },
+        ],
+      },
+      {
+        id: "viz_dir",
+        title: "Vizinho — Lateral direita",
+        fields: [
+          { id: "vd_material", label: "Material", type: "select", options: ["Madeira", "Alvenaria", "Misto", "Outro"] },
+          { id: "vd_estado", label: "Estado", type: "select", options: ["Bom", "Ruim"] },
+          { id: "vd_pavs", label: "Nº de pavimentos", type: "number" },
+          { id: "vd_habitado", label: "Habitado?", type: "boolean" },
+          { id: "vd_utilizacao", label: "Utilização", type: "select", options: ["Industrial", "Comercial", "Habitacional", "Misto"] },
+          { id: "vd_classe", label: "Classe social", type: "select", options: ["Alta", "Média", "Baixa"] },
+          { id: "vd_posicao", label: "Posição", type: "select", options: ["Afastada", "Próxima", "Encostada"] },
+          { id: "vd_reforco", label: "Necessita reforço?", type: "boolean" },
+        ],
+      },
+      {
+        id: "viz_esq",
+        title: "Vizinho — Lateral esquerda",
+        fields: [
+          { id: "ve_material", label: "Material", type: "select", options: ["Madeira", "Alvenaria", "Misto", "Outro"] },
+          { id: "ve_estado", label: "Estado", type: "select", options: ["Bom", "Ruim"] },
+          { id: "ve_pavs", label: "Nº de pavimentos", type: "number" },
+          { id: "ve_habitado", label: "Habitado?", type: "boolean" },
+          { id: "ve_utilizacao", label: "Utilização", type: "select", options: ["Industrial", "Comercial", "Habitacional", "Misto"] },
+          { id: "ve_classe", label: "Classe social", type: "select", options: ["Alta", "Média", "Baixa"] },
+          { id: "ve_posicao", label: "Posição", type: "select", options: ["Afastada", "Próxima", "Encostada"] },
+          { id: "ve_reforco", label: "Necessita reforço?", type: "boolean" },
+        ],
+      },
+      {
+        id: "laudo",
+        title: "Laudo técnico",
+        fields: [
+          { id: "necessita_laudo", label: "Há necessidade de laudo técnico dos prédios vizinhos?", type: "boolean" },
+          { id: "laudo_obs", label: "Observações", type: "textarea" },
+        ],
+      },
+      {
+        id: "mercado",
+        title: "Mercado local",
+        fields: [
+          { id: "mercado_local", label: "Itens disponíveis na região", type: "multiselect", options: ["Hospital", "Escola", "Universidade", "Shopping", "Farmácia", "Concretaria", "Supermercado", "Pedreira", "Casas para república", "Mão de obra administrativa", "Mão de obra operários"] },
+          { id: "mercado_obs", label: "Observações sobre o mercado local", type: "textarea" },
+        ],
+      },
+      {
+        id: "obras",
+        title: "Obras próximas",
+        fields: [
+          { id: "tipo_obra", label: "Tipo de obra próxima", type: "text" },
+          { id: "obras_proximas", label: "Observações", type: "textarea" },
+        ],
+      },
     ],
   },
   {
     id: "infraestrutura",
     title: "Acesso e Infraestrutura Pública",
-    fields: [
-      { id: "acesso", label: "Tipo de acesso", type: "text" },
-      { id: "pavimentacao", label: "Pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto"] },
-      { id: "agua_publica", label: "Água da rede", type: "boolean" },
-      { id: "energia", label: "Energia elétrica", type: "boolean" },
-      { id: "esgoto", label: "Esgoto", type: "boolean" },
-      { id: "drenagem", label: "Drenagem pluvial", type: "boolean" },
+    description: "Acesso por posição do terreno e infraestrutura pública disponível.",
+    fields: [],
+    subgroups: [
+      {
+        id: "acesso_frente",
+        title: "Acesso — Frente",
+        fields: [
+          { id: "af_descricao", label: "Descrição do acesso", type: "text" },
+          { id: "af_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
+          { id: "af_rua", label: "Nome da rua", type: "text" },
+        ],
+      },
+      {
+        id: "acesso_fundos",
+        title: "Acesso — Fundos",
+        fields: [
+          { id: "afu_descricao", label: "Descrição do acesso", type: "text" },
+          { id: "afu_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
+          { id: "afu_rua", label: "Nome da rua", type: "text" },
+        ],
+      },
+      {
+        id: "acesso_dir",
+        title: "Acesso — Lado direito",
+        fields: [
+          { id: "ad_descricao", label: "Descrição do acesso", type: "text" },
+          { id: "ad_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
+          { id: "ad_rua", label: "Nome da rua", type: "text" },
+        ],
+      },
+      {
+        id: "acesso_esq",
+        title: "Acesso — Lado esquerdo",
+        fields: [
+          { id: "ae_descricao", label: "Descrição do acesso", type: "text" },
+          { id: "ae_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
+          { id: "ae_rua", label: "Nome da rua", type: "text" },
+        ],
+      },
+      {
+        id: "publica",
+        title: "Infraestrutura pública",
+        fields: [
+          { id: "infra_servicos", label: "Serviços disponíveis", type: "multiselect", options: ["Abastecimento de água", "Energia elétrica", "Coleta de lixo", "Iluminação pública", "Rede de esgoto", "Telefone", "Rede de drenagem pluvial", "Alta tensão"] },
+          { id: "infra_obs", label: "Observações sobre a infraestrutura", type: "textarea" },
+        ],
+      },
     ],
   },
   {
@@ -806,24 +992,87 @@ export const MODULES: ModuleDef[] = [
   {
     id: "croqui",
     title: "Croqui / Desenho Técnico",
-    description: "Anexe croquis e desenhos como imagens ou PDFs.",
-    fields: [
-      { id: "legenda", label: "Legenda do croqui", type: "textarea" },
-      { id: "elementos", label: "Elementos representados", type: "textarea" },
+    description: "Croqui do local com legenda e elementos representados.",
+    fields: [],
+    subgroups: [
+      {
+        id: "desenho",
+        title: "Desenho",
+        fields: [
+          { id: "legenda", label: "Legenda do croqui", type: "textarea" },
+          { id: "escala", label: "Escala / referência", type: "text" },
+        ],
+      },
+      {
+        id: "elementos",
+        title: "Elementos representados",
+        fields: [
+          { id: "elementos", label: "Elementos representados (árvores, edificações, poços, acessos, etc.)", type: "textarea" },
+        ],
+      },
     ],
   },
   {
     id: "documentos",
     title: "Documentos e Anexos",
-    fields: [
-      { id: "entregues", label: "Documentos entregues", type: "textarea" },
-      { id: "solicitados", label: "Documentos solicitados", type: "textarea" },
+    description: "Documentos entregues, solicitados e checklist de documentação.",
+    fields: [],
+    subgroups: [
+      {
+        id: "entrega",
+        title: "Documento entregue na visita",
+        fields: [
+          { id: "doc_entregue_visita", label: "Foi entregue algum documento nesta visita?", type: "select", options: ["Sim", "Não"] },
+          { id: "entregues", label: "Documentos entregues (descrição)", type: "textarea" },
+        ],
+      },
+      {
+        id: "solicitacao",
+        title: "Documentos solicitados",
+        fields: [
+          { id: "solicitados", label: "Documentos solicitados ao cliente", type: "textarea" },
+          { id: "solicitar_doc_empresa", label: "Solicitar cópias da documentação da empresa?", type: "boolean" },
+        ],
+      },
+      {
+        id: "orientacao",
+        title: "Orientação técnica",
+        fields: [
+          { id: "orientacao_status", label: "Houve orientação do técnico sobre as pendências ambientais?", type: "select", options: ["Sim", "Não", "No aguardo do posicionamento da empresa", "Ficamos de enviar um relatório", "O colaborador ficou de enviar à diretoria"] },
+          { id: "orientacao_obs", label: "Observações", type: "textarea" },
+        ],
+      },
     ],
   },
   {
     id: "observacoes",
     title: "Observações Técnicas",
-    fields: [{ id: "obs_gerais", label: "Observações gerais", type: "textarea" }],
+    description: "Registros complementares e pendências observadas.",
+    fields: [],
+    subgroups: [
+      {
+        id: "gerais",
+        title: "Observações gerais",
+        fields: [
+          { id: "obs_gerais", label: "Observações gerais", type: "textarea" },
+        ],
+      },
+      {
+        id: "pendencias",
+        title: "Pendências observadas",
+        fields: [
+          { id: "pendencias_observadas", label: "Pendências observadas em campo", type: "textarea" },
+          { id: "responsavel_pendencias", label: "Responsável pelas pendências", type: "text" },
+        ],
+      },
+      {
+        id: "complementares",
+        title: "Informações complementares",
+        fields: [
+          { id: "info_complementares", label: "Informações complementares (escritório, retorno, etc.)", type: "textarea" },
+        ],
+      },
+    ],
   },
   {
     id: "validacao",

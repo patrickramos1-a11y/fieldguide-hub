@@ -2,10 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useDB } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { getModulesForType } from "@/lib/modules";
-import { SURVEY_TYPES, STATUS_LABELS } from "@/lib/types";
+import { SURVEY_TYPES } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/levantamentos/$id/resumo")({

@@ -183,6 +183,7 @@ export const MODULES: ModuleDef[] = [
     title: "Áreas, Dimensões e Terreno",
     description: "Áreas do empreendimento e características físicas do terreno.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "areas_empreendimento",
@@ -281,6 +282,7 @@ export const MODULES: ModuleDef[] = [
     title: "Água, Captação, Reservatório e Uso",
     description: "Fontes, consumo, reservatório, uso da água e situação de outorga.",
     fields: [],
+    purposes: ["projeto", "outorga", "monitoramento"],
     subgroups: [
       {
         id: "corpo_hidrico",
@@ -336,6 +338,7 @@ export const MODULES: ModuleDef[] = [
     title: "Poços",
     description: "Dados técnicos do poço, bomba, captação e uso.",
     fields: [],
+    purposes: ["outorga", "vazao", "monitoramento"],
     subgroups: [
       {
         id: "coords_poco",
@@ -380,6 +383,7 @@ export const MODULES: ModuleDef[] = [
     title: "Medição de Vazão",
     description: "Registro técnico da seção: largura, comprimento, profundidades e tempos.",
     fields: [],
+    purposes: ["vazao"],
     subgroups: [
       {
         id: "descricao_tecnica",
@@ -457,6 +461,7 @@ export const MODULES: ModuleDef[] = [
     title: "Outorga (dados específicos)",
     description: "Dados complementares para o processo de outorga.",
     fields: [],
+    purposes: ["outorga"],
     subgroups: [
       {
         id: "situacao",
@@ -501,6 +506,7 @@ export const MODULES: ModuleDef[] = [
     title: "ETE e Efluentes",
     description: "Estação de Tratamento de Efluentes: existência, operação, produtos e treinamento.",
     fields: [],
+    purposes: ["acompanhamento", "monitoramento", "projeto"],
     subgroups: [
       {
         id: "existencia",
@@ -551,6 +557,7 @@ export const MODULES: ModuleDef[] = [
     title: "Emissões",
     description: "Ruídos, emissões líquidas, sólidas e gasosas.",
     fields: [],
+    purposes: ["projeto", "acompanhamento"],
     subgroups: [
       {
         id: "ruidos",
@@ -598,6 +605,7 @@ export const MODULES: ModuleDef[] = [
     title: "Processo Produtivo",
     description: "Levantamento técnico: matéria-prima, equipamentos, etapas e entorno produtivo.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "geral",
@@ -652,6 +660,7 @@ export const MODULES: ModuleDef[] = [
     title: "Resíduos Sólidos",
     description: "Tipos de resíduos gerados, gerenciamento e coleta.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento"],
     subgroups: [
       {
         id: "tipos",
@@ -766,6 +775,7 @@ export const MODULES: ModuleDef[] = [
     title: "Política e Gestão Ambiental",
     description: "Atendimento à política ambiental, educação ambiental e demandas de projeto.",
     fields: [],
+    purposes: ["acompanhamento", "monitoramento"],
     subgroups: [
       {
         id: "respeito",
@@ -813,6 +823,7 @@ export const MODULES: ModuleDef[] = [
     title: "Rotinas de Monitoramento",
     description: "Hidrômetro, coletas de água, coletas de efluente e acompanhamento operacional.",
     fields: [],
+    purposes: ["monitoramento", "acompanhamento"],
     subgroups: [
       {
         id: "hidrometro",
@@ -854,6 +865,7 @@ export const MODULES: ModuleDef[] = [
     title: "Vizinhança e Entorno",
     description: "Terrenos vizinhos por posição, mercado local e obras próximas.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "viz_fundos",
@@ -928,6 +940,7 @@ export const MODULES: ModuleDef[] = [
     title: "Acesso e Infraestrutura Pública",
     description: "Acesso por posição do terreno e infraestrutura pública disponível.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "acesso_frente",

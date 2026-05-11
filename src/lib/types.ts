@@ -164,6 +164,10 @@ export interface ModuleState {
   fieldNotes?: Record<string, string>;
   /** Marcações de "Não se aplica" por campo/bloco. */
   nonApplicable?: Record<string, boolean>;
+  /** Marcação "Não se aplica" para o módulo inteiro. */
+  naModule?: boolean;
+  /** Marcações "Não se aplica" por subgrupo. */
+  naSubgroups?: Record<string, boolean>;
 }
 
 export interface Pendencia {

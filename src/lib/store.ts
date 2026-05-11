@@ -53,6 +53,8 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
     attachments: Array.isArray(module?.attachments) ? module.attachments : [],
     fieldNotes: module?.fieldNotes ?? {},
     nonApplicable: module?.nonApplicable ?? {},
+    naModule: module?.naModule ?? false,
+    naSubgroups: module?.naSubgroups ?? {},
   };
 }
 
@@ -529,6 +531,35 @@ export function setFieldNA(sid: string, modId: string, fieldId: string, na: bool
 
 export function setEnabledModules(sid: string, ids: string[]) {
   updateSurvey(sid, { enabledModules: ids });
+}
+
+export function setModuleNA(sid: string, modId: string, na: boolean) {
+  updateModule(sid, modId, { naModule: na });
+}
+
+export function setSubgroupNA(sid: string, modId: string, subId: string, na: boolean) {
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
+  if (!survey) return;
+  const moduleState = survey.modules[modId];
+  const next = { ...(moduleState.naSubgroups ?? {}) };
+  if (na) next[subId] = true;
+  else delete next[subId];
+  updateModule(sid, modId, { naSubgroups: next });
+}
+
+export function enableModule(sid: string, modId: string) {
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
+  if (!survey) return;
+  const current = survey.enabledModules ?? [];
+  if (current.includes(modId)) return;
+  updateSurvey(sid, { enabledModules: [...current, modId] });
+}
+
+export function disableModule(sid: string, modId: string) {
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
+  if (!survey) return;
+  const current = survey.enabledModules ?? [];
+  updateSurvey(sid, { enabledModules: current.filter((id) => id !== modId) });
 }
 
 export function addAttachment(sid: string, modId: string, att: Attachment) {

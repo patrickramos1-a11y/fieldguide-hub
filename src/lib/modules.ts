@@ -1138,6 +1138,10 @@ function fieldHasValue(v: unknown): boolean {
   if (v == null || v === "") return false;
   if (Array.isArray(v)) return v.length > 0;
   if (typeof v === "object") {
+    // hours-presets: tem preset ou turnos preenchidos
+    const o = v as Record<string, unknown>;
+    if (typeof o.preset === "string" && o.preset) return true;
+    if (Array.isArray(o.turnos) && (o.turnos as unknown[]).length > 0) return true;
     return Object.values(v as Record<string, unknown>).some((x) => x !== "" && x != null);
   }
   return true;

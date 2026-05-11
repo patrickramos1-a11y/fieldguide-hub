@@ -636,7 +636,7 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
   );
 }
 
-function FieldRendererComponent({ field, value, status, note, na, onChange, onStatus, onNote, onNA }: Props) {
+function FieldRendererComponent({ field, value, status, note, na, onChange, onStatus, onNote, onNA, moduleValues }: Props) {
   const [collapsed, setCollapsed] = useState(status === "concluido" && hasValue(value));
 
   // Recolhe somente quando o usuário marca explicitamente concluído.
@@ -721,7 +721,8 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
       </div>
 
       {field.type === "text" && <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
-      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} />}
+      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} moduleValues={moduleValues} />}
+      {field.type === "quantity" && <QuantityField value={value} onChange={onChange} />}
       {field.type === "date" && <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
       {field.type === "time" && <Input type="time" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
       {field.type === "textarea" && <Textarea rows={3} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}

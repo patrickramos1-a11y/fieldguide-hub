@@ -482,13 +482,29 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
 }
 
 // Renderer leve para campos dentro de um item de repeater
-function RepeaterItemField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
+function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { field: FieldDef; value: any; onChange: (v: any) => void; autoFocus?: boolean; onEnterAdd?: () => void }) {
+  const [showComment, setShowComment] = useState<boolean>(!!value);
+  const isCommentable = !!field.commentable;
+  if (isCommentable && !showComment) {
+    return (
+      <button type="button" onClick={() => setShowComment(true)}
+        className="self-start text-[11px] text-primary hover:underline inline-flex items-center gap-1">
+        <Plus className="h-3 w-3" /> {field.label}
+      </button>
+    );
+  }
   return (
     <div className="grid gap-1">
       <label className="text-[11px] text-muted-foreground">{field.label}{field.unit ? ` (${field.unit})` : ""}</label>
-      {field.type === "text" && <Input className="h-8" value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder} />}
+      {field.type === "text" && (
+        <Input className="h-8" autoFocus={autoFocus} value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && onEnterAdd && (e.target as HTMLInputElement).value.trim()) { e.preventDefault(); onEnterAdd(); } }}
+          placeholder={field.placeholder} />
+      )}
       {field.type === "textarea" && <Textarea rows={2} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
       {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} />}
+      {field.type === "quantity" && <QuantityField value={value} onChange={onChange} />}
       {field.type === "select" && (
         <Select value={value ?? ""} onValueChange={onChange}>
           <SelectTrigger className="h-8"><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -498,6 +514,15 @@ function RepeaterItemField({ field, value, onChange }: { field: FieldDef; value:
       {field.type === "button-select" && <ButtonSelectField field={field} value={value} onChange={onChange} />}
       {field.type === "boolean" && (
         <div className="flex items-center gap-2"><Switch checked={!!value} onCheckedChange={onChange} /><span className="text-xs text-muted-foreground">{value ? "Sim" : "Não"}</span></div>
+      )}
+      {field.type === "coords" && (
+        <div className="grid grid-cols-2 gap-1.5">
+          <Input className="h-8" placeholder="Latitude" value={value?.lat ?? ""} onChange={(e) => onChange({ ...(value || {}), lat: e.target.value })} />
+          <Input className="h-8" placeholder="Longitude" value={value?.lng ?? ""} onChange={(e) => onChange({ ...(value || {}), lng: e.target.value })} />
+        </div>
+      )}
+      {isCommentable && (
+        <button type="button" onClick={() => { onChange(""); setShowComment(false); }} className="self-end text-[10px] text-muted-foreground hover:text-destructive">Remover</button>
       )}
     </div>
   );

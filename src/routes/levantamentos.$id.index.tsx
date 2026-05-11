@@ -352,11 +352,6 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
   const effective = computeModuleStatus(m, state);
 
   const subgroups: SubgroupDef[] = m.subgroups ?? [];
-  const useSubTabs = subgroups.length >= 3;
-  const [activeSubId, setActiveSubId] = useState<string>(subgroups[0]?.id ?? "");
-  const [open, setOpen] = useState(false);
-  // Reset sub-tab when module changes
-  useEffect(() => { setActiveSubId(subgroups[0]?.id ?? ""); }, [m.id]);
 
   const handleFieldChange = useCallback((fieldId: string, value: unknown) => {
     setFieldValue(survey.id, m.id, fieldId, value);
@@ -400,40 +395,27 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
 
   return (
     <Card style={{ borderLeft: `4px solid var(--status-${statusVarSuffix(effective)})` }}>
-      <CardContent className="p-0">
-        <div className="flex items-stretch">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex-1 text-left p-4 hover:bg-secondary/40 flex items-start gap-3 min-w-0"
-          >
-            <ChevronRight className={`h-4 w-4 mt-0.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <span className="truncate">{m.title}</span>
-                {effective === "concluido" && <Check className="h-4 w-4 shrink-0" style={{ color: "var(--status-done)" }} />}
-              </h2>
-              {m.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.description}</p>}
-              <div className="mt-1.5 flex items-center gap-2">
-                <StatusBadge status={effective} />
-              </div>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setModuleNA(survey.id, m.id, true); }}
-            title="Marcar módulo como não se aplica"
-            className="px-3 border-l border-border text-muted-foreground hover:text-foreground hover:bg-secondary/40 flex items-center"
-          >
-            <Ban className="h-4 w-4" />
-          </button>
+      <CardContent className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              {m.title}
+              {effective === "concluido" && <Check className="h-5 w-5" style={{ color: "var(--status-done)" }} />}
+            </h2>
+            {m.description && <p className="text-sm text-muted-foreground">{m.description}</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            <StatusBadge status={effective} />
+            <Button variant="outline" size="sm" onClick={() => setModuleNA(survey.id, m.id, true)} title="Marcar módulo como não se aplica">
+              <Ban className="h-3.5 w-3.5 mr-1" /> N/A
+            </Button>
+          </div>
         </div>
-        {open && (
-          <div className="border-t border-border p-4">
+
         {m.fields.length > 0 && <div className="grid gap-2.5">{m.fields.map(renderField)}</div>}
 
-        {subgroups.length > 0 && !useSubTabs && (
-          <div className="mt-2 grid gap-3">
+        {subgroups.length > 0 && (
+          <div className="mt-3 grid gap-2">
             {subgroups.map((sg: SubgroupDef) => (
               <SubgroupBlock
                 key={sg.id}
@@ -444,54 +426,6 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
                 onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
               />
             ))}
-          </div>
-        )}
-
-        {subgroups.length > 0 && useSubTabs && (
-          <div className="mt-2">
-            <div className="overflow-x-auto -mx-1 px-1 mb-3">
-              <div className="flex gap-1.5 min-w-max pb-1">
-                {subgroups.map((sg) => {
-                  const sgNa = !!naSubMap[sg.id];
-                  const sgEff = sgNa ? "nao_se_aplica" : computeSubgroupStatus(sg, state);
-                  const { filled, total } = subgroupProgress(sg, state);
-                  const active = activeSubId === sg.id;
-                  const done = sgEff === "concluido";
-                  return (
-                    <button
-                      key={sg.id}
-                      onClick={() => setActiveSubId(sg.id)}
-                      className={`rounded-full px-3 py-1 text-xs whitespace-nowrap flex items-center gap-1.5 border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
-                    >
-                      {done ? (
-                        <Check className="h-3 w-3" style={{ color: active ? undefined : "var(--status-done)" }} />
-                      ) : (
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(sgEff)})` }} />
-                      )}
-                      <span>{sg.title}</span>
-                      {!sgNa && <span className={`opacity-70 ${active ? "" : "text-muted-foreground"}`}>{filled}/{total}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {(() => {
-              const sg = subgroups.find((s) => s.id === activeSubId) ?? subgroups[0];
-              if (!sg) return null;
-              return (
-                <SubgroupBlock
-                  key={sg.id}
-                  subgroup={sg}
-                  renderField={renderField}
-                  state={state}
-                  isNA={!!naSubMap[sg.id]}
-                  onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
-                  forceOpen
-                />
-              );
-            })()}
-          </div>
-        )}
           </div>
         )}
       </CardContent>

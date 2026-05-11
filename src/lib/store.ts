@@ -78,13 +78,37 @@ function normalizeSurvey(survey: Survey): Survey {
 }
 
 function normalizeDB(raw: Partial<DB> | null | undefined): DB {
-  return {
+  const db: DB = {
     clients: Array.isArray(raw?.clients) ? raw.clients : [],
     empreendimentos: Array.isArray(raw?.empreendimentos) ? raw.empreendimentos : [],
     projects: Array.isArray(raw?.projects) ? raw.projects : [],
     surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
     templates: Array.isArray(raw?.templates) ? raw.templates : [],
   };
+
+  // Recupera clientes "órfãos": se um projeto/empreendimento/levantamento referencia
+  // um clientId que não existe mais na lista de clientes, recria um placeholder
+  // para que o usuário consiga acessar e renomear depois.
+  const knownClientIds = new Set(db.clients.map((c) => c.id));
+  const orphanClientIds = new Set<string>();
+  for (const e of db.empreendimentos) {
+    if (e.clientId && !knownClientIds.has(e.clientId)) orphanClientIds.add(e.clientId);
+  }
+  for (const p of db.projects) {
+    if (p.clientId && !knownClientIds.has(p.clientId)) orphanClientIds.add(p.clientId);
+  }
+  if (orphanClientIds.size > 0) {
+    const recovered: Client[] = Array.from(orphanClientIds).map((cid, idx) => ({
+      id: cid,
+      name: `Cliente recuperado ${idx + 1}`,
+      personType: "PJ",
+      notes: "Registro reconstruído automaticamente — confira e atualize os dados.",
+      createdAt: new Date().toISOString(),
+    }));
+    db.clients = [...recovered, ...db.clients];
+  }
+
+  return db;
 }
 
 function isEmptyDB(nextDB: DB) {
@@ -181,14 +205,28 @@ async function writeIndexedDB(nextDB: DB) {
 }
 
 async function loadPersistedDB() {
+  let indexed: DB | null = null;
   try {
-    const indexed = await readIndexedDB();
-    if (indexed) return indexed;
+    indexed = await readIndexedDB();
   } catch (error) {
     console.warn("Falha ao ler IndexedDB, usando backup legado.", error);
   }
 
   const legacy = loadLegacyLocalStorage();
+
+  // Mescla IndexedDB e backup legado priorizando o snapshot mais "rico" para cada
+  // coleção. Isso recupera clientes/projetos que ficaram apenas no backup legado
+  // após uma migração parcial para o IndexedDB.
+  if (indexed && !isEmptyDB(legacy)) {
+    const merged = mergeDBs(indexed, legacy);
+    if (!isEmptyDB(merged)) {
+      try { await writeIndexedDB(merged); } catch { /* ignore */ }
+      return merged;
+    }
+  }
+
+  if (indexed && !isEmptyDB(indexed)) return indexed;
+
   if (!isEmptyDB(legacy)) {
     try {
       await writeIndexedDB(legacy);
@@ -199,6 +237,23 @@ async function loadPersistedDB() {
   }
 
   return EMPTY_DB;
+}
+
+function mergeById<T extends { id: string }>(a: T[], b: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const item of a) map.set(item.id, item);
+  for (const item of b) if (!map.has(item.id)) map.set(item.id, item);
+  return Array.from(map.values());
+}
+
+function mergeDBs(a: DB, b: DB): DB {
+  return normalizeDB({
+    clients: mergeById(a.clients, b.clients),
+    empreendimentos: mergeById(a.empreendimentos, b.empreendimentos),
+    projects: mergeById(a.projects, b.projects),
+    surveys: mergeById(a.surveys, b.surveys),
+    templates: mergeById(a.templates ?? [], b.templates ?? []),
+  });
 }
 
 async function flushPersist(snapshot: DB) {

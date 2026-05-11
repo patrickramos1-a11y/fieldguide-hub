@@ -50,7 +50,7 @@ function SurveyEditor() {
   );
   const { survey, project, client } = data;
 
-  const [activeTab, setActiveTab] = useState<string>("identificacao");
+  const [activeTab, setActiveTab] = useState<string>("__modulos");
 
   if (!mounted || !hydrated) return <AppShell><p>Carregando levantamento...</p></AppShell>;
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
@@ -120,9 +120,7 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
 
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
 
-  // Resolve aba ativa
-  const isVirtual = (activeTab as VirtualTab) === "__documentos" || (activeTab as VirtualTab) === "__pendencias" || (activeTab as VirtualTab) === "__encerramento";
-  const activeModule = !isVirtual ? regularTabs.find((m) => m.id === activeTab) ?? regularTabs[0] : null;
+  const isVirtual = activeTab === "__documentos" || activeTab === "__pendencias" || activeTab === "__encerramento";
 
   return (
     <AppShell>
@@ -170,10 +168,9 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
         {(persistPending || persistenceError) && <span className="text-muted-foreground ml-1 truncate">{persistenceError ?? "Salvando..."}</span>}
       </div>
 
-      {/* Tabs com botão N/A inline, recolhidas quando N/A */}
-      <ModuleTabsBar
+      {/* Barra superior: somente abas virtuais + módulos ocultos */}
+      <VirtualTabsBar
         survey={survey}
-        regularTabs={regularTabs}
         hiddenModules={hiddenModules}
         hasDocs={hasDocs}
         hasValidacao={hasValidacao}
@@ -181,8 +178,10 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
         setActiveTab={setActiveTab}
       />
 
-      {/* Conteúdo */}
-      {activeModule && <ModulePanel survey={survey} module={activeModule} />}
+      {/* Conteúdo principal: pilha de módulos (cards colapsáveis) */}
+      {!isVirtual && (
+        <StackedModules survey={survey} modules={regularTabs} />
+      )}
       {activeTab === "__documentos" && <DocumentsPanel survey={survey} />}
       {activeTab === "__pendencias" && <PendenciasPanel survey={survey} />}
       {activeTab === "__encerramento" && <EncerramentoPanel survey={survey} />}

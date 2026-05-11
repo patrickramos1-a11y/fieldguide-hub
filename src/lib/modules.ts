@@ -1,4 +1,4 @@
-import type { ModuleDef, SurveyType } from "./types";
+import type { FieldDef, ModuleDef, SurveyType } from "./types";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -1123,3 +1123,44 @@ const MODULES_BY_TYPE_CACHE: Record<SurveyType, typeof MODULES> = {
 export function getModulesForType(type: SurveyType) {
   return MODULES_BY_TYPE_CACHE[type];
 }
+
+/** Avaliador de regra `showIf` para campos condicionais. */
+export function shouldShowField(field: FieldDef, values: Record<string, unknown>): boolean {
+  const rule = field.showIf;
+  if (!rule) return true;
+  const v = values[rule.field];
+  if (rule.equals !== undefined) return v === rule.equals;
+  if (rule.in && rule.in.length) {
+    if (Array.isArray(v)) return v.some((x) => rule.in!.includes(x));
+    return rule.in.includes(v as unknown);
+  }
+  if (rule.truthy) {
+    if (Array.isArray(v)) return v.length > 0;
+    return Boolean(v);
+  }
+  return true;
+}
+
+/** Módulos que ganham aba dedicada centralizada (não aparecem como aba comum). */
+export const CENTRAL_TAB_MODULES = new Set(["documentos", "validacao"]);
+
+/** Sugestões de presets de módulos por tipo de levantamento. */
+export const MODULE_PRESETS: Record<SurveyType, { all: string[]; minimal: string[] }> = {
+  geral: {
+    all: MODULES_BY_TYPE.geral,
+    minimal: ["identificacao", "empreendimento", "localizacao", "fotos", "documentos", "validacao"],
+  },
+  ambiental: {
+    all: MODULES_BY_TYPE.ambiental,
+    minimal: ["identificacao", "ete", "residuos", "rotinas", "fotos", "documentos", "validacao"],
+  },
+  vazao: { all: MODULES_BY_TYPE.vazao, minimal: MODULES_BY_TYPE.vazao },
+  outorga: {
+    all: MODULES_BY_TYPE.outorga,
+    minimal: ["identificacao", "agua", "pocos", "outorga", "documentos", "validacao"],
+  },
+  terreno: {
+    all: MODULES_BY_TYPE.terreno,
+    minimal: ["identificacao", "localizacao", "areas", "fotos", "validacao"],
+  },
+};

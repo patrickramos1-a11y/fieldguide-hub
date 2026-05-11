@@ -629,15 +629,14 @@ export function removeTemplate(tid: string) {
 }
 
 export function setTemplateDefault(tid: string, isDefault: boolean) {
+  const list = store.db.templates ?? [];
+  const target = list.find((x) => x.id === tid);
+  if (!target) return;
   store.db = {
     ...store.db,
-    templates: (store.db.templates ?? []).map((t) => {
+    templates: list.map((t) => {
       if (t.id === tid) return { ...t, isDefault };
-      // Garantir único default por tipo
-      if (isDefault) {
-        const target = (store.db.templates ?? []).find((x) => x.id === tid);
-        if (target && t.type === target.type) return { ...t, isDefault: false };
-      }
+      if (isDefault && t.type === target.type) return { ...t, isDefault: false };
       return t;
     }),
   };

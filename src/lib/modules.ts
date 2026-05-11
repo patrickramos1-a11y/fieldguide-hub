@@ -15,7 +15,6 @@ export const MODULES: ModuleDef[] = [
         fields: [
           { id: "data_visita", label: "Data da visita", type: "date" },
           { id: "hora_chegada", label: "Horário de chegada", type: "time" },
-          { id: "hora_saida", label: "Horário de saída", type: "time" },
           { id: "objetivo", label: "Objetivo da visita", type: "textarea" },
         ],
       },
@@ -23,8 +22,8 @@ export const MODULES: ModuleDef[] = [
         id: "motivo",
         title: "Motivo da visita",
         fields: [
-          { id: "motivo", label: "Motivo (pode marcar mais de um)", type: "multiselect", options: ["Fiscalização", "Levantamento de projetos", "Visita técnica", "Reunião"] },
-          { id: "motivo_outro", label: "Outro motivo", type: "text" },
+          { id: "motivo", label: "Motivo (pode marcar mais de um)", type: "multiselect", options: ["Fiscalização", "Levantamento de projetos", "Visita técnica", "Reunião", "Outro"] },
+          { id: "motivo_outro", label: "Descreva o outro motivo", type: "text", showIf: { field: "motivo", in: ["Outro"] } },
         ],
       },
       {
@@ -1078,6 +1077,7 @@ export const MODULES: ModuleDef[] = [
     id: "validacao",
     title: "Validação e Encerramento",
     fields: [
+      { id: "hora_saida", label: "Horário de saída", type: "time" },
       { id: "assinatura_cliente", label: "Nome de quem assinou pelo cliente", type: "text" },
       { id: "assinatura_tecnico", label: "Nome do técnico responsável", type: "text" },
       { id: "data_validacao", label: "Data de validação", type: "date" },

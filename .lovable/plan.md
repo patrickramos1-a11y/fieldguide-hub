@@ -1,94 +1,48 @@
-## Onde paramos
-
-Hoje a plataforma já tem:
-- Cadastro básico de Clientes, Projetos e Levantamentos (5 tipos: geral, ambiental, vazão, outorga, terreno).
-- 22 módulos preliminares em `src/lib/modules.ts` com campos resumidos.
-- Editor modular com status por módulo, renderizador de campos e tela de resumo.
-- Persistência local (`localStorage`).
-
-O que falta (foco deste plano):
-- Os módulos atuais cobrem só uma fração dos campos das fichas. Faltam dezenas de subgrupos e campos condicionais detalhados nos seis anexos.
-- Os cadastros de Cliente, Projeto e Empreendimento estão minimalistas — precisam absorver os campos cadastrais completos (representante legal, endereço fiscal, contatos, atividade etc.).
-- Falta lógica condicional (ex.: só pedir dados do poço se captação = subterrânea; só pedir ETE se possui ETE).
-- Falta navegação por subgrupos dentro de cada módulo grande.
-
-Fica para DEPOIS deste plano (não tratar agora): exportação, captura de coordenadas GPS, upload de fotos, upload de documentos, assinaturas digitais, áudios.
+Vou executar em **3 lotes estratégicos**, cada um deixando o app utilizável e testável antes do próximo. Clique em **Implementar plano** para eu começar pelo Lote 1.
 
 ---
 
-## Fluxo das fases
+## Lote 1 — Fundação visual e de status (Fases 1, 2, 3)
 
-A cada fase você me envia novamente o(s) anexo(s) indicado(s) e eu implemento só aquela fatia, mantendo o app sempre funcional. Cada fase termina com cadastro/preenchimento testável.
+Resolve o que mais incomoda hoje: nada muda quando você preenche, e módulos desmarcados continuam ocupando espaço.
 
----
+- **Fase 1 — Status visual real**: cálculo automático de status (campo → subgrupo → módulo), check verde quando concluído, cor de borda lateral, indicador na pílula da aba (cinza / amarelo / verde / laranja / traço). Cabeçalho do levantamento ganha contadores `X concluídos · Y em andamento · Z N/A · W pendência`.
+- **Fase 2 — Módulos não selecionados viram contador**: abas só mostram o que está ativo; ao final da barra aparece pílula `+N não selecionados`, que abre painel para reativar item a item.
+- **Fase 3 — "Não se aplica" para módulo e subgrupo**: botão no cabeçalho de cada um; quando marcado, vira faixa cinza compacta com badge N/A e botão "Reabrir", e conta como resolvido no progresso.
 
-## Fase 1 — Reestruturar cadastros e modelo de dados
-Anexos a enviar: `📱 Conceito e Funcionalidades` + `🧩 Grupos de Informações`.
-
-Entregáveis:
-- Revisar `src/lib/types.ts` para refletir a hierarquia oficial: Cliente → Empreendimento → Projeto → Levantamento (hoje falta Empreendimento como entidade própria).
-- Expandir cadastro de Cliente (PF/PJ, contatos múltiplos, representante legal).
-- Criar cadastro de Empreendimento vinculado ao cliente (dados cadastrais completos, atividade, endereço, CNAE).
-- Ajustar criação de Levantamento para escolher Cliente → Empreendimento → Projeto → Tipo.
-- Revisar a lista oficial dos grupos macro (1 a N) conforme o anexo de Grupos.
+Resultado: você vê na hora o que já está pronto, o que falta e o que dispensou.
 
 ---
 
-## Fase 2 — Módulos de identificação, pessoas e operação
-Anexo a enviar: `📋 Campos Extraídos das Fichas` (seções de identificação, pessoas, operacionais, áreas).
+## Lote 2 — Reorganização da navegação (Fases 4, 9, 10)
 
-Entregáveis:
-- Reescrever os módulos `identificacao`, `empreendimento`, `pessoas`, `operacionais`, `areas` com TODOS os campos e subgrupos das fichas.
-- Introduzir suporte a subgrupos dentro de um módulo (accordion/sub-abas).
-- Suporte a campos condicionais simples (mostrar/esconder por valor).
+Acaba com a lista corrida gigante e fecha o ciclo do levantamento.
 
----
+- **Fase 4 — Sub-abas tipo fichário**: módulos com 3+ subgrupos (Identificação, Dados Cadastrais, Operação, Pessoas) ganham sub-abas internas com mesmo padrão visual da Fase 1.
+- **Fase 9 — Higienização estrutural de Dados Cadastrais**: sub-abas + botão N/A por sub-aba; subgrupo "Contato no local" sai daqui (vai para o módulo Pessoas no Lote 3).
+- **Fase 10 — Encerramento com duração**: aba Encerramento mostra chegada, saída, duração calculada, resumo de status, lista de pendências e assinaturas. Botão "Encerrar levantamento" trava edição.
 
-## Fase 3 — Água, poços e medição de vazão
-Anexos a enviar: `💧 Medição de Vazão` + `💧 Outorga` + seções de água/poço de `📋 Campos Extraídos`.
-
-Entregáveis:
-- Reescrever módulos `agua`, `pocos`, `vazao` com todos os subgrupos (largura início/meio/fim, profundidades múltiplas por ponto, tempos T1–T5, área calculada).
-- Módulo dedicado de Outorga com representante legal, características do poço, bomba, reservatório, captação e uso da água conforme ficha.
-- Cálculos automáticos onde a ficha sugere (área de seção, vazão estimada) — apenas cálculo, sem export.
-- Listas dinâmicas (adicionar N pontos de profundidade).
+Resultado: navegação curta e fluida, e fechamento do levantamento com indicadores reais.
 
 ---
 
-## Fase 4 — Acompanhamento ambiental (ETE, resíduos, política, rotinas)
-Anexo a enviar: `🌱 Acompanhamento Ambiental`.
+## Lote 3 — Componentes reutilizáveis e templates (Fases 5, 6, 7, 8)
 
-Entregáveis:
-- Reescrever módulos `ete`, `residuos`, `politica`, `rotinas`, `emissoes` com todos os campos do anexo.
-- Subgrupos: coleta de recicláveis vs não recicláveis, lixeiras, gerenciamento, hidrômetro, coletas periódicas, alterações operacionais, orientações entregues.
-- Campos condicionais (ex.: produtos da ETE só se "possui ETE = sim").
+Transforma os blocos repetitivos em componentes inteligentes e termina o sistema de templates.
 
----
+- **Fase 5 — Pessoas/Contatos como lista dinâmica**: botão `+ Adicionar pessoa`, ícones discretos para telefone/e-mail/cargo/documento. Adapter lê dados antigos para retrocompatibilidade.
+- **Fase 6 — Operação com presets**: Horário comercial, 2 turnos, 3 turnos, 24 h, "Outro" libera campos atuais. Mesma lógica para alterações de quadro.
+- **Fase 7 — Templates de fábrica**: presets nomeados embutidos por tipo de levantamento, botão "Salvar como template" também dentro do levantamento, e "Tornar template padrão para este tipo".
+- **Fase 8 — Distinção entre tipos**: cada módulo recebe tag de finalidade (Projeto / Acompanhamento / Monitoramento / Outorga / Vazão); na configuração do "Geral" surgem filtros rápidos por finalidade.
 
-## Fase 5 — Levantamento de projetos e visita ao local
-Anexo a enviar: `📐 Levantamento de Projetos` + seção "Visita ao Local" do `📋 Campos Extraídos`.
-
-Entregáveis:
-- Reescrever módulos `processo`, `infraestrutura`, `vizinhanca`, `areas` (terreno detalhado), `documentos`, `observacoes` com campos completos: matéria-prima, equipamentos, processo produtivo, vizinhança, mercado local, obras próximas, infraestrutura pública detalhada, topografia, vegetação, solo, limites, acessos.
-- Checklist de levantamentos por tipo.
+Resultado: configurar e preencher um levantamento vira questão de cliques, e cada tipo fica visualmente claro.
 
 ---
 
-## Fase 6 — Validação, pendências e revisão final dos módulos
-Sem anexo novo (consolidação).
+## Estratégia de execução
 
-Entregáveis:
-- Módulo `validacao` completo (campos textuais — assinatura real fica para depois).
-- Tela/aba de Pendências consolidada por levantamento (sem mexer em export ainda).
-- Revisão final do mapeamento `MODULES_BY_TYPE` para os 5 tipos refletindo as fichas oficiais.
-- Tela de resumo passando a mostrar todos os subgrupos e campos preenchidos (sem botão de exportar, só visualização).
+- Entrego o **Lote 1 inteiro** primeiro (alto impacto, baixo risco, sem mexer em dados).
+- Depois aviso e sigo para o **Lote 2** (mexe em layout, mantém dados intactos).
+- Por último o **Lote 3** (introduz componentes novos com adapter para os dados existentes — nada se perde).
 
----
-
-## Detalhes técnicos (para referência interna)
-
-- Modelo de dados: adicionar entidade `Empreendimento` em `src/lib/types.ts`; ajustar `store.ts` (CRUD + migração leve do `localStorage`).
-- Modules: estender `ModuleDef` com `subgroups: { id, title, fields, condition? }[]` e `condition?: (values) => boolean` em campos para condicional.
-- FieldRenderer: adicionar tipos faltantes (lista dinâmica/repeater, número com unidade, faixa horária).
-- Editor de levantamento: renderizar subgrupos como accordion dentro do módulo.
-- Nada de export, upload de arquivo, GPS, assinatura ou áudio nessas fases — botões existentes podem ficar visíveis mas não serão evoluídos.
+Nenhuma migração de banco é necessária. Os levantamentos já criados continuam funcionando.

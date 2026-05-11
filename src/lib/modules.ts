@@ -1,4 +1,5 @@
 import type { FieldDef, ModuleDef, SurveyType } from "./types";
+import type { FieldStatus, ModuleState, SubgroupDef } from "./types";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -1139,6 +1140,99 @@ export function shouldShowField(field: FieldDef, values: Record<string, unknown>
     return Boolean(v);
   }
   return true;
+}
+
+function fieldHasValue(v: unknown): boolean {
+  if (v == null || v === "") return false;
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === "object") {
+    return Object.values(v as Record<string, unknown>).some((x) => x !== "" && x != null);
+  }
+  return true;
+}
+
+const PENDING_STATUSES = new Set<FieldStatus>([
+  "pendente",
+  "aguardando_documento",
+  "aguardando_empresa",
+  "requer_retorno",
+]);
+
+/** Lista os campos visíveis de um módulo considerando showIf e subgrupos N/A. */
+export function visibleFieldsOfModule(
+  m: ModuleDef,
+  values: Record<string, unknown>,
+  naSubgroups?: Record<string, boolean>,
+): FieldDef[] {
+  const out: FieldDef[] = [];
+  for (const f of m.fields) if (shouldShowField(f, values)) out.push(f);
+  for (const sg of m.subgroups ?? []) {
+    if (naSubgroups?.[sg.id]) continue;
+    for (const f of sg.fields) if (shouldShowField(f, values)) out.push(f);
+  }
+  return out;
+}
+
+/** Status efetivo do módulo (ignora `state.status` armazenado, exceto para módulos centrais sem campos). */
+export function computeModuleStatus(m: ModuleDef, state: ModuleState): FieldStatus {
+  if (state.naModule) return "nao_se_aplica";
+
+  const visible = visibleFieldsOfModule(m, state.values, state.naSubgroups);
+
+  // Pendência declarada em qualquer campo já marca o módulo como pendente.
+  for (const f of visible) {
+    const fs = state.fieldStatus[f.id];
+    if (fs && PENDING_STATUSES.has(fs)) return "pendente";
+  }
+
+  if (visible.length === 0) {
+    // módulos só com ações (ex.: validação) — preserva status manual
+    return state.status ?? "nao_iniciado";
+  }
+
+  let filled = 0;
+  for (const f of visible) {
+    if (state.nonApplicable?.[f.id]) { filled++; continue; }
+    if (fieldHasValue(state.values[f.id])) filled++;
+  }
+
+  if (filled === visible.length) return "concluido";
+  if (filled > 0) return "em_andamento";
+  return "nao_iniciado";
+}
+
+/** Status efetivo de um subgrupo. */
+export function computeSubgroupStatus(sg: SubgroupDef, state: ModuleState): FieldStatus {
+  if (state.naSubgroups?.[sg.id]) return "nao_se_aplica";
+  const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
+  if (!visible.length) return "nao_iniciado";
+
+  for (const f of visible) {
+    const fs = state.fieldStatus[f.id];
+    if (fs && PENDING_STATUSES.has(fs)) return "pendente";
+  }
+
+  let filled = 0;
+  for (const f of visible) {
+    if (state.nonApplicable?.[f.id]) { filled++; continue; }
+    if (fieldHasValue(state.values[f.id])) filled++;
+  }
+
+  if (filled === visible.length) return "concluido";
+  if (filled > 0) return "em_andamento";
+  return "nao_iniciado";
+}
+
+/** Conta de campos preenchidos / total visível em um subgrupo. */
+export function subgroupProgress(sg: SubgroupDef, state: ModuleState): { filled: number; total: number; na: number } {
+  if (state.naSubgroups?.[sg.id]) return { filled: 0, total: 0, na: 0 };
+  const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
+  let filled = 0; let na = 0;
+  for (const f of visible) {
+    if (state.nonApplicable?.[f.id]) { na++; filled++; continue; }
+    if (fieldHasValue(state.values[f.id])) filled++;
+  }
+  return { filled, total: visible.length, na };
 }
 
 /** Módulos que ganham aba dedicada centralizada (não aparecem como aba comum). */

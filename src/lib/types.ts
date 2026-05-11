@@ -242,6 +242,8 @@ export interface ModuleState {
   naSubgroups?: Record<string, boolean>;
   /** Marcação manual de módulo concluído. */
   moduleDone?: boolean;
+  /** Marcação manual de conclusão por subgrupo. */
+  subgroupDone?: Record<string, boolean>;
 }
 
 export interface Pendencia {

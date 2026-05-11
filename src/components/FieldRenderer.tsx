@@ -494,11 +494,12 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
 }
 
 function FieldRendererComponent({ field, value, status, note, na, onChange, onStatus, onNote, onNA }: Props) {
-  const [collapsed, setCollapsed] = useState(hasValue(value));
+  const [collapsed, setCollapsed] = useState(status === "concluido" && hasValue(value));
 
-  // Auto-collapse quando concluído ou quando vira N/A
+  // Recolhe somente quando o usuário marca explicitamente concluído.
   useEffect(() => {
     if (status === "concluido" && hasValue(value)) setCollapsed(true);
+    if (status !== "concluido") setCollapsed(false);
   }, [status, value]);
 
   function captureCoords() {
@@ -526,8 +527,8 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
     );
   }
 
-  // Resumido (preenchido + colapsado)
-  if (collapsed && hasValue(value)) {
+  // Resumido (concluído + colapsado)
+  if (collapsed && hasValue(value) && status === "concluido") {
     return (
       <div className="rounded-md border border-border p-2 px-3 bg-card flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -551,12 +552,12 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           {field.label}{field.unit && <span className="text-muted-foreground font-normal"> ({field.unit})</span>}
         </label>
         <div className="flex items-center gap-1">
-          {hasValue(value) ? (
+          {status === "concluido" && hasValue(value) ? (
             <Check className="h-4 w-4" style={{ color: "var(--status-done)" }} />
           ) : (
             <span
               className="h-2 w-2 rounded-full inline-block"
-              style={{ backgroundColor: status === "em_andamento" ? "var(--status-progress)" : "var(--status-todo)" }}
+              style={{ backgroundColor: hasValue(value) ? "var(--status-progress)" : "var(--status-todo)" }}
               title={STATUS_LABELS[status]}
             />
           )}
@@ -576,11 +577,11 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
         </div>
       </div>
 
-      {field.type === "text" && <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
-      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => hasValue(value) && setCollapsed(true)} />}
-      {field.type === "date" && <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
-      {field.type === "time" && <Input type="time" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
-      {field.type === "textarea" && <Textarea rows={3} value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
+      {field.type === "text" && <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
+      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} />}
+      {field.type === "date" && <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
+      {field.type === "time" && <Input type="time" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
+      {field.type === "textarea" && <Textarea rows={3} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
       {field.type === "boolean" && (
         <div className="flex items-center gap-2"><Switch checked={!!value} onCheckedChange={onChange} /><span className="text-sm text-muted-foreground">{value ? "Sim" : "Não"}</span></div>
       )}
@@ -630,10 +631,13 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
         <HoursPresetEditor value={value as HoursValue | undefined} onChange={onChange} />
       )}
 
-      {hasValue(value) && (
-        <div className="mt-2 flex justify-end">
-          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setCollapsed(true)}>
-            Recolher
+      {hasValue(value) && status !== "concluido" && (
+        <div className="mt-2 flex justify-end gap-1">
+          <Button variant="ghost" size="sm" className="h-7 text-xs"
+            style={{ color: "var(--status-done)" }}
+            onClick={() => onStatus("concluido")}
+            title="Marcar este campo como concluído">
+            <Check className="h-3 w-3 mr-1" /> Concluir
           </Button>
         </div>
       )}

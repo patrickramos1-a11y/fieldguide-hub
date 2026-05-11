@@ -1,156 +1,87 @@
+# Plano de correções — auto-check, conclusão por subgrupo e fluxo
 
-# Plano — Lote final de ajustes (Política, Rotinas, Infraestrutura, Vizinhança, Croqui, Observações + UX global)
+## Problema central
 
-Vou agrupar tudo em um único lote executável. A ordem abaixo é a ordem em que vou aplicar as mudanças.
+Hoje, qualquer valor digitado/selecionado dispara o check verde de "concluído" no campo. Isso impede edição (parece já fechado), faz o subgrupo se recolher cedo demais e cria a sensação de que "não dá para editar". A correção é tirar o auto-check e usar conclusão explícita.
 
----
+## 1. Status automático mais brando (FieldRenderer)
 
-## 1. Ajustes globais de status do campo (FieldRenderer)
+- Bolinha cinza = vazio (sem valor).
+- Bolinha laranja = preenchido / em andamento (tem valor mas não foi concluído).
+- Check verde = só quando o usuário marca explicitamente como concluído (no campo OU no subgrupo).
+- Remover a regra "tem valor → check verde automático".
+- Manter o ícone "⋯" para mudar status manual e marcar N/A.
 
-Hoje, todo campo "não iniciado" mostra um badge grande de status. Vai mudar para:
+## 2. Botão "Concluir" por subgrupo
 
-- **Não iniciado** → apenas uma bolinha cinza pequena no canto, sem texto.
-- **Preenchido** → bolinha vira **check verde** automaticamente; o badge grande some.
-- O seletor manual de status (dropdown com 8 opções) sai do header padrão e vai para um menu "⋯" (só aparece se o usuário quiser marcar pendente / aguardando documento etc.). Para 99% dos casos, a regra automática basta.
-- Resultado visual: cada campo perde altura. A linha de header passa a ser só `label` + bolinha/check à direita.
+- Cada subgrupo ganha botão "Concluir subgrupo" no header (ao lado do "Não se aplica").
+- Ao concluir: marca todos os campos visíveis do subgrupo como `concluido` e recolhe o subgrupo.
+- Header passa a mostrar check verde no subgrupo concluído.
+- Botão "Reabrir" aparece quando concluído.
+- Editar campo dentro de subgrupo concluído continua possível (basta reabrir).
+- Adicionar `subgroupDone?: Record<string, boolean>` em `ModuleState` + setter no store.
+- `computeSubgroupStatus` retorna `concluido` se `subgroupDone[id]` for verdadeiro.
 
-Aplica-se a todos os módulos automaticamente (não exige editar cada campo).
+## 3. Conclusão de módulo navega para próximo
 
----
+- Em `levantamentos.$id.index.tsx`, após `setModuleDone(true)` chamar handler que:
+  - Busca primeiro módulo em `visibleTabs` que não esteja `naModule` nem `moduleDone`.
+  - Faz `setActiveTab(next.id)` e rola a aba para a área visível.
+- Se não houver próximo, mostra toast "Todos os módulos concluídos".
 
-## 2. Campos numéricos aceitam só números
+## 4. Auditoria dos botões em todos os módulos
 
-O renderer numérico já filtra entrada (`NumberField`), mas alguns campos que são na prática numéricos estão como `text` no schema. Vou converter os principais:
+Aplica-se uniformemente o novo comportamento (sem auto-check) a:
+- Quadro de funcionários (setor selecionado não fecha)
+- Captação de água (digitar 1 número não fecha)
+- Reservatórios (adicionar item não fecha; precisa concluir explicitamente)
+- Nascente / corpo hídrico
+- Conformidades, Emissões, ETE — mesma regra geral
 
-- `hidrometro` (Rotinas → Leitura do hidrômetro): `text` → `number` (decimal).
-- `vf_pavs` / `vd_pavs` / `ve_pavs` (Vizinhança): já são `number`, ok.
+## 5. Reservatório — fluxo de adicionar quantidade + tamanho
 
----
+Já é repeater. O problema é o check prematuro. Com a correção (1) e (2), o usuário:
+1. Marca "Possui reservatório? Sim" (não fecha).
+2. Adiciona reservatório → preenche tipo, capacidade, quantidade.
+3. Adiciona outros se quiser.
+4. Aperta "Concluir subgrupo" para fechar.
 
-## 3. Política e Gestão Ambiental (`politica`)
+## 6. Processos Produtivos — Resíduos (refatoração)
 
-- **Remover subgrupo "Conformidade operacional"** (campo `conformidade`).
-- `politica_status`, `coleta_recicl_status`, `educacao_status`, `ha_demanda_projeto` → `select` para `button-select`.
-- `tipo_demanda` continua `button-select` multi (já é multiselect).
-- Remover `politica_obs` (observação fixa). Observação opcional vira o "+ Adicionar observação" do subgrupo (já existe).
-- Em **Coleta de recicláveis**: se `coleta_recicl_status` for "Não" / "Não há" / "Não se aplica a essa visita", **não exibir** outros campos.
-- Em **Educação ambiental**: `palestras` (textarea) só aparece quando `educacao_status` = "Sim" ou "Houve agendamento".
-- Em **Levantamento para projeto**: `tipo_demanda` só aparece se `ha_demanda_projeto` = "Sim". Remover `demanda_obs`.
+Reestrutura módulo `processos`/`residuos`:
+- Subgrupo "Resíduos" passa a ser repeater principal por categoria.
+- Primeiro select: **Tipo de resíduo** com botões agrupados:
+  - Recicláveis: Papel, Plástico, Vidro, Metal, Papelão
+  - Não recicláveis: Orgânico, Rejeito
+  - Perigosos: Químicos, Óleos, Pilhas/baterias, Lâmpadas, EPI contaminado
+  - Inertes: Entulho, Construção civil
+  - Não inertes
+- Após selecionar o tipo, aparecem campos: quantidade gerada, periodicidade (button-select: Diária / Semanal / Mensal / Eventual), destinação, transportador.
+- Cada item do repeater tem botão "Concluir item" e "Não se aplica":
+  - "Não se aplica" remove o item da lista visível, vira chip pequeno "N/A: Papel, Plástico" no topo do subgrupo. Clicar no chip restaura o item para edição.
+- Botão "+" para adicionar mais resíduos.
 
----
+## 7. Encerramento — botão único de saída
 
-## 4. Rotinas de Monitoramento (`rotinas`)
+Refatora módulo `encerramento`:
+- Remove campos de hora manuais.
+- Mostra: hora de entrada (já registrada na Identificação) + cronômetro ao vivo "Tempo decorrido: 02:14:33".
+- Um botão grande **"Registrar saída"**:
+  - Grava `data_saida`/`hora_saida` no momento do clique.
+  - Congela o cronômetro mostrando duração total.
+  - Conclui o módulo automaticamente.
+- Botão secundário "Editar saída" para corrigir.
 
-- `hidrometro_status` → `button-select`. `hidrometro` → tipo `number`. Remover `hidrometro_obs`.
-- `coleta_agua_visita` → `button-select`. `coletas_agua` (detalhes) só aparece se "Sim".
-- `coleta_efluente_visita` → `button-select`. `coletas_efluente` só aparece se "Sim".
-- **Acompanhamento operacional**: virar opcional/discreto.
-  - Remover do subgrupo o textarea "Acompanhamento da ETE" e "Outras rotinas observadas" como campos obrigatórios.
-  - O subgrupo passa a ter apenas o link "+ Adicionar observação" (mesma mecânica usada nos outros subgrupos).
-  - O subgrupo é marcado como "opcional" (pequeno badge) para não entrar no cálculo de não-iniciado / não-se-aplica.
+## 8. Arquivos impactados
 
-Detalhe técnico: vou marcar o subgrupo com `optional?: boolean` em `SubgroupDef` e ajustar `computeSubgroupStatus` / `computeModuleStatus` para ignorar subgrupos opcionais quando vazios (não ficam "não iniciado", não derrubam o status do módulo).
+- `src/lib/types.ts` — `subgroupDone?: Record<string, boolean>` em `ModuleState`
+- `src/lib/store.ts` — `setSubgroupDone(sid, modId, sgId, done)`
+- `src/lib/modules.ts` — refazer subgrupo Resíduos + módulo Encerramento
+- `src/lib/modules.ts` (`computeSubgroupStatus`/`computeModuleStatus`) — respeitar `subgroupDone`
+- `src/components/FieldRenderer.tsx` — remover auto-check (check só com status manual `concluido`)
+- `src/routes/levantamentos.$id.index.tsx` — botão "Concluir subgrupo" no header dos subgrupos; auto-navegação ao concluir módulo; componente `EncerramentoTimer`
 
----
+## 9. Riscos
 
-## 5. Acesso e Infraestrutura Pública (`infraestrutura`)
-
-Reescrita completa dos subgrupos de acesso (frente / fundos / dir / esq) para reduzir cansaço:
-
-- **Substitui os 4 subgrupos** por **um único subgrupo "Acessos"** com um campo `apply-to-sides` para tipo de pavimentação (Asfalto / Paralelepípedo / Terra / Concreto / Bloquete / Inexistente / Outro), permitindo "aplicar aos demais lados".
-- **Nome da rua**: mantém um campo de texto único por lado, em formato compacto (4 inputs pequenos lado a lado, ou repeater). Vou implementar como repeater simples `{lado, rua}` pré-preenchido com 4 itens (Frente, Fundos, Lado direito, Lado esquerdo) — usuário só digita a rua.
-- **Remover** o campo "Descrição do acesso" dos 4 lados.
-- **Remover** observações fixas.
-
-**Infraestrutura pública (`infra_servicos`)**: ampliar lista para incluir também:
-Asfalto / Pavimentação, Iluminação LED, Coleta seletiva, Posto de saúde, Hospital, Internet/Fibra, Gás encanado, Transporte público, Ponto de ônibus.
-
-Remover `infra_obs`.
-
----
-
-## 6. Vizinhança e Entorno (`vizinhanca`)
-
-Reescrita dos 3 subgrupos de vizinhos (fundos / dir / esq) para reduzir cansaço:
-
-- **Substituir os 3 subgrupos** por **um subgrupo "Vizinhos confrontantes"** com um **repeater** com 3 itens pré-preenchidos (Fundos, Lateral direita, Lateral esquerda).
-- Cada item tem os mesmos campos (Material, Estado, Pavimentos, Habitado, Utilização, Classe, Posição, Reforço), todos como `button-select` no lugar de `select`/`boolean`.
-- Cada item terá um botão **"Copiar do anterior"** para reaproveitar dados rapidamente.
-- **Remover** botões/campos de observação por vizinho.
-
-**Laudo técnico**:
-- `necessita_laudo`: trocar `boolean` por `button-select` ["Sim", "Não", "Não se aplica"].
-- **Remover** `laudo_obs`.
-
-**Mercado local**: ampliar `mercado_local` adicionando:
-- Posto de combustível, Creche, Praça, Banco / lotérica, Igreja, Restaurante, Hotel/Pousada, Indústria próxima, Centro comercial, Ponto de ônibus / terminal, Delegacia, Corpo de bombeiros.
-- **Remover** `mercado_obs`.
-
-**Obras próximas**:
-- `tipo_obra` permanece como texto curto.
-- **Remover** `obras_proximas` (observação).
-
----
-
-## 7. Croqui / Desenho Técnico (`croqui`)
-
-- **Remover por completo** o módulo `croqui` da lista `MODULES`.
-- Remover de `MODULES_BY_TYPE` (geral, vazao, terreno).
-- Remover de templates default que o referenciem (verifico em `src/lib/store.ts` os defaults).
-
----
-
-## 8. Levantamento Fotográfico (`fotos`)
-
-- **Não tocar.** Mantido como está.
-
----
-
-## 9. Observações Técnicas (`observacoes`)
-
-- **Remover por completo** o módulo `observacoes` da lista `MODULES`.
-- Remover de `MODULES_BY_TYPE` (todos os tipos onde aparece).
-- Remover de templates default.
-
----
-
-## 10. Documentos (`documentos`)
-
-- **Manter como está.** Sem alteração.
-
----
-
-## Detalhes técnicos (referência rápida)
-
-### Arquivos impactados
-
-- `src/lib/types.ts`
-  - Adicionar `optional?: boolean` em `SubgroupDef`.
-- `src/lib/modules.ts`
-  - Reescrever subgrupos de `politica`, `rotinas`, `infraestrutura`, `vizinhanca`.
-  - Remover entradas `croqui` e `observacoes` de `MODULES` e de `MODULES_BY_TYPE`.
-  - Ajustar `computeSubgroupStatus` / `computeModuleStatus` para ignorar subgrupos `optional` vazios.
-- `src/components/FieldRenderer.tsx`
-  - Header padrão: bolinha cinza (não iniciado) → check verde quando preenchido. Esconder `StatusBadge` grande do header padrão; mover seletor manual para menu "⋯".
-  - Estado intermediário "em andamento" continua como bolinha colorida.
-- `src/components/ModuleConfigStep.tsx`
-  - Sem mudança direta; só refletirá automaticamente a remoção de croqui/observações.
-- `src/lib/store.ts`
-  - Remover referências a `croqui` / `observacoes` em templates ou seeds, se houver.
-- `src/routes/levantamentos.$id.resumo.tsx`
-  - Garantir que não dependa explicitamente de `croqui` / `observacoes`.
-
-### Migração de dados
-
-Sem schema do backend mudando — `ModuleState.values` é JSON livre. Levantamentos antigos com dados em `croqui` / `observacoes` continuarão no banco; só não são mais exibidos. Sem perda destrutiva.
-
-### Risco / pontos de atenção
-
-- Subgrupos `optional` precisam aparecer fechados por padrão e nunca contar negativamente no progresso.
-- O `apply-to-sides` para pavimentação já existe no renderer; só configurar.
-- Repeater com itens pré-preenchidos: vou inicializar `value` com 3 (vizinhos) ou 4 (ruas) itens fixos quando o usuário entra no subgrupo pela primeira vez.
-
-### Fora deste lote (tratado em outras rodadas)
-
-- Lote G (Poços como repeater) e Lote J (Resíduos por seleção mestre) — pendentes, conforme planejado anteriormente.
-- Levantamento Fotográfico — fica para depois.
+- Levantamentos antigos: campos com valor passam a aparecer como "em andamento" (laranja) em vez de check verde. Aceitável — usuário pode concluir em massa via "Concluir subgrupo".
+- Sem mudanças no schema do banco; tudo no JSON `data` do levantamento.

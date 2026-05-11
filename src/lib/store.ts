@@ -57,6 +57,7 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
     naModule: module?.naModule ?? false,
     naSubgroups: module?.naSubgroups ?? {},
     moduleDone: module?.moduleDone ?? false,
+    subgroupDone: module?.subgroupDone ?? {},
   };
 }
 
@@ -566,6 +567,16 @@ export function setModuleNA(sid: string, modId: string, na: boolean) {
 
 export function setModuleDone(sid: string, modId: string, done: boolean) {
   updateModule(sid, modId, { moduleDone: done });
+}
+
+export function setSubgroupDone(sid: string, modId: string, subId: string, done: boolean) {
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
+  if (!survey) return;
+  const moduleState = survey.modules[modId];
+  const next = { ...(moduleState.subgroupDone ?? {}) };
+  if (done) next[subId] = true;
+  else delete next[subId];
+  updateModule(sid, modId, { subgroupDone: next });
 }
 
 export function setSubgroupNA(sid: string, modId: string, subId: string, na: boolean) {

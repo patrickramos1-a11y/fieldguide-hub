@@ -696,88 +696,40 @@ export const MODULES: ModuleDef[] = [
     purposes: ["projeto", "acompanhamento", "monitoramento"],
     subgroups: [
       {
-        id: "tipos",
-        title: "Tipos de resíduos gerados",
+        id: "lista",
+        title: "Resíduos gerados",
+        description: "Adicione cada resíduo gerado pela operação. Selecione o tipo e preencha os detalhes.",
         fields: [
-          { id: "tipos", label: "Categorias geradas", type: "multiselect", options: ["Papel", "Plástico", "Vidro", "Metal", "Orgânicos", "Perigosos", "Outros"] },
-        ],
-      },
-      {
-        id: "papel",
-        title: "Papel",
-        fields: [
-          { id: "papel_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "papel_periodo", label: "Período / frequência", type: "text" },
-          { id: "papel_acond", label: "Acondicionamento", type: "text" },
-          { id: "papel_destino", label: "Destinação", type: "text" },
-          { id: "papel_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "plastico",
-        title: "Plástico",
-        fields: [
-          { id: "plastico_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "plastico_periodo", label: "Período / frequência", type: "text" },
-          { id: "plastico_acond", label: "Acondicionamento", type: "text" },
-          { id: "plastico_destino", label: "Destinação", type: "text" },
-          { id: "plastico_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "vidro",
-        title: "Vidro",
-        fields: [
-          { id: "vidro_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "vidro_periodo", label: "Período / frequência", type: "text" },
-          { id: "vidro_acond", label: "Acondicionamento", type: "text" },
-          { id: "vidro_destino", label: "Destinação", type: "text" },
-          { id: "vidro_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "metal",
-        title: "Metal",
-        fields: [
-          { id: "metal_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "metal_periodo", label: "Período / frequência", type: "text" },
-          { id: "metal_acond", label: "Acondicionamento", type: "text" },
-          { id: "metal_destino", label: "Destinação", type: "text" },
-          { id: "metal_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "organicos",
-        title: "Orgânicos",
-        fields: [
-          { id: "org_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "org_periodo", label: "Período / frequência", type: "text" },
-          { id: "org_acond", label: "Acondicionamento", type: "text" },
-          { id: "org_destino", label: "Destinação", type: "text" },
-          { id: "org_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "perigosos",
-        title: "Perigosos",
-        fields: [
-          { id: "per_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "per_periodo", label: "Período / frequência", type: "text" },
-          { id: "per_acond", label: "Acondicionamento", type: "text" },
-          { id: "per_destino", label: "Destinação", type: "text" },
-          { id: "per_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "outros",
-        title: "Outros resíduos",
-        fields: [
-          { id: "outros_desc", label: "Descrição do resíduo", type: "text" },
-          { id: "outros_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "outros_periodo", label: "Período / frequência", type: "text" },
-          { id: "outros_acond", label: "Acondicionamento", type: "text" },
-          { id: "outros_destino", label: "Destinação", type: "text" },
-          { id: "outros_coletor", label: "Quem coleta", type: "text" },
+          {
+            id: "residuos_lista",
+            label: "Resíduos",
+            type: "repeater",
+            addItemLabel: "Adicionar resíduo",
+            itemFields: [
+              {
+                id: "tipo",
+                label: "Tipo de resíduo",
+                type: "button-select",
+                allowOther: true,
+                options: [
+                  // Recicláveis
+                  "Papel", "Plástico", "Vidro", "Metal", "Papelão",
+                  // Não recicláveis
+                  "Orgânico", "Rejeito",
+                  // Perigosos
+                  "Químicos", "Óleos", "Pilhas/baterias", "Lâmpadas", "EPI contaminado",
+                  // Inertes / construção
+                  "Entulho", "Construção civil", "Não inerte",
+                ],
+              },
+              { id: "categoria", label: "Categoria", type: "button-select", options: ["Reciclável", "Não reciclável", "Perigoso", "Inerte", "Não inerte"] },
+              { id: "quantidade", label: "Quantidade", type: "number", unit: "kg" },
+              { id: "periodicidade", label: "Periodicidade", type: "button-select", options: ["Diária", "Semanal", "Quinzenal", "Mensal", "Eventual"] },
+              { id: "acondicionamento", label: "Acondicionamento", type: "text" },
+              { id: "destino", label: "Destinação", type: "text" },
+              { id: "coletor", label: "Quem coleta", type: "text" },
+            ],
+          },
         ],
       },
       {
@@ -1125,33 +1077,49 @@ export function computeModuleStatus(m: ModuleDef, state: ModuleState): FieldStat
   if (state.naModule) return "nao_se_aplica";
   if (state.moduleDone) return "concluido";
 
-  const visible = visibleFieldsOfModule(m, state.values, state.naSubgroups);
+  // Conta por campo, mas trata subgrupos concluídos manualmente como totalmente preenchidos.
+  const moduleFields = m.fields.filter((f) => shouldShowField(f, state.values));
+  let totalFields = 0;
+  let filledFields = 0;
+  let hasPending = false;
 
-  // Pendência declarada em qualquer campo já marca o módulo como pendente.
-  for (const f of visible) {
+  for (const f of moduleFields) {
+    totalFields++;
     const fs = state.fieldStatus[f.id];
-    if (fs && PENDING_STATUSES.has(fs)) return "pendente";
+    if (fs && PENDING_STATUSES.has(fs)) hasPending = true;
+    if (state.nonApplicable?.[f.id]) { filledFields++; continue; }
+    if (fieldHasValue(state.values[f.id])) filledFields++;
   }
 
-  if (visible.length === 0) {
-    // módulos só com ações (ex.: validação) — preserva status manual
-    return state.status ?? "nao_iniciado";
+  for (const sg of m.subgroups ?? []) {
+    if (state.naSubgroups?.[sg.id]) continue;
+    if (sg.optional) continue;
+    const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
+    if (state.subgroupDone?.[sg.id]) {
+      totalFields += visible.length;
+      filledFields += visible.length;
+      continue;
+    }
+    for (const f of visible) {
+      totalFields++;
+      const fs = state.fieldStatus[f.id];
+      if (fs && PENDING_STATUSES.has(fs)) hasPending = true;
+      if (state.nonApplicable?.[f.id]) { filledFields++; continue; }
+      if (fieldHasValue(state.values[f.id])) filledFields++;
+    }
   }
 
-  let filled = 0;
-  for (const f of visible) {
-    if (state.nonApplicable?.[f.id]) { filled++; continue; }
-    if (fieldHasValue(state.values[f.id])) filled++;
-  }
-
-  if (filled === visible.length) return "concluido";
-  if (filled > 0) return "em_andamento";
+  if (hasPending) return "pendente";
+  if (totalFields === 0) return state.status ?? "nao_iniciado";
+  if (filledFields === totalFields) return "concluido";
+  if (filledFields > 0) return "em_andamento";
   return "nao_iniciado";
 }
 
 /** Status efetivo de um subgrupo. */
 export function computeSubgroupStatus(sg: SubgroupDef, state: ModuleState): FieldStatus {
   if (state.naSubgroups?.[sg.id]) return "nao_se_aplica";
+  if (state.subgroupDone?.[sg.id]) return "concluido";
   const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
   if (!visible.length) return sg.optional ? "concluido" : "nao_iniciado";
 

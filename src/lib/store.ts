@@ -52,6 +52,7 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
     notes: module?.notes,
     attachments: Array.isArray(module?.attachments) ? module.attachments : [],
     fieldNotes: module?.fieldNotes ?? {},
+    subgroupNotes: module?.subgroupNotes ?? {},
     nonApplicable: module?.nonApplicable ?? {},
     naModule: module?.naModule ?? false,
     naSubgroups: module?.naSubgroups ?? {},
@@ -570,6 +571,16 @@ export function setSubgroupNA(sid: string, modId: string, subId: string, na: boo
   if (na) next[subId] = true;
   else delete next[subId];
   updateModule(sid, modId, { naSubgroups: next });
+}
+
+export function setSubgroupNote(sid: string, modId: string, subId: string, note: string) {
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
+  if (!survey) return;
+  const moduleState = survey.modules[modId];
+  const next = { ...(moduleState.subgroupNotes ?? {}) };
+  if (note.trim()) next[subId] = note;
+  else delete next[subId];
+  updateModule(sid, modId, { subgroupNotes: next });
 }
 
 export function enableModule(sid: string, modId: string) {

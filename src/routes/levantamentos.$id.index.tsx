@@ -181,7 +181,24 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
         setActiveTab={setActiveTab}
       />
 
-      {activeModule && <ModulePanel survey={survey} module={activeModule} />}
+      {activeModule && (
+        <ModulePanel
+          survey={survey}
+          module={activeModule}
+          onModuleDone={() => {
+            // Navega para próximo módulo aberto
+            const remaining = regularTabs.filter((m) => {
+              if (m.id === activeModule.id) return false;
+              const st = survey.modules[m.id] as ModuleState;
+              if (st?.naModule || st?.moduleDone) return false;
+              return true;
+            });
+            const currentIdx = regularTabs.findIndex((m) => m.id === activeModule.id);
+            const next = remaining.find((m) => regularTabs.indexOf(m) > currentIdx) ?? remaining[0];
+            if (next) setActiveTab(next.id);
+          }}
+        />
+      )}
       {activeTab === "__documentos" && <DocumentsPanel survey={survey} />}
       {activeTab === "__pendencias" && <PendenciasPanel survey={survey} />}
       {activeTab === "__encerramento" && <EncerramentoPanel survey={survey} />}
@@ -399,13 +416,14 @@ function HiddenModulesPill({ survey, hidden }: { survey: any; hidden: any[] }) {
 
 // =========================== ModulePanel ============================
 
-function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
+function ModulePanel({ survey, module: m, onModuleDone }: { survey: any; module: any; onModuleDone?: () => void }) {
   const state = survey.modules[m.id] as ModuleState;
   const values = state.values;
   const fieldStatusMap = state.fieldStatus;
   const fieldNotes = state.fieldNotes ?? {};
   const naMap = state.nonApplicable ?? {};
   const naSubMap = state.naSubgroups ?? {};
+  const subDoneMap = state.subgroupDone ?? {};
   const effective = computeModuleStatus(m, state);
 
   const subgroups: SubgroupDef[] = m.subgroups ?? [];
@@ -471,7 +489,7 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setModuleDone(survey.id, m.id, true)}
+                onClick={() => { setModuleDone(survey.id, m.id, true); onModuleDone?.(); }}
                 title="Concluir módulo"
                 style={{ borderColor: "var(--status-done)", color: "var(--status-done)" }}
               >
@@ -496,6 +514,8 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
                 state={state}
                 isNA={!!naSubMap[sg.id]}
                 onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
+                isDone={!!subDoneMap[sg.id]}
+                onToggleDone={(done) => setSubgroupDone(survey.id, m.id, sg.id, done)}
                 note={state.subgroupNotes?.[sg.id]}
                 onNote={(n) => setSubgroupNote(survey.id, m.id, sg.id, n)}
               />
@@ -507,12 +527,14 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
   );
 }
 
-function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOpen, note, onNote }: {
+function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, isDone, onToggleDone, forceOpen, note, onNote }: {
   subgroup: SubgroupDef;
   renderField: (f: FieldDef) => React.ReactNode;
   state: ModuleState;
   isNA: boolean;
   onToggleNA: (na: boolean) => void;
+  isDone?: boolean;
+  onToggleDone?: (done: boolean) => void;
   forceOpen?: boolean;
   note?: string;
   onNote?: (n: string) => void;
@@ -522,8 +544,8 @@ function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOp
   const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, state.values));
   const [openInternal, setOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
-  // Auto-collapse: se está concluído e usuário não forçou abertura, fica fechado
-  const open = forceOpen ? true : (effective === "concluido" ? false : openInternal);
+  // Auto-collapse: se está concluído (manual ou efetivo) e usuário não forçou abertura, fica fechado
+  const open = forceOpen ? true : (isDone || effective === "concluido" ? openInternal : openInternal);
 
   if (isNA) {
     return (
@@ -537,7 +559,7 @@ function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOp
     );
   }
 
-  const done = effective === "concluido";
+  const done = !!isDone || effective === "concluido";
 
   return (
     <div
@@ -565,6 +587,29 @@ function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOp
             {filled}/{total}
           </div>
         </button>
+        {onToggleDone && (
+          isDone ? (
+            <button
+              type="button"
+              className="px-2 text-xs hover:bg-secondary/40 border-l border-border inline-flex items-center gap-1"
+              style={{ color: "var(--status-done)" }}
+              title="Reabrir subgrupo"
+              onClick={() => onToggleDone(false)}
+            >
+              <Unlock className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="px-2 text-xs hover:bg-secondary/40 border-l border-border inline-flex items-center gap-1"
+              style={{ color: "var(--status-done)" }}
+              title="Concluir subgrupo"
+              onClick={() => onToggleDone(true)}
+            >
+              <Check className="h-3.5 w-3.5" />
+            </button>
+          )
+        )}
         <button
           type="button"
           className="px-2 text-muted-foreground hover:text-foreground hover:bg-secondary/40 border-l border-border"

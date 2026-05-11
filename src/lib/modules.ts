@@ -520,7 +520,7 @@ export const MODULES: ModuleDef[] = [
         id: "existencia",
         title: "Existência da ETE",
         fields: [
-          { id: "possui_ete", label: "Possui ETE?", type: "select", options: ["Tem ETE", "Não tem ETE", "Esperando obra", "Esperando reforma", "Em projeto"] },
+          { id: "possui_ete", label: "Possui ETE?", type: "button-select", options: ["Tem ETE", "Não tem ETE", "Esperando obra", "Esperando reforma", "Em projeto"] },
         ],
       },
       {
@@ -528,34 +528,40 @@ export const MODULES: ModuleDef[] = [
         title: "Operação da ETE",
         description: "Preencher se possui ETE.",
         fields: [
-          { id: "problema_ete", label: "Algum problema na operação da ETE?", type: "select", options: ["Sim", "Não", "Não se aplica"] },
+          { id: "problema_ete", label: "Algum problema na operação da ETE?", type: "button-select", options: ["Sim", "Não", "Não se aplica"] },
           { id: "problema_ete_desc", label: "Descrição do problema", type: "textarea", showIf: { field: "problema_ete", equals: "Sim" } },
-          { id: "funcionamento_ete", label: "Funcionamento da ETE", type: "select", options: ["Adequado", "Com problemas", "Parada"] },
+          { id: "funcionamento_ete", label: "Funcionamento da ETE", type: "button-select", options: ["Adequado", "Com problemas", "Parada"] },
         ],
       },
       {
         id: "produtos",
         title: "Produtos utilizados na ETE",
         fields: [
-          { id: "produtos_ete", label: "Produtos utilizados", type: "multiselect", options: ["Não utiliza", "Cloro em pó", "Cal", "Alcalinizante", "Coagulante", "Floculante", "Reagente biológico"] },
-          { id: "produtos_ete_outros", label: "Outros produtos (especificar)", type: "textarea" },
+          {
+            id: "produtos_ete_lista",
+            label: "Produtos utilizados",
+            type: "repeater",
+            addItemLabel: "Adicionar produto",
+            itemFields: [
+              { id: "nome", label: "Produto", type: "button-select", allowOther: true, options: ["Cloro em pó", "Cal", "Alcalinizante", "Coagulante", "Floculante", "Reagente biológico", "Não utiliza"] },
+              { id: "quantidade", label: "Quantidade / dose", type: "text" },
+            ],
+          },
         ],
       },
       {
         id: "treinamento",
         title: "Treinamento de operador",
         fields: [
-          { id: "treinamento_ete", label: "Há necessidade de treinar um novo operador da ETE?", type: "select", options: ["Sim", "Não", "Não se aplica ainda"] },
-          { id: "treinamento_obs", label: "Observações sobre treinamento", type: "textarea" },
+          { id: "treinamento_ete", label: "Há necessidade de treinar um novo operador?", type: "button-select", options: ["Sim", "Não", "Não se aplica ainda"] },
         ],
       },
       {
         id: "tratamento_efluentes",
         title: "Tratamento de efluentes",
         fields: [
-          { id: "ha_tratamento", label: "Há tratamento de efluentes?", type: "multiselect", options: ["Sim", "Não", "Precisará de projeto", "Não está funcionando"] },
-          { id: "tipo_efluente", label: "Tipo de efluente líquido", type: "multiselect", options: ["Industrial", "Doméstico", "ETE", "Fossa"] },
-          { id: "tratamento", label: "Situação / observações sobre o tratamento", type: "textarea" },
+          { id: "ha_tratamento", label: "Há tratamento de efluentes?", type: "button-select", options: ["Sim", "Não", "Precisará de projeto", "Não está funcionando"] },
+          { id: "tipo_efluente", label: "Tipo de efluente", type: "button-select", multi: true, allowOther: true, options: ["Industrial", "Doméstico", "ETE", "Fossa séptica", "Sumidouro", "Reuso", "Lançamento em corpo hídrico", "Rede pública"] },
         ],
       },
     ],

@@ -54,7 +54,54 @@ export type FieldType =
   | "select"
   | "multiselect"
   | "boolean"
-  | "coords";
+  | "coords"
+  | "people"
+  | "hours-presets";
+
+/** Pessoa em listas dinâmicas (Pessoas Envolvidas etc.). */
+export interface Person {
+  id: string;
+  nome: string;
+  cargo?: string;
+  vinculo?: string;
+  telefone?: string;
+  email?: string;
+  documento?: string;
+  registro?: string;
+}
+
+/** Configuração de funcionamento / horários com presets. */
+export type HoursPreset =
+  | "comercial"
+  | "2turnos"
+  | "3turnos"
+  | "24h"
+  | "outro";
+
+export interface HoursTurno {
+  id: string;
+  inicio: string;
+  fim: string;
+  label?: string;
+}
+
+export interface HoursValue {
+  preset?: HoursPreset;
+  dias?: string[];
+  turnos?: HoursTurno[];
+  observacao?: string;
+}
+
+/** Finalidade dos módulos para classificação/filtros. */
+export type ModulePurpose = "projeto" | "acompanhamento" | "monitoramento" | "outorga" | "vazao";
+
+export const MODULE_PURPOSE_LABELS: Record<ModulePurpose, string> = {
+  projeto: "Projeto",
+  acompanhamento: "Acompanhamento",
+  monitoramento: "Monitoramento",
+  outorga: "Outorga",
+  vazao: "Vazão",
+};
 
 export interface FieldDef {
   id: string;
@@ -78,6 +125,8 @@ export interface ModuleDef {
   description?: string;
   fields: FieldDef[];
   subgroups?: SubgroupDef[];
+  /** Tags de finalidade para filtros rápidos. */
+  purposes?: ModulePurpose[];
 }
 
 export interface SubgroupDef {
@@ -204,4 +253,8 @@ export interface SurveyTemplate {
   type: SurveyType;
   moduleIds: string[];
   createdAt: string;
+  /** Quando true, vira preset padrão para esse tipo no novo levantamento. */
+  isDefault?: boolean;
+  /** Templates de fábrica não podem ser removidos. */
+  builtIn?: boolean;
 }

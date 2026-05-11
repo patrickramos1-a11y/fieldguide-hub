@@ -83,10 +83,9 @@ function SurveyEditor() {
   );
 }
 
-function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActiveTab }: {
+function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActiveTab, persistPending, persistenceError }: {
   survey: any; projectName: string; clientName: string; activeTab: string; setActiveTab: (t: string) => void; persistPending?: boolean; persistenceError?: string;
 }) {
-  const { persistPending, persistenceError } = arguments[0] as { persistPending?: boolean; persistenceError?: string };
   const allModules = getModulesForType(survey.type);
   const enabled: string[] = survey.enabledModules ?? allModules.map((m: any) => m.id);
   const enabledSet = useMemo(() => new Set(enabled), [enabled]);

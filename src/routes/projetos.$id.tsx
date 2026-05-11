@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB, addSurvey, deleteSurvey } from "@/lib/store";
+import { useDB, addSurvey, deleteSurvey, useDBStatus } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2, ClipboardList } from "lucide-react";
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/projetos/$id")({
 
 function ProjetoDetail() {
   const { id } = Route.useParams();
+  const { hydrated } = useDBStatus();
   const db = useDB();
   const nav = useNavigate();
   const project = db.projects.find((p) => p.id === id);
@@ -26,6 +27,7 @@ function ProjetoDetail() {
   const [type, setType] = useState<SurveyType>("geral");
   const [title, setTitle] = useState("");
 
+  if (!hydrated) return <AppShell><p>Carregando projeto...</p></AppShell>;
   if (!project) return <AppShell><p>Projeto não encontrado.</p></AppShell>;
 
   function create() {

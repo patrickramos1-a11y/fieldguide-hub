@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB } from "@/lib/store";
+import { useDB, useDBStatus } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { getModulesForType } from "@/lib/modules";
@@ -24,7 +24,9 @@ function fmtVal(v: any): string {
 
 function ResumoPage() {
   const { id } = Route.useParams();
+  const { hydrated } = useDBStatus();
   const db = useDB();
+  if (!hydrated) return <AppShell><p>Carregando resumo...</p></AppShell>;
   const survey = db.surveys.find((s) => s.id === id);
   if (!survey) return <AppShell><p>Não encontrado.</p></AppShell>;
   const project = db.projects.find((p) => p.id === survey.projectId);

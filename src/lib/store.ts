@@ -450,6 +450,11 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
     signatures: {},
     createdAt: now.toISOString(),
   };
+  // Aplica template padrão do tipo, se houver.
+  const def = (store.db.templates ?? []).find((t) => t.type === data.type && t.isDefault);
+  if (def && def.moduleIds.length) {
+    survey.enabledModules = Array.from(new Set([...def.moduleIds, "identificacao", "validacao"]));
+  }
 
   store.db = { ...store.db, surveys: [survey, ...store.db.surveys] };
   persist();
@@ -620,5 +625,21 @@ export function addTemplate(data: Omit<SurveyTemplate, "id" | "createdAt">) {
 
 export function removeTemplate(tid: string) {
   store.db = { ...store.db, templates: (store.db.templates ?? []).filter((t) => t.id !== tid) };
+  persist();
+}
+
+export function setTemplateDefault(tid: string, isDefault: boolean) {
+  store.db = {
+    ...store.db,
+    templates: (store.db.templates ?? []).map((t) => {
+      if (t.id === tid) return { ...t, isDefault };
+      // Garantir único default por tipo
+      if (isDefault) {
+        const target = (store.db.templates ?? []).find((x) => x.id === tid);
+        if (target && t.type === target.type) return { ...t, isDefault: false };
+      }
+      return t;
+    }),
+  };
   persist();
 }

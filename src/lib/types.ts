@@ -63,6 +63,13 @@ export interface FieldDef {
   options?: string[];
   unit?: string;
   placeholder?: string;
+  /** Condicional: só exibe se a regra for satisfeita pelos valores do mesmo módulo. */
+  showIf?: {
+    field: string;
+    equals?: unknown;
+    in?: unknown[];
+    truthy?: boolean;
+  };
 }
 
 export interface ModuleDef {
@@ -141,6 +148,10 @@ export interface Attachment {
   type: string;
   dataUrl: string;
   createdAt: string;
+  /** Categoria livre para organização central (ex.: "Licenças", "Fotos"). */
+  category?: string;
+  /** Módulo de origem/contexto (opcional). */
+  moduleTag?: string;
 }
 
 export interface ModuleState {
@@ -149,6 +160,10 @@ export interface ModuleState {
   fieldStatus: Record<string, FieldStatus>;
   notes?: string;
   attachments: Attachment[];
+  /** Observações pontuais por campo/bloco. */
+  fieldNotes?: Record<string, string>;
+  /** Marcações de "Não se aplica" por campo/bloco. */
+  nonApplicable?: Record<string, boolean>;
 }
 
 export interface Pendencia {
@@ -170,4 +185,6 @@ export interface Survey {
   pendencias: Pendencia[];
   signatures: { client?: string; technician?: string; date?: string };
   createdAt: string;
+  /** IDs de módulos habilitados; quando undefined, etapa de configuração é exibida. */
+  enabledModules?: string[];
 }

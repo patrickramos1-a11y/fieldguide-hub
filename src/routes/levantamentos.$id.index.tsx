@@ -790,9 +790,26 @@ function EncerramentoPanel({ survey }: { survey: any }) {
   const horaChegada: string = ident.hora_chegada ?? "";
   const [horaSaida, setHoraSaida] = useState<string>(survey.closedAtSaida ?? "");
 
-  const duration = useMemo(() => computeDuration(dataVisita, horaChegada, horaSaida || nowHHMM()), [dataVisita, horaChegada, horaSaida]);
   const closed = !!survey.closedAt;
   const blockers = emAndamento.length + pendAbertas.length;
+
+  // Cronômetro ao vivo até registrar saída
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (horaSaida) return;
+    const t = window.setInterval(() => setTick((v) => v + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [horaSaida]);
+  const duration = useMemo(
+    () => computeDuration(dataVisita, horaChegada, horaSaida || nowHHMMSS()),
+    [dataVisita, horaChegada, horaSaida, tick],
+  );
+
+  function registrarSaida() {
+    const hh = nowHHMM();
+    setHoraSaida(hh);
+    setFieldValue(survey.id, "validacao", "hora_saida", hh);
+  }
 
   return (
     <div className="space-y-4">
@@ -813,7 +830,7 @@ function EncerramentoPanel({ survey }: { survey: any }) {
       <Card>
         <CardContent className="p-5">
           <h3 className="font-semibold mb-3 flex items-center gap-2"><Clock className="h-4 w-4" /> Duração da visita</h3>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4 mb-4">
             <div>
               <Label className="text-xs">Data</Label>
               <div className="text-sm">{dataVisita || <span className="text-muted-foreground">não informada</span>}</div>
@@ -824,11 +841,24 @@ function EncerramentoPanel({ survey }: { survey: any }) {
             </div>
             <div>
               <Label className="text-xs">Saída</Label>
-              <Input type="time" value={horaSaida} onChange={(e) => setHoraSaida(e.target.value)} disabled={closed} />
+              <div className="text-sm">{horaSaida || <span className="text-muted-foreground">— ainda na visita</span>}</div>
             </div>
           </div>
-          <div className="mt-3 text-sm">
-            Tempo decorrido: <strong>{duration ?? "—"}</strong>
+          <div className="rounded-md border border-border p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-card/50">
+            <div>
+              <div className="text-xs text-muted-foreground">Tempo {horaSaida ? "total" : "decorrido"}</div>
+              <div className="text-2xl font-mono font-semibold tabular-nums">{duration ?? "—"}</div>
+            </div>
+            {!horaSaida ? (
+              <Button size="lg" onClick={registrarSaida} disabled={closed}
+                style={{ backgroundColor: "var(--status-done)", color: "white" }}>
+                <Lock className="h-4 w-4 mr-2" /> Registrar saída
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => { setHoraSaida(""); setFieldValue(survey.id, "validacao", "hora_saida", ""); }} disabled={closed}>
+                Editar saída
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -888,6 +918,11 @@ function nowHHMM() {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function nowHHMMSS() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+}
+
 function computeDuration(date: string, start: string, end: string): string | null {
   if (!date || !start || !end) return null;
   const s = new Date(`${date}T${start}`);
@@ -895,11 +930,11 @@ function computeDuration(date: string, start: string, end: string): string | nul
   let diff = e.getTime() - s.getTime();
   if (Number.isNaN(diff)) return null;
   if (diff < 0) diff += 24 * 60 * 60 * 1000; // virou o dia
-  const totalMin = Math.floor(diff / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h === 0) return `${m}min`;
-  return `${h}h ${String(m).padStart(2, "0")}min`;
+  const totalSec = Math.floor(diff / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s2 = totalSec % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s2).padStart(2, "0")}`;
 }
 
 function SummaryRow({ label, items, tone }: { label: string; items: string[]; tone: string }) {

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { MapPin, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock, Copy } from "lucide-react";
+import { MapPin, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock, Copy, Check, MoreHorizontal } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 
 interface Props {
@@ -535,7 +535,7 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           <div className="text-xs text-muted-foreground truncate">{summarize(field, value)}{field.unit && hasValue(value) ? ` ${field.unit}` : ""}</div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <StatusBadge status={status} />
+          <Check className="h-4 w-4" style={{ color: "var(--status-done)" }} />
           <Button variant="ghost" size="sm" onClick={() => setCollapsed(false)} className="h-7">
             <Pencil className="h-3 w-3" />
           </Button>
@@ -551,17 +551,28 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           {field.label}{field.unit && <span className="text-muted-foreground font-normal"> ({field.unit})</span>}
         </label>
         <div className="flex items-center gap-1">
-          {onNA && (
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" title="Marcar como não se aplica" onClick={() => onNA(true)}>
-              <Ban className="h-3.5 w-3.5" />
-            </Button>
+          {hasValue(value) ? (
+            <Check className="h-4 w-4" style={{ color: "var(--status-done)" }} />
+          ) : (
+            <span
+              className="h-2 w-2 rounded-full inline-block"
+              style={{ backgroundColor: status === "em_andamento" ? "var(--status-progress)" : "var(--status-todo)" }}
+              title={STATUS_LABELS[status]}
+            />
           )}
           <Select value={status} onValueChange={(v) => onStatus(v as FieldStatus)}>
-            <SelectTrigger className="h-7 w-auto border-0 bg-transparent p-0 hover:bg-secondary px-2"><StatusBadge status={status} /></SelectTrigger>
+            <SelectTrigger className="h-7 w-auto border-0 bg-transparent p-0 hover:bg-secondary px-1.5" title="Mais opções de status">
+              <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+            </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}
             </SelectContent>
           </Select>
+          {onNA && (
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" title="Marcar como não se aplica" onClick={() => onNA(true)}>
+              <Ban className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          )}
         </div>
       </div>
 

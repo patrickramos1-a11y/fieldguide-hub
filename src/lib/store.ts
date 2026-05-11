@@ -457,6 +457,15 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
   const def = (store.db.templates ?? []).find((t) => t.type === data.type && t.isDefault);
   if (def && def.moduleIds.length) {
     survey.enabledModules = Array.from(new Set([...def.moduleIds, "identificacao", "validacao"]));
+    // Aplica overrides de subgrupos: marca como N/A subgrupos desabilitados pelo template.
+    if (def.subgroupOverrides) {
+      for (const [mid, sgIds] of Object.entries(def.subgroupOverrides)) {
+        if (!survey.modules[mid]) continue;
+        const naSub: Record<string, boolean> = { ...(survey.modules[mid].naSubgroups ?? {}) };
+        for (const sg of sgIds) naSub[sg] = true;
+        survey.modules[mid] = { ...survey.modules[mid], naSubgroups: naSub };
+      }
+    }
   }
 
   store.db = { ...store.db, surveys: [survey, ...store.db.surveys] };
@@ -648,6 +657,14 @@ export function addTemplate(data: Omit<SurveyTemplate, "id" | "createdAt">) {
   store.db = { ...store.db, templates: [tpl, ...(store.db.templates ?? [])] };
   persist();
   return tpl;
+}
+
+export function updateTemplate(tid: string, patch: Partial<Omit<SurveyTemplate, "id" | "createdAt">>) {
+  store.db = {
+    ...store.db,
+    templates: (store.db.templates ?? []).map((t) => (t.id === tid ? { ...t, ...patch } : t)),
+  };
+  persist();
 }
 
 export function removeTemplate(tid: string) {

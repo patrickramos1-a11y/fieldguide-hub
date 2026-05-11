@@ -3,6 +3,9 @@ import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus,
 import { getModulesForType } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
+const INDEXED_DB_NAME = "ramos-eng-db";
+const INDEXED_DB_STORE = "app-state";
+const INDEXED_DB_RECORD = "snapshot";
 
 interface DB {
   clients: Client[];
@@ -11,10 +14,33 @@ interface DB {
   surveys: Survey[];
 }
 
+interface DBStatus {
+  hydrated: boolean;
+  persistPending: boolean;
+  persistenceError?: string;
+}
+
+interface StoreRuntime {
+  db: DB;
+  status: DBStatus;
+  listeners: Set<() => void>;
+  initPromise?: Promise<void>;
+  idbPromise?: Promise<IDBDatabase>;
+  persistTimer?: number;
+  persistChain: Promise<void>;
+}
+
 const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [] };
 
 function createModuleState(): ModuleState {
-  return { status: "nao_iniciado", values: {}, fieldStatus: {}, attachments: [] };
+  return {
+    status: "nao_iniciado",
+    values: {},
+    fieldStatus: {},
+    attachments: [],
+    fieldNotes: {},
+    nonApplicable: {},
+  };
 }
 
 function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState {
@@ -54,7 +80,14 @@ function normalizeDB(raw: Partial<DB> | null | undefined): DB {
   };
 }
 
-function load(): DB {
+function isEmptyDB(nextDB: DB) {
+  return nextDB.clients.length === 0
+    && nextDB.empreendimentos.length === 0
+    && nextDB.projects.length === 0
+    && nextDB.surveys.length === 0;
+}
+
+function loadLegacyLocalStorage(): DB {
   if (typeof window === "undefined") return EMPTY_DB;
   try {
     const raw = localStorage.getItem(KEY);
@@ -65,59 +98,219 @@ function load(): DB {
   }
 }
 
-function save(nextDB: DB) {
+function saveLegacyLocalStorage(nextDB: DB) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(KEY, JSON.stringify(nextDB));
   } catch (error) {
-    console.error("Falha ao persistir dados no navegador", error);
+    console.error("Falha ao criar backup local dos dados", error);
   }
 }
 
-let db: DB = load();
-const listeners = new Set<() => void>();
+const runtimeGlobal = globalThis as typeof globalThis & {
+  __ramosStoreRuntime?: StoreRuntime;
+  __ramosPersistLifecycleBound?: boolean;
+};
 
-const persistLifecycle = globalThis as typeof globalThis & { __ramosPersistLifecycleBound?: boolean };
-if (typeof window !== "undefined" && !persistLifecycle.__ramosPersistLifecycleBound) {
-  const syncFromStorage = () => {
-    db = load();
-    listeners.forEach((l) => l());
+const store = runtimeGlobal.__ramosStoreRuntime ??= {
+  db: EMPTY_DB,
+  status: { hydrated: typeof window === "undefined", persistPending: false },
+  listeners: new Set<() => void>(),
+  persistChain: Promise.resolve(),
+};
+
+function emit() {
+  store.listeners.forEach((listener) => listener());
+}
+
+function openIndexedDB() {
+  if (typeof window === "undefined" || !("indexedDB" in window)) {
+    return Promise.reject(new Error("IndexedDB indisponível neste navegador."));
+  }
+
+  if (!store.idbPromise) {
+    store.idbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+      const request = window.indexedDB.open(INDEXED_DB_NAME, 1);
+
+      request.onupgradeneeded = () => {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(INDEXED_DB_STORE)) {
+          database.createObjectStore(INDEXED_DB_STORE);
+        }
+      };
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error("Não foi possível abrir o armazenamento local."));
+    });
+  }
+
+  return store.idbPromise;
+}
+
+async function readIndexedDB(): Promise<DB | null> {
+  const database = await openIndexedDB();
+
+  return new Promise<DB | null>((resolve, reject) => {
+    const transaction = database.transaction(INDEXED_DB_STORE, "readonly");
+    const request = transaction.objectStore(INDEXED_DB_STORE).get(INDEXED_DB_RECORD);
+
+    request.onsuccess = () => {
+      resolve(request.result ? normalizeDB(request.result as Partial<DB>) : null);
+    };
+    request.onerror = () => reject(request.error ?? new Error("Não foi possível ler os dados locais."));
+  });
+}
+
+async function writeIndexedDB(nextDB: DB) {
+  const database = await openIndexedDB();
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(INDEXED_DB_STORE, "readwrite");
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error("Não foi possível salvar os dados locais."));
+    transaction.objectStore(INDEXED_DB_STORE).put(nextDB, INDEXED_DB_RECORD);
+  });
+}
+
+async function loadPersistedDB() {
+  try {
+    const indexed = await readIndexedDB();
+    if (indexed) return indexed;
+  } catch (error) {
+    console.warn("Falha ao ler IndexedDB, usando backup legado.", error);
+  }
+
+  const legacy = loadLegacyLocalStorage();
+  if (!isEmptyDB(legacy)) {
+    try {
+      await writeIndexedDB(legacy);
+    } catch (error) {
+      console.warn("Falha ao migrar dados legados para IndexedDB.", error);
+    }
+    return legacy;
+  }
+
+  return EMPTY_DB;
+}
+
+async function flushPersist(snapshot: DB) {
+  try {
+    await writeIndexedDB(snapshot);
+    store.status = { ...store.status, persistPending: false, persistenceError: undefined };
+  } catch (error) {
+    console.error("Falha ao persistir dados no navegador", error);
+    saveLegacyLocalStorage(snapshot);
+    store.status = {
+      ...store.status,
+      persistPending: false,
+      persistenceError: "Alguns dados foram mantidos em backup local por segurança.",
+    };
+  }
+  emit();
+}
+
+function queuePersist(immediate = false) {
+  if (typeof window === "undefined") return;
+
+  const schedule = () => {
+    store.persistTimer = undefined;
+    const snapshot = store.db;
+    store.persistChain = store.persistChain.then(() => flushPersist(snapshot));
   };
 
-  window.addEventListener("pageshow", syncFromStorage);
-  window.addEventListener("storage", (event) => {
-    if (event.key && event.key !== KEY) return;
-    syncFromStorage();
+  store.status = { ...store.status, persistPending: true, persistenceError: undefined };
+  emit();
+
+  if (store.persistTimer) {
+    window.clearTimeout(store.persistTimer);
+  }
+
+  if (immediate) {
+    schedule();
+    return;
+  }
+
+  store.persistTimer = window.setTimeout(schedule, 120);
+}
+
+function ensureInitialized() {
+  if (typeof window === "undefined" || store.initPromise) return;
+
+  store.status = { ...store.status, hydrated: false };
+  store.initPromise = loadPersistedDB()
+    .then((loaded) => {
+      store.db = loaded;
+    })
+    .catch((error) => {
+      console.error("Falha ao carregar dados locais", error);
+      store.status = {
+        ...store.status,
+        persistenceError: "Não foi possível carregar o armazenamento local salvo.",
+      };
+    })
+    .finally(() => {
+      store.status = { ...store.status, hydrated: true };
+      emit();
+    });
+}
+
+ensureInitialized();
+
+if (typeof window !== "undefined" && !runtimeGlobal.__ramosPersistLifecycleBound) {
+  const flushBeforeExit = () => {
+    if (store.persistTimer) {
+      window.clearTimeout(store.persistTimer);
+      store.persistTimer = undefined;
+    }
+    saveLegacyLocalStorage(store.db);
+    queuePersist(true);
+  };
+
+  window.addEventListener("pagehide", flushBeforeExit);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushBeforeExit();
   });
-  persistLifecycle.__ramosPersistLifecycleBound = true;
+  runtimeGlobal.__ramosPersistLifecycleBound = true;
 }
 
 function persist() {
-  save(db);
-  listeners.forEach((l) => l());
+  queuePersist();
+  emit();
 }
 
-function subscribe(l: () => void) {
-  listeners.add(l);
+function subscribe(listener: () => void) {
+  store.listeners.add(listener);
   return () => {
-    listeners.delete(l);
+    store.listeners.delete(listener);
   };
 }
 
 function getSnapshot() {
-  return db;
+  return store.db;
 }
 
 function getServerSnapshot(): DB {
   return EMPTY_DB;
 }
 
+function getStatusSnapshot() {
+  return store.status;
+}
+
+function getServerStatusSnapshot(): DBStatus {
+  return { hydrated: false, persistPending: false };
+}
+
 export function useDB() {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
+export function useDBStatus() {
+  return useSyncExternalStore(subscribe, getStatusSnapshot, getServerStatusSnapshot);
+}
+
 export function useDBSelector<T>(selector: (state: DB) => T, isEqual: (a: T, b: T) => boolean = Object.is) {
-  const [selected, setSelected] = useState(() => selector(db));
+  const [selected, setSelected] = useState(() => selector(store.db));
   const selectedRef = useRef(selected);
   const selectorRef = useRef(selector);
   const isEqualRef = useRef(isEqual);
@@ -126,7 +319,7 @@ export function useDBSelector<T>(selector: (state: DB) => T, isEqual: (a: T, b: 
   isEqualRef.current = isEqual;
 
   useEffect(() => {
-    const next = selector(db);
+    const next = selector(store.db);
     if (!isEqualRef.current(selectedRef.current, next)) {
       selectedRef.current = next;
       setSelected(next);
@@ -135,7 +328,7 @@ export function useDBSelector<T>(selector: (state: DB) => T, isEqual: (a: T, b: 
 
   useEffect(() => {
     return subscribe(() => {
-      const next = selectorRef.current(db);
+      const next = selectorRef.current(store.db);
       if (!isEqualRef.current(selectedRef.current, next)) {
         selectedRef.current = next;
         setSelected(next);
@@ -148,75 +341,79 @@ export function useDBSelector<T>(selector: (state: DB) => T, isEqual: (a: T, b: 
 
 const id = () => Math.random().toString(36).slice(2, 11);
 
-// Clients
 export function addClient(data: Omit<Client, "id" | "createdAt">) {
-  const c: Client = { ...data, id: id(), createdAt: new Date().toISOString() };
-  db = { ...db, clients: [c, ...db.clients] };
+  const client: Client = { ...data, id: id(), createdAt: new Date().toISOString() };
+  store.db = { ...store.db, clients: [client, ...store.db.clients] };
   persist();
-  return c;
+  return client;
 }
+
 export function updateClient(cid: string, data: Partial<Client>) {
-  db = { ...db, clients: db.clients.map((c) => (c.id === cid ? { ...c, ...data } : c)) };
+  store.db = { ...store.db, clients: store.db.clients.map((client) => (client.id === cid ? { ...client, ...data } : client)) };
   persist();
 }
+
 export function deleteClient(cid: string) {
-  db = {
-    ...db,
-    clients: db.clients.filter((c) => c.id !== cid),
-    empreendimentos: db.empreendimentos.filter((e) => e.clientId !== cid),
-    projects: db.projects.filter((p) => p.clientId !== cid),
-    surveys: db.surveys.filter((s) => {
-      const proj = db.projects.find((p) => p.id === s.projectId);
-      return proj && proj.clientId !== cid;
-    }),
+  const remainingProjects = store.db.projects.filter((project) => project.clientId !== cid);
+  const remainingProjectIds = new Set(remainingProjects.map((project) => project.id));
+
+  store.db = {
+    ...store.db,
+    clients: store.db.clients.filter((client) => client.id !== cid),
+    empreendimentos: store.db.empreendimentos.filter((empreendimento) => empreendimento.clientId !== cid),
+    projects: remainingProjects,
+    surveys: store.db.surveys.filter((survey) => remainingProjectIds.has(survey.projectId)),
   };
   persist();
 }
 
-// Empreendimentos
 export function addEmpreendimento(data: Omit<Empreendimento, "id" | "createdAt">) {
-  const e: Empreendimento = { ...data, id: id(), createdAt: new Date().toISOString() };
-  db = { ...db, empreendimentos: [e, ...db.empreendimentos] };
+  const empreendimento: Empreendimento = { ...data, id: id(), createdAt: new Date().toISOString() };
+  store.db = { ...store.db, empreendimentos: [empreendimento, ...store.db.empreendimentos] };
   persist();
-  return e;
+  return empreendimento;
 }
+
 export function updateEmpreendimento(eid: string, data: Partial<Empreendimento>) {
-  db = { ...db, empreendimentos: db.empreendimentos.map((e) => (e.id === eid ? { ...e, ...data } : e)) };
+  store.db = {
+    ...store.db,
+    empreendimentos: store.db.empreendimentos.map((empreendimento) => (empreendimento.id === eid ? { ...empreendimento, ...data } : empreendimento)),
+  };
   persist();
 }
+
 export function deleteEmpreendimento(eid: string) {
-  db = {
-    ...db,
-    empreendimentos: db.empreendimentos.filter((e) => e.id !== eid),
-    projects: db.projects.map((p) => (p.empreendimentoId === eid ? { ...p, empreendimentoId: undefined } : p)),
+  store.db = {
+    ...store.db,
+    empreendimentos: store.db.empreendimentos.filter((empreendimento) => empreendimento.id !== eid),
+    projects: store.db.projects.map((project) => (project.empreendimentoId === eid ? { ...project, empreendimentoId: undefined } : project)),
   };
   persist();
 }
 
-// Projects
 export function addProject(data: Omit<Project, "id" | "createdAt">) {
-  const p: Project = { ...data, id: id(), createdAt: new Date().toISOString() };
-  db = { ...db, projects: [p, ...db.projects] };
+  const project: Project = { ...data, id: id(), createdAt: new Date().toISOString() };
+  store.db = { ...store.db, projects: [project, ...store.db.projects] };
   persist();
-  return p;
+  return project;
 }
+
 export function deleteProject(pid: string) {
-  db = {
-    ...db,
-    projects: db.projects.filter((p) => p.id !== pid),
-    surveys: db.surveys.filter((s) => s.projectId !== pid),
+  store.db = {
+    ...store.db,
+    projects: store.db.projects.filter((project) => project.id !== pid),
+    surveys: store.db.surveys.filter((survey) => survey.projectId !== pid),
   };
   persist();
 }
 
-// Surveys
 export function addSurvey(data: { projectId: string; type: SurveyType; title: string }) {
-  const mods = getModulesForType(data.type);
   const modules: Record<string, ModuleState> = {};
-  mods.forEach((m) => {
-    modules[m.id] = { status: "nao_iniciado", values: {}, fieldStatus: {}, attachments: [] };
+  getModulesForType(data.type).forEach((module) => {
+    modules[module.id] = createModuleState();
   });
-  const s: Survey = {
+
+  const survey: Survey = {
     id: id(),
     projectId: data.projectId,
     type: data.type,
@@ -227,77 +424,83 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
     signatures: {},
     createdAt: new Date().toISOString(),
   };
-  db = { ...db, surveys: [s, ...db.surveys] };
+
+  store.db = { ...store.db, surveys: [survey, ...store.db.surveys] };
   persist();
-  return s;
+  return survey;
 }
+
 export function updateSurvey(sid: string, data: Partial<Survey>) {
-  db = {
-    ...db,
-    surveys: db.surveys.map((s) => (s.id === sid ? normalizeSurvey({ ...s, ...data }) : s)),
+  store.db = {
+    ...store.db,
+    surveys: store.db.surveys.map((survey) => (survey.id === sid ? normalizeSurvey({ ...survey, ...data }) : survey)),
   };
   persist();
 }
+
 export function deleteSurvey(sid: string) {
-  db = { ...db, surveys: db.surveys.filter((s) => s.id !== sid) };
+  store.db = { ...store.db, surveys: store.db.surveys.filter((survey) => survey.id !== sid) };
   persist();
 }
 
 export function updateModule(sid: string, modId: string, patch: Partial<ModuleState>) {
-  db = {
-    ...db,
-    surveys: db.surveys.map((s) =>
-      s.id === sid
+  store.db = {
+    ...store.db,
+    surveys: store.db.surveys.map((survey) =>
+      survey.id === sid
         ? {
-            ...s,
+            ...survey,
             modules: {
-              ...s.modules,
-              [modId]: normalizeModuleState({ ...(s.modules[modId] ?? createModuleState()), ...patch }),
+              ...survey.modules,
+              [modId]: normalizeModuleState({ ...(survey.modules[modId] ?? createModuleState()), ...patch }),
             },
           }
-        : s,
+        : survey,
     ),
   };
   persist();
 }
 
 export function setFieldValue(sid: string, modId: string, fieldId: string, value: any) {
-  const survey = db.surveys.find((s) => s.id === sid);
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  const mod = survey.modules[modId];
+  const moduleState = survey.modules[modId];
   updateModule(sid, modId, {
-    values: { ...mod.values, [fieldId]: value },
-    status: mod.status === "nao_iniciado" ? "em_andamento" : mod.status,
+    values: { ...moduleState.values, [fieldId]: value },
+    status: moduleState.status === "nao_iniciado" ? "em_andamento" : moduleState.status,
   });
 }
 
 export function setFieldStatus(sid: string, modId: string, fieldId: string, status: FieldStatus) {
-  const survey = db.surveys.find((s) => s.id === sid);
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  const mod = survey.modules[modId];
-  updateModule(sid, modId, { fieldStatus: { ...mod.fieldStatus, [fieldId]: status } });
+  const moduleState = survey.modules[modId];
+  updateModule(sid, modId, { fieldStatus: { ...moduleState.fieldStatus, [fieldId]: status } });
 }
 
 export function setFieldNote(sid: string, modId: string, fieldId: string, note: string) {
-  const survey = db.surveys.find((s) => s.id === sid);
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  const mod = survey.modules[modId];
-  const next = { ...(mod.fieldNotes ?? {}) };
-  if (note.trim()) next[fieldId] = note;
-  else delete next[fieldId];
-  updateModule(sid, modId, { fieldNotes: next });
+  const moduleState = survey.modules[modId];
+  const nextNotes = { ...(moduleState.fieldNotes ?? {}) };
+  if (note.trim()) nextNotes[fieldId] = note;
+  else delete nextNotes[fieldId];
+  updateModule(sid, modId, { fieldNotes: nextNotes });
 }
 
 export function setFieldNA(sid: string, modId: string, fieldId: string, na: boolean) {
-  const survey = db.surveys.find((s) => s.id === sid);
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  const mod = survey.modules[modId];
-  const next = { ...(mod.nonApplicable ?? {}) };
-  if (na) next[fieldId] = true; else delete next[fieldId];
-  const nextFieldStatus = { ...mod.fieldStatus };
+  const moduleState = survey.modules[modId];
+  const nextNonApplicable = { ...(moduleState.nonApplicable ?? {}) };
+  if (na) nextNonApplicable[fieldId] = true;
+  else delete nextNonApplicable[fieldId];
+
+  const nextFieldStatus = { ...moduleState.fieldStatus };
   if (na) nextFieldStatus[fieldId] = "nao_se_aplica";
   else if (nextFieldStatus[fieldId] === "nao_se_aplica") delete nextFieldStatus[fieldId];
-  updateModule(sid, modId, { nonApplicable: next, fieldStatus: nextFieldStatus });
+
+  updateModule(sid, modId, { nonApplicable: nextNonApplicable, fieldStatus: nextFieldStatus });
 }
 
 export function setEnabledModules(sid: string, ids: string[]) {
@@ -305,27 +508,28 @@ export function setEnabledModules(sid: string, ids: string[]) {
 }
 
 export function addAttachment(sid: string, modId: string, att: Attachment) {
-  const survey = db.surveys.find((s) => s.id === sid);
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  const mod = survey.modules[modId];
-  updateModule(sid, modId, { attachments: [...mod.attachments, att] });
+  const moduleState = survey.modules[modId];
+  updateModule(sid, modId, { attachments: [...moduleState.attachments, att] });
 }
 
 export function removeAttachment(sid: string, modId: string, attId: string) {
-  const survey = db.surveys.find((s) => s.id === sid);
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  const mod = survey.modules[modId];
-  updateModule(sid, modId, { attachments: mod.attachments.filter((a) => a.id !== attId) });
+  const moduleState = survey.modules[modId];
+  updateModule(sid, modId, { attachments: moduleState.attachments.filter((attachment) => attachment.id !== attId) });
 }
 
-export function addPendencia(sid: string, p: Omit<Pendencia, "id" | "createdAt">) {
-  const survey = db.surveys.find((s) => s.id === sid);
+export function addPendencia(sid: string, pendencia: Omit<Pendencia, "id" | "createdAt">) {
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  const np: Pendencia = { ...p, id: id(), createdAt: new Date().toISOString() };
-  updateSurvey(sid, { pendencias: [np, ...survey.pendencias] });
+  const nextPendencia: Pendencia = { ...pendencia, id: id(), createdAt: new Date().toISOString() };
+  updateSurvey(sid, { pendencias: [nextPendencia, ...survey.pendencias] });
 }
+
 export function removePendencia(sid: string, pid: string) {
-  const survey = db.surveys.find((s) => s.id === sid);
+  const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
-  updateSurvey(sid, { pendencias: survey.pendencias.filter((p) => p.id !== pid) });
+  updateSurvey(sid, { pendencias: survey.pendencias.filter((pendencia) => pendencia.id !== pid) });
 }

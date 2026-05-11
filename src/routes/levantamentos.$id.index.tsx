@@ -449,6 +449,7 @@ function ModulePanel({ survey, module: m, onModuleDone }: { survey: any; module:
         onStatus={(s) => handleFieldStatus(f.id, s)}
         onNote={(n) => handleNote(f.id, n)}
         onNA={(na) => handleNA(f.id, na)}
+        moduleValues={values}
       />
     );
   }

@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import type { FieldDef, FieldStatus, Person, HoursValue, HoursTurno, HoursPreset } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { MapPin, MessageSquarePlus, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock } from "lucide-react";
+import { MapPin, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock, Copy } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 
 interface Props {
@@ -52,6 +52,17 @@ function summarize(field: FieldDef, value: any): string {
     const turnos = v.turnos?.length ? ` · ${v.turnos.length} turno(s)` : "";
     return `${presetLabel}${turnos}`;
   }
+  if (field.type === "repeater" && Array.isArray(value)) {
+    return `${value.length} item(ns)`;
+  }
+  if (field.type === "apply-to-sides" && typeof value === "object") {
+    const sides = field.sides ?? ["Frente", "Fundos", "Lado direito", "Lado esquerdo"];
+    const filled = sides.filter((s) => (value as Record<string, string>)[s]).length;
+    return `${filled}/${sides.length} lados`;
+  }
+  if (field.type === "number" && field.unitOptions && typeof value === "object" && value !== null) {
+    return `${(value as any).value ?? ""} ${(value as any).unit ?? ""}`.trim();
+  }
   if (Array.isArray(value)) return value.join(", ");
   return String(value);
 }
@@ -80,6 +91,299 @@ const HOURS_PRESET_DEFAULTS: Record<HoursPreset, HoursTurno[]> = {
 };
 
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+// ============================ NumberField (estrito) ===========================
+function NumberField({ field, value, onChange, onBlur }: { field: FieldDef; value: any; onChange: (v: any) => void; onBlur: () => void }) {
+  const allowDecimal = field.decimal !== false;
+  const useUnit = !!field.unitOptions?.length;
+  const v = useUnit && typeof value === "object" && value !== null ? value : { value: value ?? "", unit: useUnit ? field.unitOptions![0] : undefined };
+  const cur: string = String(useUnit ? (v.value ?? "") : (value ?? ""));
+  const unit: string | undefined = useUnit ? v.unit : undefined;
+
+  function setVal(next: string) {
+    // Filtra: aceita apenas dígitos e (opcionalmente) um separador decimal
+    const re = allowDecimal ? /[^0-9.,]/g : /[^0-9]/g;
+    let cleaned = next.replace(re, "");
+    if (allowDecimal) {
+      // normaliza vírgula para ponto e mantém apenas o primeiro
+      cleaned = cleaned.replace(",", ".");
+      const parts = cleaned.split(".");
+      if (parts.length > 2) cleaned = parts[0] + "." + parts.slice(1).join("");
+    }
+    if (useUnit) onChange({ value: cleaned, unit });
+    else onChange(cleaned);
+  }
+  function setUnit(u: string) {
+    onChange({ value: cur, unit: u });
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        inputMode={allowDecimal ? "decimal" : "numeric"}
+        value={cur}
+        placeholder={field.placeholder}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={onBlur}
+      />
+      {field.presets && field.presets.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {field.presets.map((p) => (
+            <button key={String(p)} type="button" onClick={() => setVal(String(p))}
+              className="text-[11px] rounded-full px-2 py-0.5 border border-border hover:bg-secondary">
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
+      {useUnit && (
+        <Select value={unit ?? ""} onValueChange={setUnit}>
+          <SelectTrigger className="h-9 w-24"><SelectValue /></SelectTrigger>
+          <SelectContent>{field.unitOptions!.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}
+
+// ============================ ButtonSelectField ===============================
+function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
+  const multi = !!field.multi;
+  const options = field.options ?? [];
+  const selected: string[] = multi
+    ? (Array.isArray(value) ? value : [])
+    : (value ? [String(value)] : []);
+  const [otherOpen, setOtherOpen] = useState(false);
+  const [otherValue, setOtherValue] = useState("");
+
+  function toggle(opt: string) {
+    if (multi) {
+      const has = selected.includes(opt);
+      onChange(has ? selected.filter((x) => x !== opt) : [...selected, opt]);
+    } else {
+      onChange(selected[0] === opt ? "" : opt);
+    }
+  }
+  function addOther() {
+    const v = otherValue.trim();
+    if (!v) return;
+    if (multi) onChange([...selected, v]);
+    else onChange(v);
+    setOtherValue("");
+    setOtherOpen(false);
+  }
+
+  // Itens "outros" (selecionados que não estão em options)
+  const otherItems = selected.filter((s) => !options.includes(s));
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => {
+        const checked = selected.includes(o);
+        return (
+          <button type="button" key={o} onClick={() => toggle(o)}
+            className={`text-xs rounded-full px-3 py-1 border transition-colors ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}>
+            {o}
+          </button>
+        );
+      })}
+      {otherItems.map((o) => (
+        <span key={o} className="text-xs rounded-full px-2.5 py-1 border bg-primary text-primary-foreground border-primary inline-flex items-center gap-1">
+          {o}
+          <button type="button" onClick={() => toggle(o)} className="opacity-80 hover:opacity-100">×</button>
+        </span>
+      ))}
+      {field.allowOther && !otherOpen && (
+        <button type="button" onClick={() => setOtherOpen(true)}
+          className="text-xs rounded-full px-2.5 py-1 border border-dashed border-border hover:bg-secondary inline-flex items-center gap-1">
+          <Plus className="h-3 w-3" /> Outra
+        </button>
+      )}
+      {field.allowOther && otherOpen && (
+        <div className="inline-flex items-center gap-1">
+          <Input className="h-7 w-40 text-xs" autoFocus value={otherValue} onChange={(e) => setOtherValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOther(); } if (e.key === "Escape") { setOtherOpen(false); setOtherValue(""); } }} placeholder="Descreva…" />
+          <Button type="button" size="sm" variant="outline" className="h-7" onClick={addOther}>Adicionar</Button>
+          <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => { setOtherOpen(false); setOtherValue(""); }}>Cancelar</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================ ApplyToSidesField ===============================
+function ApplyToSidesField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
+  const sides = field.sides ?? ["Frente", "Fundos", "Lado direito", "Lado esquerdo"];
+  const options = field.options ?? [];
+  const v: Record<string, string> = (value && typeof value === "object") ? value : {};
+  const [activeSide, setActiveSide] = useState<string | null>(null);
+
+  function setSide(side: string, opt: string) {
+    onChange({ ...v, [side]: v[side] === opt ? "" : opt });
+  }
+  function applyToOthers(side: string) {
+    const opt = v[side];
+    if (!opt) return;
+    const next: Record<string, string> = { ...v };
+    sides.forEach((s) => { if (!next[s]) next[s] = opt; });
+    onChange(next);
+  }
+
+  return (
+    <div className="grid gap-2">
+      {sides.map((side) => {
+        const cur = v[side] ?? "";
+        const isActive = activeSide === side || !cur;
+        return (
+          <div key={side} className="rounded-md border border-border p-2 bg-card/50">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-xs font-medium">{side}{cur && <span className="ml-2 text-muted-foreground font-normal">{cur}</span>}</div>
+              <div className="flex items-center gap-1">
+                {cur && (
+                  <button type="button" onClick={() => applyToOthers(side)} title="Aplicar aos demais lados vazios"
+                    className="text-[11px] inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border hover:bg-secondary">
+                    <Copy className="h-3 w-3" /> Aplicar aos demais
+                  </button>
+                )}
+                <button type="button" onClick={() => setActiveSide(isActive ? null : side)}
+                  className="text-[11px] px-1.5 py-0.5 rounded hover:bg-secondary text-muted-foreground">
+                  {isActive ? "—" : "Editar"}
+                </button>
+              </div>
+            </div>
+            {isActive && (
+              <div className="flex flex-wrap gap-1.5">
+                {options.map((o) => (
+                  <button type="button" key={o} onClick={() => setSide(side, o)}
+                    className={`text-xs rounded-full px-2.5 py-1 border ${cur === o ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}>
+                    {o}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================ RepeaterField ===================================
+function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
+  const items: Array<Record<string, any>> = Array.isArray(value) ? value : [];
+  const itemFields = field.itemFields ?? [];
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [picker, setPicker] = useState(items.length === 0);
+
+  function addItem(initial: Record<string, any> = {}) {
+    const id = Math.random().toString(36).slice(2, 9);
+    const next = [...items, { __id: id, ...initial }];
+    onChange(next);
+    setOpenIdx(next.length - 1);
+    setPicker(false);
+  }
+  function updateItem(idx: number, patch: Record<string, any>) {
+    onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  }
+  function removeItem(idx: number) {
+    onChange(items.filter((_, i) => i !== idx));
+    if (openIdx === idx) setOpenIdx(null);
+  }
+
+  // Primeiro field é tratado como "rótulo" do item
+  const labelField = itemFields[0];
+
+  // Picker de presets (se primeiro field for button-select com options)
+  const presets: string[] = labelField?.options ?? [];
+
+  return (
+    <div className="grid gap-2">
+      {items.map((it, idx) => {
+        const open = openIdx === idx;
+        const labelVal = labelField ? it[labelField.id] : "";
+        const summaryParts = itemFields.slice(1).map((f) => {
+          const val = it[f.id];
+          if (val == null || val === "") return null;
+          return `${f.label}: ${Array.isArray(val) ? val.join(", ") : val}${f.unit ? ` ${f.unit}` : ""}`;
+        }).filter(Boolean);
+        return (
+          <div key={it.__id ?? idx} className="rounded-md border border-border bg-card">
+            <div className="flex items-center justify-between gap-2 p-2">
+              <button type="button" onClick={() => setOpenIdx(open ? null : idx)}
+                className="flex-1 text-left min-w-0">
+                <div className="text-sm font-medium truncate">{labelVal || `Item ${idx + 1}`}</div>
+                {summaryParts.length > 0 && (
+                  <div className="text-[11px] text-muted-foreground truncate">{summaryParts.join(" · ")}</div>
+                )}
+              </button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeItem(idx)} title="Remover">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            {open && (
+              <div className="border-t border-border p-2 grid gap-2">
+                {itemFields.map((f) => (
+                  <RepeaterItemField key={f.id} field={f} value={it[f.id]} onChange={(v) => updateItem(idx, { [f.id]: v })} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {picker && presets.length > 0 ? (
+        <div className="rounded-md border border-dashed border-border p-2 bg-card/50">
+          <div className="text-[11px] text-muted-foreground mb-1.5">Selecione para adicionar:</div>
+          <div className="flex flex-wrap gap-1.5">
+            {presets.map((p) => (
+              <button key={p} type="button" onClick={() => addItem({ [labelField!.id]: p })}
+                className="text-xs rounded-full px-2.5 py-1 border border-border hover:bg-secondary">
+                {p}
+              </button>
+            ))}
+            <button type="button" onClick={() => addItem()}
+              className="text-xs rounded-full px-2.5 py-1 border border-dashed border-border hover:bg-secondary inline-flex items-center gap-1">
+              <Plus className="h-3 w-3" /> {field.addItemLabel ?? "Outro"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          {presets.length > 0 && (
+            <Button type="button" variant="outline" size="sm" onClick={() => setPicker(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> {field.addItemLabel ?? "Adicionar"}
+            </Button>
+          )}
+          {presets.length === 0 && (
+            <Button type="button" variant="outline" size="sm" onClick={() => addItem()}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> {field.addItemLabel ?? "Adicionar"}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Renderer leve para campos dentro de um item de repeater
+function RepeaterItemField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
+  return (
+    <div className="grid gap-1">
+      <label className="text-[11px] text-muted-foreground">{field.label}{field.unit ? ` (${field.unit})` : ""}</label>
+      {field.type === "text" && <Input className="h-8" value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder} />}
+      {field.type === "textarea" && <Textarea rows={2} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
+      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} />}
+      {field.type === "select" && (
+        <Select value={value ?? ""} onValueChange={onChange}>
+          <SelectTrigger className="h-8"><SelectValue placeholder="Selecione" /></SelectTrigger>
+          <SelectContent>{(field.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+        </Select>
+      )}
+      {field.type === "button-select" && <ButtonSelectField field={field} value={value} onChange={onChange} />}
+      {field.type === "boolean" && (
+        <div className="flex items-center gap-2"><Switch checked={!!value} onCheckedChange={onChange} /><span className="text-xs text-muted-foreground">{value ? "Sim" : "Não"}</span></div>
+      )}
+    </div>
+  );
+}
 
 function PeopleEditor({ value, onChange }: { value: Person[] | undefined; onChange: (v: Person[]) => void }) {
   const list = Array.isArray(value) ? value : [];
@@ -190,8 +494,12 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
 }
 
 function FieldRendererComponent({ field, value, status, note, na, onChange, onStatus, onNote, onNA }: Props) {
-  const [noteOpen, setNoteOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(hasValue(value));
+
+  // Auto-collapse quando concluído ou quando vira N/A
+  useEffect(() => {
+    if (status === "concluido" && hasValue(value)) setCollapsed(true);
+  }, [status, value]);
 
   function captureCoords() {
     if (!navigator.geolocation) return alert("Geolocalização não disponível");
@@ -243,11 +551,6 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           {field.label}{field.unit && <span className="text-muted-foreground font-normal"> ({field.unit})</span>}
         </label>
         <div className="flex items-center gap-1">
-          {onNote && (
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" title="Adicionar observação" onClick={() => setNoteOpen((v) => !v)}>
-              <MessageSquarePlus className={`h-3.5 w-3.5 ${note ? "text-primary" : ""}`} />
-            </Button>
-          )}
           {onNA && (
             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" title="Marcar como não se aplica" onClick={() => onNA(true)}>
               <Ban className="h-3.5 w-3.5" />
@@ -263,7 +566,7 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
       </div>
 
       {field.type === "text" && <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
-      {field.type === "number" && <Input type="number" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
+      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => hasValue(value) && setCollapsed(true)} />}
       {field.type === "date" && <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
       {field.type === "time" && <Input type="time" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
       {field.type === "textarea" && <Textarea rows={3} value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
@@ -290,6 +593,15 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           })}
         </div>
       )}
+      {field.type === "button-select" && (
+        <ButtonSelectField field={field} value={value} onChange={onChange} />
+      )}
+      {field.type === "apply-to-sides" && (
+        <ApplyToSidesField field={field} value={value} onChange={onChange} />
+      )}
+      {field.type === "repeater" && (
+        <RepeaterField field={field} value={value} onChange={onChange} />
+      )}
       {field.type === "coords" && (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
@@ -305,18 +617,6 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
       )}
       {field.type === "hours-presets" && (
         <HoursPresetEditor value={value as HoursValue | undefined} onChange={onChange} />
-      )}
-
-      {(noteOpen || note) && onNote && (
-        <div className="mt-2">
-          <Textarea
-            rows={2}
-            placeholder="Observação sobre este item…"
-            value={note ?? ""}
-            onChange={(e) => onNote(e.target.value)}
-            className="text-xs"
-          />
-        </div>
       )}
 
       {hasValue(value) && (

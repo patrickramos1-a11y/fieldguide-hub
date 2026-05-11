@@ -19,6 +19,7 @@ interface Props {
   onStatus: (s: FieldStatus) => void;
   onNote?: (note: string) => void;
   onNA?: (na: boolean) => void;
+  moduleValues?: Record<string, any>;
 }
 
 const STATUS_OPTIONS: FieldStatus[] = [
@@ -93,7 +94,7 @@ const HOURS_PRESET_DEFAULTS: Record<HoursPreset, HoursTurno[]> = {
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 // ============================ NumberField (estrito) ===========================
-function NumberField({ field, value, onChange, onBlur }: { field: FieldDef; value: any; onChange: (v: any) => void; onBlur: () => void }) {
+function NumberField({ field, value, onChange, onBlur, moduleValues }: { field: FieldDef; value: any; onChange: (v: any) => void; onBlur: () => void; moduleValues?: Record<string, any> }) {
   const allowDecimal = field.decimal !== false;
   const useUnit = !!field.unitOptions?.length;
   const v = useUnit && typeof value === "object" && value !== null ? value : { value: value ?? "", unit: useUnit ? field.unitOptions![0] : undefined };
@@ -116,7 +117,22 @@ function NumberField({ field, value, onChange, onBlur }: { field: FieldDef; valu
   function setUnit(u: string) {
     onChange({ value: cur, unit: u });
   }
+  // Sugestão de área a partir das dimensões do terreno
+  let suggestion: number | null = null;
+  if (field.suggestFrom?.kind === "areaFromDims" && moduleValues) {
+    const num = (k: string) => {
+      const r = moduleValues[k];
+      const x = typeof r === "object" && r ? r.value : r;
+      const n = parseFloat(String(x ?? "").replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const f = num("dim_frente"), fu = num("dim_fundos"), ld = num("dim_lado_dir"), le = num("dim_lado_esq");
+    const larg = (f && fu) ? (f + fu) / 2 : (f || fu);
+    const comp = (ld && le) ? (ld + le) / 2 : (ld || le);
+    if (larg > 0 && comp > 0) suggestion = Math.round(larg * comp);
+  }
   return (
+    <div className="flex flex-col gap-1.5">
     <div className="flex items-center gap-2">
       <Input
         inputMode={allowDecimal ? "decimal" : "numeric"}
@@ -142,13 +158,44 @@ function NumberField({ field, value, onChange, onBlur }: { field: FieldDef; valu
         </Select>
       )}
     </div>
+      {suggestion !== null && Number(cur) !== suggestion && (
+        <button type="button" onClick={() => setVal(String(suggestion))}
+          className="self-start text-[11px] rounded-full px-2 py-0.5 border border-dashed border-primary/60 text-primary hover:bg-primary/10">
+          Calcular ≈ {suggestion} m² (frente × lateral)
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================ QuantityField (stepper) ========================
+function QuantityField({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+  const n = (() => {
+    const x = typeof value === "object" && value ? value.value : value;
+    const p = parseInt(String(x ?? "0"), 10);
+    return Number.isFinite(p) ? p : 0;
+  })();
+  function set(next: number) { onChange(Math.max(0, next)); }
+  return (
+    <div className="inline-flex items-center gap-1">
+      <Button type="button" variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => set(n - 1)}>−</Button>
+      <Input className="h-8 w-16 text-center" inputMode="numeric" value={String(n)}
+        onChange={(e) => set(parseInt(e.target.value.replace(/\D/g, ""), 10) || 0)} />
+      <Button type="button" variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => set(n + 1)}>+</Button>
+    </div>
   );
 }
 
 // ============================ ButtonSelectField ===============================
 function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
   const multi = !!field.multi;
-  const options = field.options ?? [];
+  const baseOptions = field.options ?? [];
+  const learnKey = field.learn ? `learned:${field.id}` : null;
+  const [learned, setLearned] = useState<string[]>(() => {
+    if (!learnKey || typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem(learnKey) ?? "[]") as string[]; } catch { return []; }
+  });
+  const options = [...baseOptions, ...learned.filter((l) => !baseOptions.includes(l))];
   const selected: string[] = multi
     ? (Array.isArray(value) ? value : [])
     : (value ? [String(value)] : []);
@@ -168,8 +215,19 @@ function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value:
     if (!v) return;
     if (multi) onChange([...selected, v]);
     else onChange(v);
+    if (learnKey && !options.includes(v)) {
+      const next = [...learned, v];
+      setLearned(next);
+      try { localStorage.setItem(learnKey, JSON.stringify(next)); } catch {}
+    }
     setOtherValue("");
     setOtherOpen(false);
+  }
+  function forgetLearned(opt: string) {
+    if (!learnKey) return;
+    const next = learned.filter((x) => x !== opt);
+    setLearned(next);
+    try { localStorage.setItem(learnKey, JSON.stringify(next)); } catch {}
   }
 
   // Itens "outros" (selecionados que não estão em options)
@@ -179,11 +237,19 @@ function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value:
     <div className="flex flex-wrap gap-1.5">
       {options.map((o) => {
         const checked = selected.includes(o);
+        const isLearned = learnKey && learned.includes(o) && !baseOptions.includes(o);
         return (
-          <button type="button" key={o} onClick={() => toggle(o)}
-            className={`text-xs rounded-full px-3 py-1 border transition-colors ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}>
-            {o}
-          </button>
+          <span key={o} className="inline-flex items-center">
+            <button type="button" onClick={() => toggle(o)}
+              className={`text-xs rounded-full px-3 py-1 border transition-colors ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"} ${isLearned ? "border-dashed" : ""}`}
+              title={isLearned ? "Opção aprendida" : undefined}>
+              {o}
+            </button>
+            {isLearned && !checked && (
+              <button type="button" onClick={() => forgetLearned(o)} title="Esquecer"
+                className="ml-0.5 text-[10px] text-muted-foreground hover:text-destructive">×</button>
+            )}
+          </span>
         );
       })}
       {otherItems.map((o) => (
@@ -272,16 +338,21 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
   const items: Array<Record<string, any>> = Array.isArray(value) ? value : [];
   const itemFields = field.itemFields ?? [];
   const [openIdx, setOpenIdx] = useState<number | null>(null);
-  const [picker, setPicker] = useState(items.length === 0);
+  const labelField0 = itemFields[0];
+  const hasPresets0 = !!(labelField0?.options && labelField0.options.length > 0);
+  const startsCollapsed = !hasPresets0 || !!field.noPresetMemory;
+  const [picker, setPicker] = useState(items.length === 0 && hasPresets0 && !field.noPresetMemory);
   const [pickerSel, setPickerSel] = useState<string[]>([]);
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherValue, setOtherValue] = useState("");
+  const [autoFocusIdx, setAutoFocusIdx] = useState<number | null>(null);
 
   function addItem(initial: Record<string, any> = {}) {
     const id = Math.random().toString(36).slice(2, 9);
     const next = [...items, { __id: id, ...initial }];
     onChange(next);
     setOpenIdx(next.length - 1);
+    setAutoFocusIdx(next.length - 1);
     setPicker(false);
   }
   function addManyByLabel(labels: string[]) {
@@ -336,15 +407,22 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
             </div>
             {open && (
               <div className="border-t border-border p-2 grid gap-2">
-                {itemFields.map((f) => (
-                  <RepeaterItemField key={f.id} field={f} value={it[f.id]} onChange={(v) => updateItem(idx, { [f.id]: v })} />
+                {itemFields.map((f, fi) => (
+                  <RepeaterItemField
+                    key={f.id}
+                    field={f}
+                    value={it[f.id]}
+                    onChange={(v) => updateItem(idx, { [f.id]: v })}
+                    autoFocus={fi === 0 && autoFocusIdx === idx}
+                    onEnterAdd={fi === 0 && f.enterToAdd ? () => { setAutoFocusIdx(null); addItem(); } : undefined}
+                  />
                 ))}
               </div>
             )}
           </div>
         );
       })}
-      {picker && presets.length > 0 ? (
+      {picker && presets.length > 0 && !field.noPresetMemory ? (
         <div className="rounded-md border border-dashed border-border p-2 bg-card/50">
           <div className="text-[11px] text-muted-foreground mb-1.5">Selecione um ou mais para adicionar:</div>
           <div className="flex flex-wrap gap-1.5">
@@ -404,13 +482,29 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
 }
 
 // Renderer leve para campos dentro de um item de repeater
-function RepeaterItemField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
+function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { field: FieldDef; value: any; onChange: (v: any) => void; autoFocus?: boolean; onEnterAdd?: () => void }) {
+  const [showComment, setShowComment] = useState<boolean>(!!value);
+  const isCommentable = !!field.commentable;
+  if (isCommentable && !showComment) {
+    return (
+      <button type="button" onClick={() => setShowComment(true)}
+        className="self-start text-[11px] text-primary hover:underline inline-flex items-center gap-1">
+        <Plus className="h-3 w-3" /> {field.label}
+      </button>
+    );
+  }
   return (
     <div className="grid gap-1">
       <label className="text-[11px] text-muted-foreground">{field.label}{field.unit ? ` (${field.unit})` : ""}</label>
-      {field.type === "text" && <Input className="h-8" value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder} />}
+      {field.type === "text" && (
+        <Input className="h-8" autoFocus={autoFocus} value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && onEnterAdd && (e.target as HTMLInputElement).value.trim()) { e.preventDefault(); onEnterAdd(); } }}
+          placeholder={field.placeholder} />
+      )}
       {field.type === "textarea" && <Textarea rows={2} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
       {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} />}
+      {field.type === "quantity" && <QuantityField value={value} onChange={onChange} />}
       {field.type === "select" && (
         <Select value={value ?? ""} onValueChange={onChange}>
           <SelectTrigger className="h-8"><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -420,6 +514,15 @@ function RepeaterItemField({ field, value, onChange }: { field: FieldDef; value:
       {field.type === "button-select" && <ButtonSelectField field={field} value={value} onChange={onChange} />}
       {field.type === "boolean" && (
         <div className="flex items-center gap-2"><Switch checked={!!value} onCheckedChange={onChange} /><span className="text-xs text-muted-foreground">{value ? "Sim" : "Não"}</span></div>
+      )}
+      {field.type === "coords" && (
+        <div className="grid grid-cols-2 gap-1.5">
+          <Input className="h-8" placeholder="Latitude" value={value?.lat ?? ""} onChange={(e) => onChange({ ...(value || {}), lat: e.target.value })} />
+          <Input className="h-8" placeholder="Longitude" value={value?.lng ?? ""} onChange={(e) => onChange({ ...(value || {}), lng: e.target.value })} />
+        </div>
+      )}
+      {isCommentable && (
+        <button type="button" onClick={() => { onChange(""); setShowComment(false); }} className="self-end text-[10px] text-muted-foreground hover:text-destructive">Remover</button>
       )}
     </div>
   );
@@ -533,7 +636,7 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
   );
 }
 
-function FieldRendererComponent({ field, value, status, note, na, onChange, onStatus, onNote, onNA }: Props) {
+function FieldRendererComponent({ field, value, status, note, na, onChange, onStatus, onNote, onNA, moduleValues }: Props) {
   const [collapsed, setCollapsed] = useState(status === "concluido" && hasValue(value));
 
   // Recolhe somente quando o usuário marca explicitamente concluído.
@@ -618,7 +721,8 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
       </div>
 
       {field.type === "text" && <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
-      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} />}
+      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => {}} moduleValues={moduleValues} />}
+      {field.type === "quantity" && <QuantityField value={value} onChange={onChange} />}
       {field.type === "date" && <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
       {field.type === "time" && <Input type="time" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
       {field.type === "textarea" && <Textarea rows={3} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />}
@@ -690,5 +794,6 @@ export const FieldRenderer = memo(FieldRendererComponent, (prev, next) => {
     && prev.status === next.status
     && prev.note === next.note
     && prev.na === next.na
+    && prev.moduleValues === next.moduleValues
     && Object.is(prev.value, next.value);
 });

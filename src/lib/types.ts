@@ -49,6 +49,7 @@ export type FieldType =
   | "text"
   | "textarea"
   | "number"
+  | "quantity"
   | "date"
   | "time"
   | "select"
@@ -136,6 +137,16 @@ export interface FieldDef {
   decimal?: boolean;
   /** apply-to-sides: rótulos dos lados. */
   sides?: string[];
+  /** button-select: aprende novas opções "Outra" no localStorage por field.id. */
+  learn?: boolean;
+  /** repeater (labelField): salva ao apertar Enter e cria novo item já em foco. */
+  enterToAdd?: boolean;
+  /** repeater item: campo opcional acessível via balão "Comentar". */
+  commentable?: boolean;
+  /** number: sugere valor calculado a partir de outros campos do módulo. */
+  suggestFrom?: { kind: "areaFromDims" };
+  /** repeater: não memoriza presets globais (cada empresa é única). */
+  noPresetMemory?: boolean;
 }
 
 export interface ModuleDef {

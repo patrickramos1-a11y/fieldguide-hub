@@ -794,5 +794,6 @@ export const FieldRenderer = memo(FieldRendererComponent, (prev, next) => {
     && prev.status === next.status
     && prev.note === next.note
     && prev.na === next.na
+    && prev.moduleValues === next.moduleValues
     && Object.is(prev.value, next.value);
 });

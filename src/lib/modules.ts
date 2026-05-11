@@ -191,10 +191,10 @@ export const MODULES: ModuleDef[] = [
         id: "areas_empreendimento",
         title: "Áreas do empreendimento",
         fields: [
-          { id: "area_total", label: "Área total", type: "number", unitOptions: ["m²", "ha"] },
-          { id: "area_construida", label: "Área construída", type: "number", unit: "m²" },
-          { id: "area_a_construir", label: "Área a construir", type: "number", unit: "m²" },
-          { id: "area_livre", label: "Área livre / não edificada", type: "number", unit: "m²" },
+          { id: "area_total", label: "Área total", type: "number", unitOptions: ["m²", "ha"], presets: [100, 250, 500, 1000, 5000, 10000], suggestFrom: { kind: "areaFromDims" } },
+          { id: "area_construida", label: "Área construída", type: "number", unit: "m²", presets: [50, 100, 250, 500, 1000] },
+          { id: "area_a_construir", label: "Área a construir", type: "number", unit: "m²", presets: [50, 100, 250, 500, 1000] },
+          { id: "area_livre", label: "Área livre / não edificada", type: "number", unit: "m²", presets: [50, 100, 250, 500, 1000] },
         ],
       },
       {
@@ -261,8 +261,8 @@ export const MODULES: ModuleDef[] = [
             type: "repeater",
             addItemLabel: "Adicionar construção",
             itemFields: [
-              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, options: ["Galpão", "Sede", "Poço", "Barragem", "Curral", "Caixa d'água", "Escritório", "Depósito", "Área coberta", "Banheiro", "Casa", "Muro", "Cerca"] },
-              { id: "quantidade", label: "Quantidade", type: "number", decimal: false },
+              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, learn: true, options: ["Galpão", "Sede", "Poço", "Barragem", "Curral", "Caixa d'água", "Escritório", "Depósito", "Área coberta", "Banheiro", "Casa", "Muro", "Cerca"] },
+              { id: "quantidade", label: "Quantidade", type: "quantity" },
               { id: "area", label: "Área aproximada", type: "number", unit: "m²" },
             ],
           },

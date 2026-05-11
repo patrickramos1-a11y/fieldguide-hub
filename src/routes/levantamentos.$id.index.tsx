@@ -544,8 +544,11 @@ function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, isDone,
   const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, state.values));
   const [openInternal, setOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
-  // Auto-collapse: se está concluído (manual ou efetivo) e usuário não forçou abertura, fica fechado
-  const open = forceOpen ? true : (isDone || effective === "concluido" ? openInternal : openInternal);
+  // Quando marca como concluído manualmente, recolhe.
+  useEffect(() => {
+    if (isDone) setOpen(false);
+  }, [isDone]);
+  const open = forceOpen ? true : openInternal;
 
   if (isNA) {
     return (

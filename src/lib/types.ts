@@ -284,4 +284,8 @@ export interface SurveyTemplate {
   isDefault?: boolean;
   /** Templates de fábrica não podem ser removidos. */
   builtIn?: boolean;
+  /** Subgrupos desabilitados por módulo (serão marcados como N/A ao criar levantamento). */
+  subgroupOverrides?: Record<string, string[]>;
+  /** Descrição livre exibida na listagem. */
+  description?: string;
 }

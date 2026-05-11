@@ -853,33 +853,32 @@ export const MODULES: ModuleDef[] = [
         id: "hidrometro",
         title: "Leitura do hidrômetro",
         fields: [
-          { id: "hidrometro_status", label: "Está havendo leitura diária do hidrômetro?", type: "select", options: ["Sim", "Não", "Não há tabela", "Não se aplica", "O colaborador não está fazendo o acompanhamento"] },
-          { id: "hidrometro", label: "Leitura registrada nesta visita", type: "text" },
-          { id: "hidrometro_obs", label: "Observações", type: "textarea" },
+          { id: "hidrometro_status", label: "Há leitura diária do hidrômetro?", type: "button-select", options: ["Sim", "Não", "Não há tabela", "Não se aplica", "O colaborador não está fazendo o acompanhamento"] },
+          { id: "hidrometro", label: "Leitura registrada nesta visita", type: "number" },
         ],
       },
       {
         id: "coleta_agua",
         title: "Coleta de água do poço",
         fields: [
-          { id: "coleta_agua_visita", label: "Houve coleta de água do poço para análise nesta visita?", type: "select", options: ["Sim", "Não"] },
-          { id: "coletas_agua", label: "Detalhes da coleta", type: "textarea" },
+          { id: "coleta_agua_visita", label: "Houve coleta nesta visita?", type: "button-select", options: ["Sim", "Não"] },
+          { id: "coletas_agua", label: "Detalhes da coleta", type: "textarea", showIf: { field: "coleta_agua_visita", equals: "Sim" } },
         ],
       },
       {
         id: "coleta_efluente",
         title: "Coleta de efluente na ETE",
         fields: [
-          { id: "coleta_efluente_visita", label: "Houve coleta de efluente na ETE para análise nesta visita?", type: "select", options: ["Sim", "Não"] },
-          { id: "coletas_efluente", label: "Detalhes da coleta", type: "textarea" },
+          { id: "coleta_efluente_visita", label: "Houve coleta nesta visita?", type: "button-select", options: ["Sim", "Não"] },
+          { id: "coletas_efluente", label: "Detalhes da coleta", type: "textarea", showIf: { field: "coleta_efluente_visita", equals: "Sim" } },
         ],
       },
       {
         id: "acompanhamento",
-        title: "Acompanhamento operacional",
+        title: "Acompanhamento operacional (opcional)",
+        optional: true,
         fields: [
-          { id: "acompanhamento_ete", label: "Acompanhamento da ETE", type: "textarea" },
-          { id: "acompanhamento_obs", label: "Outras rotinas observadas", type: "textarea" },
+          { id: "acompanhamento_obs", label: "Anotações livres", type: "textarea" },
         ],
       },
     ],

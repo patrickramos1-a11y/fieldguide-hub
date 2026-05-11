@@ -1,159 +1,156 @@
 
-# Plano de ajustes — Preenchimento dos Levantamentos
+# Plano — Lote final de ajustes (Política, Rotinas, Infraestrutura, Vizinhança, Croqui, Observações + UX global)
 
-Vamos dividir em **lotes pequenos e testáveis**. Cada lote pode ser entregue isoladamente. Você aprova em ordem ou pula o que não quiser agora.
-
----
-
-## Lote A — Fundamentos de UX (base reutilizável)
-
-São mudanças transversais que destravam todos os módulos seguintes. Sem isso, repetiríamos código.
-
-A1. **Auto-collapse ao concluir/N/A**
-- Ao marcar campo/subgrupo/módulo como concluído ou N/A, ele recolhe automaticamente em uma "barrinha" com resumo (label + valor curto + status).
-- Clicar na barrinha reabre. Não precisa de ícone extra.
-
-A2. **Observação como item opcional**
-- Remover o campo "observação" sempre aberto.
-- Substituir por um link discreto "+ Observação" dentro do subgrupo. Só abre textarea ao clicar.
-- Limite: **uma observação por subgrupo** (não por campo).
-- Remover o "balão de comentário por campo".
-
-A3. **Novo tipo de campo `button-select`** (substitui `select`/`multiselect` quando há poucas opções)
-- Renderiza opções como chips/botões clicáveis (single ou multi).
-- Suporte a "+ Outra" inline (abre input curto).
-
-A4. **Novo tipo de campo `repeater`** (lista adicionável)
-- Botão "+" adiciona item; cada item tem subcampos definidos.
-- Item preenchido recolhe em chip-resumo. Clique reabre.
-- Usado em: setores, reservatórios, poços, matérias-primas, equipamentos, etapas, produtos químicos, frota, resíduos.
-
-A5. **Campo numérico estrito**
-- `type: "number"` passa a aceitar **somente** dígitos (e separador decimal quando aplicável). Validação visual.
-
-A6. **Campo `apply-to-sides`** (frente/fundos/dir/esq)
-- Seleção por botões com ação "aplicar a outros lados".
-
-> Após A1–A6, todos os lotes seguintes são edições pequenas em `src/lib/modules.ts`.
+Vou agrupar tudo em um único lote executável. A ordem abaixo é a ordem em que vou aplicar as mudanças.
 
 ---
 
-## Lote B — Dados Operacionais
+## 1. Ajustes globais de status do campo (FieldRenderer)
 
-- Remover: `alteracao_quadro`, `alteracao_quadro_obs`, `alteracao_producao`, `alteracao_producao_obs`.
-- Manter: `capacidade_produtiva`.
-- Quadro de funcionários vira **repeater de setores** (`{setor, quantidade}`) com lista pré-definida (Administrativo, Operacional, Produção, Manutenção, Limpeza, Segurança, Logística, Outros) + "+".
-- Total de funcionários calculado automaticamente (somatório).
-- Remover observação geral; manter "+ Observação" opcional no subgrupo.
+Hoje, todo campo "não iniciado" mostra um badge grande de status. Vai mudar para:
 
----
+- **Não iniciado** → apenas uma bolinha cinza pequena no canto, sem texto.
+- **Preenchido** → bolinha vira **check verde** automaticamente; o badge grande some.
+- O seletor manual de status (dropdown com 8 opções) sai do header padrão e vai para um menu "⋯" (só aparece se o usuário quiser marcar pendente / aguardando documento etc.). Para 99% dos casos, a regra automática basta.
+- Resultado visual: cada campo perde altura. A linha de header passa a ser só `label` + bolinha/check à direita.
 
-## Lote C — Áreas, Limites e Topografia
-
-- **Área total**: unidade selecionável (m² / hectares).
-- **Limites do terreno**: `apply-to-sides` (frente/fundos/lado dir/lado esq) com botões.
-- **Topografia atual**: remover.
-- **Conformação predominante**: vira `button-select` single.
-- **Tipo de solo**: vira `button-select` multi.
-- "Localização do solo no terreno" e "Sondagem existente": **marcar para revisão** — peço sua definição antes de mexer.
-- Remover observações fixas dos blocos.
+Aplica-se a todos os módulos automaticamente (não exige editar cada campo).
 
 ---
 
-## Lote D — Vegetação e Obstruções/Construções
+## 2. Campos numéricos aceitam só números
 
-D1. **Vegetação**: substituir densidade/tipo estimados por `button-select` multi de identificação:
-Vegetação presente, Ausência, Degradada, Preservada, Antropizada, Capoeira, Árvores isoladas, Rasteira, Arbustiva, Arbórea.
+O renderer numérico já filtra entrada (`NumberField`), mas alguns campos que são na prática numéricos estão como `text` no schema. Vou converter os principais:
 
-D2. **Obstruções**: ampliar lista + opção "Outra" com campo livre.
-
-D3. **Construções existentes**: `repeater` `{tipo, quantidade}` com botões pré-definidos: Galpão, Sede, Poço, Barragem, Curral, Caixa d'água, Escritório, Depósito, Área coberta, Banheiro, Casa, Muro, Cerca, Outra.
+- `hidrometro` (Rotinas → Leitura do hidrômetro): `text` → `number` (decimal).
+- `vf_pavs` / `vd_pavs` / `ve_pavs` (Vizinhança): já são `number`, ok.
 
 ---
 
-## Lote E — Água, Captação e Reservatório
+## 3. Política e Gestão Ambiental (`politica`)
 
-- **Corpo hídrico**: Sim/Não (botões). Campos extras só aparecem se "Sim".
-- Adicionar **Nascente** (Sim/Não).
-- Adicionar **Distância do corpo hídrico** + opção "Dentro da propriedade".
-- Identificação do corpo hídrico: vira "+ adicionar identificação" opcional.
-- **Tipo de captação**: `button-select`. Estimativa de consumo: numérico estrito.
-- **Reservatório**: Sim/Não → se Sim, **repeater** `{tipo, capacidade(L), quantidade}`.
-- Capacidade com presets: 500, 1000, 2000, 5000, 10000, "Outro".
-- Descrição/dimensões: link "+ Detalhes" opcional.
-- Remover todas as observações fixas.
+- **Remover subgrupo "Conformidade operacional"** (campo `conformidade`).
+- `politica_status`, `coleta_recicl_status`, `educacao_status`, `ha_demanda_projeto` → `select` para `button-select`.
+- `tipo_demanda` continua `button-select` multi (já é multiselect).
+- Remover `politica_obs` (observação fixa). Observação opcional vira o "+ Adicionar observação" do subgrupo (já existe).
+- Em **Coleta de recicláveis**: se `coleta_recicl_status` for "Não" / "Não há" / "Não se aplica a essa visita", **não exibir** outros campos.
+- Em **Educação ambiental**: `palestras` (textarea) só aparece quando `educacao_status` = "Sim" ou "Houve agendamento".
+- Em **Levantamento para projeto**: `tipo_demanda` só aparece se `ha_demanda_projeto` = "Sim". Remover `demanda_obs`.
 
 ---
 
-## Lote F — Uso da Água e Outorga
+## 4. Rotinas de Monitoramento (`rotinas`)
 
-- **Uso da água**: ampliar lista de opções + botão "+" para uso manual.
-- Descrição: opcional ("+ Descrição").
-- **Situação da outorga**: dropdown → `button-select`.
+- `hidrometro_status` → `button-select`. `hidrometro` → tipo `number`. Remover `hidrometro_obs`.
+- `coleta_agua_visita` → `button-select`. `coletas_agua` (detalhes) só aparece se "Sim".
+- `coleta_efluente_visita` → `button-select`. `coletas_efluente` só aparece se "Sim".
+- **Acompanhamento operacional**: virar opcional/discreto.
+  - Remover do subgrupo o textarea "Acompanhamento da ETE" e "Outras rotinas observadas" como campos obrigatórios.
+  - O subgrupo passa a ter apenas o link "+ Adicionar observação" (mesma mecânica usada nos outros subgrupos).
+  - O subgrupo é marcado como "opcional" (pequeno badge) para não entrar no cálculo de não-iniciado / não-se-aplica.
 
----
-
-## Lote G — Poços
-
-- Vira `repeater` (múltiplos poços), cada um com seus campos.
-- Profundidade, diâmetro, nível estático, nível dinâmico, vazão, tempo de captação: numérico estrito.
-
----
-
-## Lote H — Processo Produtivo
-
-- **Remover** "relatório fotográfico" (será tratado depois em outro módulo).
-- **Matéria-prima**: `repeater` `{nome, quantidade, periodicidade(button-select: mensal/semanal/diária/outro)}`.
-- **Equipamentos**: `repeater` `{nome, quantidade, especificações(opcional)}`.
-- **Etapas**: `repeater` `{nome, descrição(opcional)}`.
-- **Produtos químicos**: `button-select` multi com exemplos pré-definidos + "+ Outro". Descrição opcional.
-- **Frota**: Sim/Não → se Sim, `repeater` `{tipo veículo, quantidade, descrição opcional}`.
-- **Caracterização do entorno**: **mover** para outro módulo (proponho criar subgrupo "Entorno" em "Áreas, Dimensões e Terreno"; confirmo com você no início do lote).
+Detalhe técnico: vou marcar o subgrupo com `optional?: boolean` em `SubgroupDef` e ajustar `computeSubgroupStatus` / `computeModuleStatus` para ignorar subgrupos opcionais quando vazios (não ficam "não iniciado", não derrubam o status do módulo).
 
 ---
 
-## Lote I — Emissões
+## 5. Acesso e Infraestrutura Pública (`infraestrutura`)
 
-- **Ruído**: `button-select`, sem observação.
-- **Emissões líquidas (efluente)**: ampliar opções como `button-select`, sem observação.
-- **Emissões sólidas**: `button-select` multi.
-- **Emissões gasosas**: dropdown → botões; auto-collapse ao selecionar.
-- Remover observações fixas (manter "+ Observação" opcional).
+Reescrita completa dos subgrupos de acesso (frente / fundos / dir / esq) para reduzir cansaço:
 
----
+- **Substitui os 4 subgrupos** por **um único subgrupo "Acessos"** com um campo `apply-to-sides` para tipo de pavimentação (Asfalto / Paralelepípedo / Terra / Concreto / Bloquete / Inexistente / Outro), permitindo "aplicar aos demais lados".
+- **Nome da rua**: mantém um campo de texto único por lado, em formato compacto (4 inputs pequenos lado a lado, ou repeater). Vou implementar como repeater simples `{lado, rua}` pré-preenchido com 4 itens (Frente, Fundos, Lado direito, Lado esquerdo) — usuário só digita a rua.
+- **Remover** o campo "Descrição do acesso" dos 4 lados.
+- **Remover** observações fixas.
 
-## Lote J — Resíduos Sólidos
+**Infraestrutura pública (`infra_servicos`)**: ampliar lista para incluir também:
+Asfalto / Pavimentação, Iluminação LED, Coleta seletiva, Posto de saúde, Hospital, Internet/Fibra, Gás encanado, Transporte público, Ponto de ônibus.
 
-- Lista mestre de tipos como `button-select` multi. Bloco de detalhe **só aparece** para os tipos selecionados.
-- Por resíduo selecionado: quantidade, frequência, acondicionamento, destinação — todos via `button-select` com "+ Outra".
-- **Periodicidade geral da coleta**: `button-select`.
-- **Gerenciamento**: botões; "Há dificuldade?" Sim/Não → descrição só se Sim.
+Remover `infra_obs`.
 
 ---
 
-## Lote K — ETE / Efluentes
+## 6. Vizinhança e Entorno (`vizinhanca`)
 
-- Substituir dropdowns por `button-select`/chips.
-- **Produtos químicos**: `repeater` com "+".
-- **Tipo de efluentes (tratamento)**: ampliar opções como `button-select`.
+Reescrita dos 3 subgrupos de vizinhos (fundos / dir / esq) para reduzir cansaço:
+
+- **Substituir os 3 subgrupos** por **um subgrupo "Vizinhos confrontantes"** com um **repeater** com 3 itens pré-preenchidos (Fundos, Lateral direita, Lateral esquerda).
+- Cada item tem os mesmos campos (Material, Estado, Pavimentos, Habitado, Utilização, Classe, Posição, Reforço), todos como `button-select` no lugar de `select`/`boolean`.
+- Cada item terá um botão **"Copiar do anterior"** para reaproveitar dados rapidamente.
+- **Remover** botões/campos de observação por vizinho.
+
+**Laudo técnico**:
+- `necessita_laudo`: trocar `boolean` por `button-select` ["Sim", "Não", "Não se aplica"].
+- **Remover** `laudo_obs`.
+
+**Mercado local**: ampliar `mercado_local` adicionando:
+- Posto de combustível, Creche, Praça, Banco / lotérica, Igreja, Restaurante, Hotel/Pousada, Indústria próxima, Centro comercial, Ponto de ônibus / terminal, Delegacia, Corpo de bombeiros.
+- **Remover** `mercado_obs`.
+
+**Obras próximas**:
+- `tipo_obra` permanece como texto curto.
+- **Remover** `obras_proximas` (observação).
 
 ---
 
-## Detalhes técnicos (para registro)
+## 7. Croqui / Desenho Técnico (`croqui`)
 
-Arquivos impactados:
-- `src/lib/types.ts` — adicionar `FieldType` `"button-select" | "repeater" | "apply-to-sides"`; estender `FieldDef` com `multi?`, `allowOther?`, `presets?`, `itemFields?`, `unitOptions?`, `min?/max?`.
-- `src/components/FieldRenderer.tsx` — renderers novos; numérico estrito; chip-resumo de item recolhido.
-- `src/components/ModuleConfigStep.tsx` / `src/routes/levantamentos.$id.index.tsx` — auto-collapse ao concluir/N/A; "+ Observação" por subgrupo; remover balões por campo.
-- `src/lib/modules.ts` — reescrita por módulo conforme lotes B–K.
-- `src/lib/store.ts` — helpers para repeater (CRUD de itens) e somatórios derivados (ex.: total funcionários).
-
-Sem mudanças de schema do backend nesta rodada — tudo persiste em `ModuleState.values` (objetos/arrays JSON).
+- **Remover por completo** o módulo `croqui` da lista `MODULES`.
+- Remover de `MODULES_BY_TYPE` (geral, vazao, terreno).
+- Remover de templates default que o referenciem (verifico em `src/lib/store.ts` os defaults).
 
 ---
 
-## Pontos que precisam da sua decisão antes de mexer
+## 8. Levantamento Fotográfico (`fotos`)
 
-1. **Lote C**: o que fazer com "Localização do solo no terreno" e "Sondagem existente" — manter, remover, ou redesenhar?
-2. **Lote H**: confirmar destino de "Caracterização do entorno" (sugiro mover para "Áreas, Dimensões e Terreno").
-3. Posso já começar pelo **Lote A**? Ele desbloqueia todos os outros e o resultado já fica visível em qualquer módulo.
+- **Não tocar.** Mantido como está.
+
+---
+
+## 9. Observações Técnicas (`observacoes`)
+
+- **Remover por completo** o módulo `observacoes` da lista `MODULES`.
+- Remover de `MODULES_BY_TYPE` (todos os tipos onde aparece).
+- Remover de templates default.
+
+---
+
+## 10. Documentos (`documentos`)
+
+- **Manter como está.** Sem alteração.
+
+---
+
+## Detalhes técnicos (referência rápida)
+
+### Arquivos impactados
+
+- `src/lib/types.ts`
+  - Adicionar `optional?: boolean` em `SubgroupDef`.
+- `src/lib/modules.ts`
+  - Reescrever subgrupos de `politica`, `rotinas`, `infraestrutura`, `vizinhanca`.
+  - Remover entradas `croqui` e `observacoes` de `MODULES` e de `MODULES_BY_TYPE`.
+  - Ajustar `computeSubgroupStatus` / `computeModuleStatus` para ignorar subgrupos `optional` vazios.
+- `src/components/FieldRenderer.tsx`
+  - Header padrão: bolinha cinza (não iniciado) → check verde quando preenchido. Esconder `StatusBadge` grande do header padrão; mover seletor manual para menu "⋯".
+  - Estado intermediário "em andamento" continua como bolinha colorida.
+- `src/components/ModuleConfigStep.tsx`
+  - Sem mudança direta; só refletirá automaticamente a remoção de croqui/observações.
+- `src/lib/store.ts`
+  - Remover referências a `croqui` / `observacoes` em templates ou seeds, se houver.
+- `src/routes/levantamentos.$id.resumo.tsx`
+  - Garantir que não dependa explicitamente de `croqui` / `observacoes`.
+
+### Migração de dados
+
+Sem schema do backend mudando — `ModuleState.values` é JSON livre. Levantamentos antigos com dados em `croqui` / `observacoes` continuarão no banco; só não são mais exibidos. Sem perda destrutiva.
+
+### Risco / pontos de atenção
+
+- Subgrupos `optional` precisam aparecer fechados por padrão e nunca contar negativamente no progresso.
+- O `apply-to-sides` para pavimentação já existe no renderer; só configurar.
+- Repeater com itens pré-preenchidos: vou inicializar `value` com 3 (vizinhos) ou 4 (ruas) itens fixos quando o usuário entra no subgrupo pela primeira vez.
+
+### Fora deste lote (tratado em outras rodadas)
+
+- Lote G (Poços como repeater) e Lote J (Resíduos por seleção mestre) — pendentes, conforme planejado anteriormente.
+- Levantamento Fotográfico — fica para depois.

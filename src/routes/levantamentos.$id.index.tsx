@@ -462,6 +462,21 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={effective} />
+            {state.moduleDone ? (
+              <Button variant="outline" size="sm" onClick={() => setModuleDone(survey.id, m.id, false)} title="Reabrir módulo">
+                <Unlock className="h-3.5 w-3.5 mr-1" /> Reabrir
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setModuleDone(survey.id, m.id, true)}
+                title="Concluir módulo"
+                style={{ borderColor: "var(--status-done)", color: "var(--status-done)" }}
+              >
+                <Check className="h-3.5 w-3.5 mr-1" /> Concluir
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setModuleNA(survey.id, m.id, true)} title="Marcar módulo como não se aplica">
               <Ban className="h-3.5 w-3.5 mr-1" /> N/A
             </Button>

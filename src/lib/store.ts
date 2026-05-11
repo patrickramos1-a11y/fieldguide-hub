@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment, SurveyTemplate } from "./types";
-import { getModulesForType } from "./modules";
+import { getModulesForType, ensureLegacyAdapters } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
 const INDEXED_DB_NAME = "ramos-eng-db";
@@ -68,7 +68,7 @@ function normalizeSurvey(survey: Survey): Survey {
 
   return {
     ...survey,
-    modules: nextModules,
+    modules: ensureLegacyAdapters(nextModules),
     pendencias: Array.isArray(survey.pendencias) ? survey.pendencias : [],
     signatures: survey.signatures ?? {},
   };

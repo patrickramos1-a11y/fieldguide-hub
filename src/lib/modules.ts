@@ -611,54 +611,84 @@ export const MODULES: ModuleDef[] = [
   {
     id: "processo",
     title: "Processo Produtivo",
-    description: "Levantamento técnico: matéria-prima, equipamentos, etapas e entorno produtivo.",
+    description: "Levantamento técnico: matéria-prima, equipamentos, etapas, químicos e frota.",
     fields: [],
     purposes: ["projeto"],
     subgroups: [
       {
-        id: "geral",
-        title: "Informações gerais",
+        id: "materia_prima",
+        title: "Matéria-prima",
         fields: [
-          { id: "relatorio_fotografico", label: "Relatório fotográfico", type: "select", options: ["Realizado", "Falta fazer"] },
-          { id: "materia_prima", label: "Matéria-prima utilizada", type: "textarea" },
+          {
+            id: "materias_primas",
+            label: "Matérias-primas utilizadas",
+            type: "repeater",
+            addItemLabel: "Adicionar matéria-prima",
+            itemFields: [
+              { id: "nome", label: "Nome", type: "text" },
+              { id: "quantidade", label: "Quantidade", type: "text" },
+              { id: "periodicidade", label: "Periodicidade", type: "button-select", allowOther: true, options: ["Diária", "Semanal", "Mensal", "Anual"] },
+            ],
+          },
         ],
       },
       {
         id: "equipamentos",
         title: "Equipamentos",
         fields: [
-          { id: "equipamentos", label: "Equipamentos existentes", type: "textarea" },
-          { id: "qtd_equipamentos", label: "Quantidade de equipamentos", type: "number" },
-          { id: "tipos_equipamentos", label: "Tipos de equipamentos", type: "textarea" },
+          {
+            id: "equipamentos",
+            label: "Equipamentos existentes",
+            type: "repeater",
+            addItemLabel: "Adicionar equipamento",
+            itemFields: [
+              { id: "nome", label: "Nome", type: "text" },
+              { id: "quantidade", label: "Quantidade", type: "number", decimal: false },
+              { id: "especificacoes", label: "Especificações (opcional)", type: "text" },
+            ],
+          },
         ],
       },
       {
         id: "etapas",
         title: "Etapas do processo produtivo",
         fields: [
-          { id: "etapa_1", label: "Etapa 1", type: "text" },
-          { id: "etapa_2", label: "Etapa 2", type: "text" },
-          { id: "etapa_3", label: "Etapa 3", type: "text" },
-          { id: "etapa_4", label: "Etapa 4", type: "text" },
-          { id: "etapa_5", label: "Etapa 5", type: "text" },
-          { id: "etapas_obs", label: "Observações sobre as etapas", type: "textarea" },
+          {
+            id: "etapas",
+            label: "Etapas",
+            type: "repeater",
+            addItemLabel: "Adicionar etapa",
+            itemFields: [
+              { id: "nome", label: "Nome da etapa", type: "text" },
+              { id: "descricao", label: "Descrição (opcional)", type: "textarea" },
+            ],
+          },
         ],
       },
       {
-        id: "quimicos_frota",
-        title: "Produtos químicos e frota",
+        id: "quimicos",
+        title: "Produtos químicos",
         fields: [
-          { id: "ha_quimicos", label: "Há produtos químicos?", type: "boolean" },
-          { id: "produtos_quimicos", label: "Produtos químicos utilizados", type: "textarea" },
-          { id: "ha_frota", label: "Possui frota de veículos?", type: "boolean" },
-          { id: "frota", label: "Descrição da frota / veículos", type: "textarea" },
+          { id: "produtos_quimicos", label: "Produtos químicos utilizados", type: "button-select", multi: true, allowOther: true, options: ["Cloro", "Soda cáustica", "Ácido sulfúrico", "Ácido clorídrico", "Solventes", "Tintas", "Óleos", "Detergentes", "Hipoclorito"] },
         ],
       },
       {
-        id: "entorno",
-        title: "Caracterização do entorno",
+        id: "frota",
+        title: "Frota",
         fields: [
-          { id: "entorno_empresa", label: "Caracterização da área do entorno da empresa", type: "textarea" },
+          { id: "tem_frota", label: "Possui frota de veículos?", type: "button-select", options: ["Sim", "Não"] },
+          {
+            id: "frota",
+            label: "Veículos",
+            type: "repeater",
+            addItemLabel: "Adicionar veículo",
+            showIf: { field: "tem_frota", equals: "Sim" },
+            itemFields: [
+              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, options: ["Carro", "Moto", "Caminhão", "Caminhonete", "Van", "Empilhadeira", "Trator"] },
+              { id: "quantidade", label: "Quantidade", type: "number", decimal: false },
+              { id: "descricao", label: "Descrição (opcional)", type: "text" },
+            ],
+          },
         ],
       },
     ],

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useCallback, useMemo, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import {
   useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment,
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
@@ -32,6 +32,8 @@ type VirtualTab = "__documentos" | "__pendencias" | "__encerramento";
 
 function SurveyEditor() {
   const { id } = Route.useParams();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const { hydrated, persistPending, persistenceError } = useDBStatus();
   const data = useDBSelector(
     (state) => {
@@ -46,8 +48,7 @@ function SurveyEditor() {
 
   const [activeTab, setActiveTab] = useState<string>("identificacao");
 
-  if (!hydrated) return <AppShell><p>Carregando levantamento...</p></AppShell>;
-
+  if (!mounted || !hydrated) return <AppShell><p>Carregando levantamento...</p></AppShell>;
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
 
   // ---- Etapa de configuração inicial ----

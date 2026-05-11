@@ -3,7 +3,6 @@ import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus,
 import { getModulesForType } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
-const STORAGE_FLUSH_DELAY = 180;
 
 interface DB {
   clients: Client[];
@@ -64,39 +63,35 @@ function load(): DB {
   }
 }
 
+function save(nextDB: DB) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(nextDB));
+  } catch (error) {
+    console.error("Falha ao persistir dados no navegador", error);
+  }
+}
+
 let db: DB = load();
 const listeners = new Set<() => void>();
-let persistTimer: number | null = null;
-
-function flushToStorage() {
-  if (typeof window === "undefined") return;
-  if (persistTimer !== null) {
-    window.clearTimeout(persistTimer);
-    persistTimer = null;
-  }
-  localStorage.setItem(KEY, JSON.stringify(db));
-}
-
-function scheduleStorageWrite() {
-  if (typeof window === "undefined") return;
-  if (persistTimer !== null) window.clearTimeout(persistTimer);
-  persistTimer = window.setTimeout(() => {
-    persistTimer = null;
-    localStorage.setItem(KEY, JSON.stringify(db));
-  }, STORAGE_FLUSH_DELAY);
-}
 
 const persistLifecycle = globalThis as typeof globalThis & { __ramosPersistLifecycleBound?: boolean };
 if (typeof window !== "undefined" && !persistLifecycle.__ramosPersistLifecycleBound) {
-  window.addEventListener("beforeunload", flushToStorage);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushToStorage();
+  const syncFromStorage = () => {
+    db = load();
+    listeners.forEach((l) => l());
+  };
+
+  window.addEventListener("pageshow", syncFromStorage);
+  window.addEventListener("storage", (event) => {
+    if (event.key && event.key !== KEY) return;
+    syncFromStorage();
   });
   persistLifecycle.__ramosPersistLifecycleBound = true;
 }
 
 function persist() {
-  scheduleStorageWrite();
+  save(db);
   listeners.forEach((l) => l());
 }
 

@@ -5,7 +5,7 @@ import {
   useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment,
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
   setEnabledModules, useDBStatus, setModuleNA, setSubgroupNA, enableModule,
-  closeSurvey, reopenSurvey, addTemplate, setSubgroupNote,
+  closeSurvey, reopenSurvey, addTemplate, setSubgroupNote, setModuleDone,
 } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -206,7 +206,18 @@ function ModuleTabsBar({ survey, regularTabs, hiddenModules, hasDocs, hasValidac
   activeTab: string; setActiveTab: (t: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const visibleTabs = regularTabs.filter((m) => !(survey.modules[m.id] as ModuleState)?.naModule);
+  const doneTabs = regularTabs.filter((m) => {
+    const st = survey.modules[m.id] as ModuleState;
+    if (st?.naModule) return false;
+    return computeModuleStatus(m, st) === "concluido";
+  });
+  const doneIds = new Set(doneTabs.map((m) => m.id));
+  const visibleTabs = regularTabs.filter((m) => {
+    const st = survey.modules[m.id] as ModuleState;
+    if (st?.naModule) return false;
+    if (doneIds.has(m.id)) return false;
+    return true;
+  });
   const naTabs = regularTabs.filter((m) => (survey.modules[m.id] as ModuleState)?.naModule);
 
   return (
@@ -269,6 +280,9 @@ function ModuleTabsBar({ survey, regularTabs, hiddenModules, hasDocs, hasValidac
                 </button>
               );
             })}
+            {doneTabs.length > 0 && (
+              <DoneModulesPill survey={survey} done={doneTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+            )}
             {hiddenModules.length > 0 && (
               <HiddenModulesPill survey={survey} hidden={hiddenModules} />
             )}
@@ -286,6 +300,48 @@ function ModuleTabsBar({ survey, regularTabs, hiddenModules, hasDocs, hasValidac
         </div>
       )}
     </div>
+  );
+}
+
+function DoneModulesPill({ survey, done, activeTab, setActiveTab }: { survey: any; done: any[]; activeTab: string; setActiveTab: (t: string) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className="rounded-md px-2.5 py-1 text-xs whitespace-nowrap inline-flex items-center gap-1.5 border"
+          style={{ borderColor: "var(--status-done)", color: "var(--status-done)", backgroundColor: "color-mix(in oklab, var(--status-done) 12%, transparent)" }}
+          title="Módulos concluídos"
+        >
+          <Check className="h-3 w-3" /> {done.length} concluído{done.length > 1 ? "s" : ""}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-2">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground px-2 py-1">Módulos concluídos</div>
+        <div className="grid gap-1 max-h-72 overflow-auto">
+          {done.map((m) => {
+            const active = activeTab === m.id;
+            return (
+              <div key={m.id} className="flex items-center gap-1">
+                <button
+                  className={`flex-1 text-left text-sm rounded-md px-2 py-1.5 hover:bg-secondary inline-flex items-center gap-2 ${active ? "bg-secondary" : ""}`}
+                  onClick={() => setActiveTab(m.id)}
+                >
+                  <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--status-done)" }} />
+                  <span className="truncate">{m.title}</span>
+                </button>
+                <button
+                  className="text-[11px] text-muted-foreground hover:text-foreground rounded-md px-2 py-1 hover:bg-secondary"
+                  onClick={() => setModuleDone(survey.id, m.id, false)}
+                  title="Reabrir módulo"
+                >
+                  Reabrir
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

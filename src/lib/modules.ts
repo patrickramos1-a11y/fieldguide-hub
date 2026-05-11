@@ -985,29 +985,6 @@ export const MODULES: ModuleDef[] = [
     ],
   },
   {
-    id: "croqui",
-    title: "Croqui / Desenho Técnico",
-    description: "Croqui do local com legenda e elementos representados.",
-    fields: [],
-    subgroups: [
-      {
-        id: "desenho",
-        title: "Desenho",
-        fields: [
-          { id: "legenda", label: "Legenda do croqui", type: "textarea" },
-          { id: "escala", label: "Escala / referência", type: "text" },
-        ],
-      },
-      {
-        id: "elementos",
-        title: "Elementos representados",
-        fields: [
-          { id: "elementos", label: "Elementos representados (árvores, edificações, poços, acessos, etc.)", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
     id: "documentos",
     title: "Documentos e Anexos",
     description: "Documentos entregues, solicitados e checklist de documentação.",
@@ -1035,36 +1012,6 @@ export const MODULES: ModuleDef[] = [
         fields: [
           { id: "orientacao_status", label: "Houve orientação do técnico sobre as pendências ambientais?", type: "select", options: ["Sim", "Não", "No aguardo do posicionamento da empresa", "Ficamos de enviar um relatório", "O colaborador ficou de enviar à diretoria"] },
           { id: "orientacao_obs", label: "Observações", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "observacoes",
-    title: "Observações Técnicas",
-    description: "Registros complementares e pendências observadas.",
-    fields: [],
-    subgroups: [
-      {
-        id: "gerais",
-        title: "Observações gerais",
-        fields: [
-          { id: "obs_gerais", label: "Observações gerais", type: "textarea" },
-        ],
-      },
-      {
-        id: "pendencias",
-        title: "Pendências observadas",
-        fields: [
-          { id: "pendencias_observadas", label: "Pendências observadas em campo", type: "textarea" },
-          { id: "responsavel_pendencias", label: "Responsável pelas pendências", type: "text" },
-        ],
-      },
-      {
-        id: "complementares",
-        title: "Informações complementares",
-        fields: [
-          { id: "info_complementares", label: "Informações complementares (escritório, retorno, etc.)", type: "textarea" },
         ],
       },
     ],

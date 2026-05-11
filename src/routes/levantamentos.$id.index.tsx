@@ -133,7 +133,14 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-xs text-muted-foreground">{clientName} / {projectName}</div>
-          <h1 className="text-2xl font-semibold">{survey.title}</h1>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            {survey.title}
+            {survey.closedAt && (
+              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-normal" style={{ borderColor: "var(--status-done)", color: "var(--status-done)" }}>
+                <Lock className="h-3 w-3" /> Encerrado
+              </span>
+            )}
+          </h1>
           <div className="text-sm text-muted-foreground">{typeLabel}</div>
           <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
             <CounterChip tone="done" icon={<Check className="h-3 w-3" />} value={counters.concluido} label="concluídos" />

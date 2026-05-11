@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useDBSelector, addTemplate, updateTemplate, removeTemplate, setTemplateDefault } from "@/lib/store";
 import { SURVEY_TYPES, type SurveyType, type SurveyTemplate } from "@/lib/types";
-import { MODULES, MODULES_BY_TYPE, FACTORY_TEMPLATES, getModulesForType } from "@/lib/modules";
+import { MODULES_BY_TYPE, FACTORY_TEMPLATES, getModulesForType } from "@/lib/modules";
 import { Star, Pencil, Trash2, Copy, Plus, ChevronDown, ChevronRight, Check } from "lucide-react";
 import { toast } from "sonner";
 

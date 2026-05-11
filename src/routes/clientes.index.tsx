@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { ClienteForm, emptyClienteForm } from "@/components/ClienteForm";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/clientes/")({
   head: () => ({ meta: [{ title: "Clientes — Ramos Engenharia" }] }),
@@ -16,12 +17,13 @@ export const Route = createFileRoute("/clientes/")({
 function ClientesPage() {
   const db = useDB();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(emptyClienteForm());
+  const [name, setName] = useState("");
 
   function submit() {
-    if (!form.name.trim()) return;
-    addClient(form);
-    setForm(emptyClienteForm());
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    addClient({ name: trimmed, personType: "PJ" });
+    setName("");
     setOpen(false);
   }
 
@@ -34,10 +36,22 @@ function ClientesPage() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <Button type="button" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Novo cliente</Button>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Cadastrar cliente</DialogTitle></DialogHeader>
-            <ClienteForm value={form} onChange={setForm} />
-            <DialogFooter><Button onClick={submit}>Salvar</Button></DialogFooter>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Novo cliente</DialogTitle></DialogHeader>
+            <div className="grid gap-2">
+              <Label>Nome do cliente *</Label>
+              <Input
+                autoFocus
+                value={name}
+                placeholder="Ex.: Empresa XYZ Ltda"
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Você pode complementar CNPJ, endereço, contatos e representante depois, abrindo o cliente.
+              </p>
+            </div>
+            <DialogFooter><Button onClick={submit} disabled={!name.trim()}>Criar cliente</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

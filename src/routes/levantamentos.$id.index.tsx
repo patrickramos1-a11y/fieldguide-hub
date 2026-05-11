@@ -6,6 +6,7 @@ import {
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
   setEnabledModules, useDBStatus, setModuleNA, setSubgroupNA, enableModule,
   closeSurvey, reopenSurvey, addTemplate, setSubgroupNote, setModuleDone,
+  setSubgroupDone,
 } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

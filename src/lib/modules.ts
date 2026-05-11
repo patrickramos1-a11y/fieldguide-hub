@@ -144,15 +144,13 @@ export const MODULES: ModuleDef[] = [
     title: "Dados Operacionais",
     description: "Funcionamento, equipe e alterações operacionais.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento", "outorga"],
     subgroups: [
       {
         id: "funcionamento",
         title: "Funcionamento",
         fields: [
-          { id: "horario_inicio", label: "Horário de início", type: "time" },
-          { id: "horario_fim", label: "Horário de término", type: "time" },
-          { id: "horario_func", label: "Observações sobre o horário (turnos, escalas)", type: "textarea" },
-          { id: "dias_semana", label: "Dias de funcionamento", type: "multiselect", options: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"] },
+          { id: "funcionamento", label: "Regime de funcionamento", type: "hours-presets" },
         ],
       },
       {

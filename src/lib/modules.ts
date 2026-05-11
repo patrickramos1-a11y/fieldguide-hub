@@ -159,21 +159,23 @@ export const MODULES: ModuleDef[] = [
         id: "quadro",
         title: "Quadro de funcionários",
         fields: [
-          { id: "n_funcionarios", label: "Número de funcionários", type: "number" },
-          { id: "n_funcionarios_admin", label: "Funcionários administrativos", type: "number" },
-          { id: "n_funcionarios_oper", label: "Funcionários operacionais", type: "number" },
-          { id: "alteracao_quadro", label: "Houve alteração no quadro?", type: "boolean" },
-          { id: "alteracao_quadro_obs", label: "Descrição da alteração no quadro", type: "textarea", showIf: { field: "alteracao_quadro", truthy: true } },
+          {
+            id: "setores",
+            label: "Setores e quantidade de funcionários",
+            type: "repeater",
+            addItemLabel: "Adicionar setor",
+            itemFields: [
+              { id: "setor", label: "Setor", type: "button-select", options: ["Administrativo", "Operacional", "Produção", "Manutenção", "Limpeza", "Segurança", "Logística", "Outros"], allowOther: true },
+              { id: "quantidade", label: "Quantidade", type: "number", decimal: false },
+            ],
+          },
         ],
       },
       {
         id: "producao",
         title: "Produção e operação",
         fields: [
-          { id: "alteracao_producao", label: "Houve alteração na produção?", type: "boolean" },
-          { id: "alteracao_producao_obs", label: "Descrição da alteração na produção", type: "textarea", showIf: { field: "alteracao_producao", truthy: true } },
           { id: "capacidade_produtiva", label: "Capacidade produtiva atual", type: "text" },
-          { id: "obs_operacionais", label: "Observações operacionais", type: "textarea" },
         ],
       },
     ],

@@ -48,7 +48,7 @@ function SurveyEditor() {
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
 
   // ---- Etapa de configuração inicial ----
-  if (!survey.enabledModules) {
+  if (!survey.enabledModules || survey.enabledModules.length === 0) {
     return (
       <AppShell>
         <Link to="/levantamentos" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3">
@@ -60,7 +60,7 @@ function SurveyEditor() {
         </div>
         <ModuleConfigStep
           surveyType={survey.type}
-          onConfirm={(ids) => setEnabledModules(survey.id, ids)}
+          onConfirm={(ids) => setEnabledModules(survey.id, ids.length ? ids : ["identificacao", "validacao"])}
         />
       </AppShell>
     );

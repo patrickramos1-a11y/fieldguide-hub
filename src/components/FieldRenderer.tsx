@@ -189,7 +189,13 @@ function QuantityField({ value, onChange }: { value: any; onChange: (v: any) => 
 // ============================ ButtonSelectField ===============================
 function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value: any; onChange: (v: any) => void }) {
   const multi = !!field.multi;
-  const options = field.options ?? [];
+  const baseOptions = field.options ?? [];
+  const learnKey = field.learn ? `learned:${field.id}` : null;
+  const [learned, setLearned] = useState<string[]>(() => {
+    if (!learnKey || typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem(learnKey) ?? "[]") as string[]; } catch { return []; }
+  });
+  const options = [...baseOptions, ...learned.filter((l) => !baseOptions.includes(l))];
   const selected: string[] = multi
     ? (Array.isArray(value) ? value : [])
     : (value ? [String(value)] : []);
@@ -209,8 +215,19 @@ function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value:
     if (!v) return;
     if (multi) onChange([...selected, v]);
     else onChange(v);
+    if (learnKey && !options.includes(v)) {
+      const next = [...learned, v];
+      setLearned(next);
+      try { localStorage.setItem(learnKey, JSON.stringify(next)); } catch {}
+    }
     setOtherValue("");
     setOtherOpen(false);
+  }
+  function forgetLearned(opt: string) {
+    if (!learnKey) return;
+    const next = learned.filter((x) => x !== opt);
+    setLearned(next);
+    try { localStorage.setItem(learnKey, JSON.stringify(next)); } catch {}
   }
 
   // Itens "outros" (selecionados que não estão em options)
@@ -220,11 +237,19 @@ function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value:
     <div className="flex flex-wrap gap-1.5">
       {options.map((o) => {
         const checked = selected.includes(o);
+        const isLearned = learnKey && learned.includes(o) && !baseOptions.includes(o);
         return (
-          <button type="button" key={o} onClick={() => toggle(o)}
-            className={`text-xs rounded-full px-3 py-1 border transition-colors ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}>
-            {o}
-          </button>
+          <span key={o} className="inline-flex items-center">
+            <button type="button" onClick={() => toggle(o)}
+              className={`text-xs rounded-full px-3 py-1 border transition-colors ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"} ${isLearned ? "border-dashed" : ""}`}
+              title={isLearned ? "Opção aprendida" : undefined}>
+              {o}
+            </button>
+            {isLearned && !checked && (
+              <button type="button" onClick={() => forgetLearned(o)} title="Esquecer"
+                className="ml-0.5 text-[10px] text-muted-foreground hover:text-destructive">×</button>
+            )}
+          </span>
         );
       })}
       {otherItems.map((o) => (

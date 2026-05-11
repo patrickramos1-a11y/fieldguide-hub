@@ -571,39 +571,28 @@ export const MODULES: ModuleDef[] = [
         id: "ruidos",
         title: "Ruídos",
         fields: [
-          { id: "ruidos_status", label: "Situação", type: "select", options: ["Houve teste", "Falta fazer", "Não se aplica"] },
-          { id: "ruidos", label: "Descrição / observações", type: "textarea" },
+          { id: "ruidos_status", label: "Situação", type: "button-select", options: ["Houve teste", "Falta fazer", "Não se aplica"] },
         ],
       },
       {
         id: "liquidos",
         title: "Emissões líquidas",
         fields: [
-          { id: "tipo_efluente_liquido", label: "Tipo de efluente líquido", type: "multiselect", options: ["Industrial", "Doméstico", "ETE", "Fossa"] },
-          { id: "liquidos", label: "Observações", type: "textarea" },
+          { id: "tipo_efluente_liquido", label: "Tipo de efluente líquido", type: "button-select", multi: true, allowOther: true, options: ["Industrial", "Doméstico", "ETE", "Fossa séptica", "Sumidouro", "Rede pública", "Reuso"] },
         ],
       },
       {
         id: "solidos",
         title: "Emissões sólidas",
         fields: [
-          { id: "destinacao_solidos", label: "Destinação dos sólidos", type: "multiselect", options: ["Coleta pública", "Empresa terceirizada", "Mistura com demais resíduos"] },
-          { id: "solidos", label: "Observações", type: "textarea" },
+          { id: "destinacao_solidos", label: "Destinação dos sólidos", type: "button-select", multi: true, allowOther: true, options: ["Coleta pública", "Empresa terceirizada", "Mistura com demais resíduos", "Reciclagem", "Aterro próprio", "Compostagem"] },
         ],
       },
       {
         id: "gasosos",
         title: "Emissões gasosas",
         fields: [
-          { id: "emissao_gasosa", label: "Existência de emissão gasosa", type: "select", options: ["Há chaminé", "Há emissão difusa", "Não se aplica"] },
-          { id: "gasosos", label: "Observações", type: "textarea" },
-        ],
-      },
-      {
-        id: "obs",
-        title: "Observações gerais sobre emissões",
-        fields: [
-          { id: "obs_emissoes", label: "Observações", type: "textarea" },
+          { id: "emissao_gasosa", label: "Existência de emissão gasosa", type: "button-select", multi: true, options: ["Há chaminé", "Há emissão difusa", "Vapor", "Material particulado", "Não se aplica"] },
         ],
       },
     ],

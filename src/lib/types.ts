@@ -56,7 +56,10 @@ export type FieldType =
   | "boolean"
   | "coords"
   | "people"
-  | "hours-presets";
+  | "hours-presets"
+  | "button-select"
+  | "repeater"
+  | "apply-to-sides";
 
 /** Pessoa em listas dinâmicas (Pessoas Envolvidas etc.). */
 export interface Person {
@@ -117,6 +120,22 @@ export interface FieldDef {
     in?: unknown[];
     truthy?: boolean;
   };
+  /** button-select: permite múltipla seleção. */
+  multi?: boolean;
+  /** button-select / repeater: oferece opção "Outra" inline. */
+  allowOther?: boolean;
+  /** repeater: campos de cada item. */
+  itemFields?: FieldDef[];
+  /** repeater: rótulo para o botão de adicionar item. */
+  addItemLabel?: string;
+  /** number: lista de presets clicáveis. */
+  presets?: Array<string | number>;
+  /** number: opções de unidade (substitui `unit`). */
+  unitOptions?: string[];
+  /** number: aceita decimais (default true). */
+  decimal?: boolean;
+  /** apply-to-sides: rótulos dos lados. */
+  sides?: string[];
 }
 
 export interface ModuleDef {
@@ -211,6 +230,8 @@ export interface ModuleState {
   attachments: Attachment[];
   /** Observações pontuais por campo/bloco. */
   fieldNotes?: Record<string, string>;
+  /** Observações por subgrupo (uma por subgrupo). */
+  subgroupNotes?: Record<string, string>;
   /** Marcações de "Não se aplica" por campo/bloco. */
   nonApplicable?: Record<string, boolean>;
   /** Marcação "Não se aplica" para o módulo inteiro. */

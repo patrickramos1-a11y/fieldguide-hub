@@ -921,7 +921,7 @@ export const MODULES: ModuleDef[] = [
         id: "mercado",
         title: "Mercado local",
         fields: [
-          { id: "mercado_local", label: "Itens disponíveis na região", type: "button-select", multi: true, allowOther: true, options: ["Hospital", "Posto de saúde", "Escola", "Creche", "Universidade", "Shopping", "Farmácia", "Concretaria", "Supermercado", "Pedreira", "Casas para república", "Mão de obra administrativa", "Mão de obra operária", "Posto de combustível", "Praça", "Banco / lotérica", "Igreja", "Restaurante", "Hotel / Pousada", "Indústria próxima", "Centro comercial", "Ponto de ônibus / terminal", "Delegacia", "Corpo de bombeiros"] },
+          { id: "mercado_local", label: "Itens disponíveis na região", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Hospital", "Posto de saúde", "Escola", "Creche", "Universidade", "Shopping", "Farmácia", "Concretaria", "Supermercado", "Pedreira", "Casas para república", "Mão de obra administrativa", "Mão de obra operária", "Posto de combustível", "Praça", "Parque", "Áreas verdes", "Ciclovia", "Cinema", "Biblioteca", "Estádio", "Quadra esportiva", "Centro comunitário", "Banco / lotérica", "Igreja", "Restaurante", "Hotel / Pousada", "Indústria próxima", "Centro comercial", "Ponto de ônibus / terminal", "Delegacia", "Corpo de bombeiros"] },
         ],
       },
       {
@@ -968,7 +968,7 @@ export const MODULES: ModuleDef[] = [
         id: "publica",
         title: "Infraestrutura pública",
         fields: [
-          { id: "infra_servicos", label: "Serviços disponíveis", type: "button-select", multi: true, allowOther: true, options: ["Abastecimento de água", "Energia elétrica", "Coleta de lixo", "Iluminação pública", "Iluminação LED", "Rede de esgoto", "Telefone", "Internet / Fibra", "Rede de drenagem pluvial", "Alta tensão", "Asfalto / Pavimentação", "Coleta seletiva", "Posto de saúde", "Hospital", "Gás encanado", "Transporte público", "Ponto de ônibus"] },
+          { id: "infra_servicos", label: "Serviços e equipamentos públicos disponíveis", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Abastecimento de água", "Energia elétrica", "Coleta de lixo", "Iluminação pública", "Iluminação LED", "Rede de esgoto", "Telefone", "Internet / Fibra", "Rede de drenagem pluvial", "Alta tensão", "Asfalto / Pavimentação", "Coleta seletiva", "Posto de saúde", "Hospital", "Escola", "Creche", "Praça", "Parque", "Áreas de lazer", "Quadra esportiva", "Centro comunitário", "Igreja", "Gás encanado", "Transporte público", "Ponto de ônibus"] },
         ],
       },
     ],

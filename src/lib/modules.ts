@@ -814,39 +814,30 @@ export const MODULES: ModuleDef[] = [
         id: "respeito",
         title: "Respeito à política ambiental",
         fields: [
-          { id: "politica_status", label: "A política ambiental está sendo respeitada pelos colaboradores?", type: "select", options: ["Sim", "Não", "Parcialmente", "Em implantação", "Falta mais avisos", "Não há política", "Não foi avaliado"] },
-          { id: "politica_obs", label: "Observações", type: "textarea" },
+          { id: "politica_status", label: "A política está sendo respeitada?", type: "button-select", options: ["Sim", "Não", "Parcialmente", "Em implantação", "Falta mais avisos", "Não há política", "Não foi avaliado"] },
         ],
       },
       {
         id: "coleta_recicl",
         title: "Coleta de resíduos recicláveis e não recicláveis",
         fields: [
-          { id: "coleta_recicl_status", label: "Está sendo realizada?", type: "select", options: ["Sim", "Não", "Parcialmente", "Em fase de contratação", "Não há", "Não se aplica a essa visita"] },
+          { id: "coleta_recicl_status", label: "Está sendo realizada?", type: "button-select", options: ["Sim", "Não", "Parcialmente", "Em fase de contratação", "Não há", "Não se aplica a essa visita"] },
         ],
       },
       {
         id: "educacao",
         title: "Educação ambiental",
         fields: [
-          { id: "educacao_status", label: "Há necessidade de novas palestras?", type: "select", options: ["Sim", "Não", "Houve agendamento", "Não se aplica", "Não há perspectiva no momento", "Irá contactar o escritório havendo necessidade"] },
-          { id: "palestras", label: "Palestras / orientações realizadas", type: "textarea" },
+          { id: "educacao_status", label: "Há necessidade de novas palestras?", type: "button-select", options: ["Sim", "Não", "Houve agendamento", "Não se aplica", "Não há perspectiva no momento", "Irá contactar o escritório havendo necessidade"] },
+          { id: "palestras", label: "Palestras / orientações realizadas", type: "textarea", showIf: { field: "educacao_status", in: ["Sim", "Houve agendamento"] } },
         ],
       },
       {
         id: "demandas",
         title: "Levantamento de informações para projeto",
         fields: [
-          { id: "ha_demanda_projeto", label: "Há levantamento de informações para projeto?", type: "select", options: ["Sim", "Não"] },
-          { id: "tipo_demanda", label: "Tipo(s) de demanda / documento", type: "multiselect", options: ["OUTORGA", "PEA", "CAR", "PCA", "RCA", "PGRS", "RIAA"] },
-          { id: "demanda_obs", label: "Observações sobre a demanda", type: "textarea" },
-        ],
-      },
-      {
-        id: "conformidade",
-        title: "Conformidade operacional",
-        fields: [
-          { id: "conformidade", label: "Observações de conformidade", type: "textarea" },
+          { id: "ha_demanda_projeto", label: "Há levantamento para projeto?", type: "button-select", options: ["Sim", "Não"] },
+          { id: "tipo_demanda", label: "Tipo(s) de demanda / documento", type: "button-select", multi: true, options: ["OUTORGA", "PEA", "CAR", "PCA", "RCA", "PGRS", "RIAA"], showIf: { field: "ha_demanda_projeto", equals: "Sim" } },
         ],
       },
     ],

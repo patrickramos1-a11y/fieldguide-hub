@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState, type ChangeEvent } from "react";
 import {
   useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment,
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
-  setEnabledModules,
+  setEnabledModules, useDBStatus,
 } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ type VirtualTab = "__documentos" | "__pendencias" | "__encerramento";
 
 function SurveyEditor() {
   const { id } = Route.useParams();
+  const { hydrated, persistPending, persistenceError } = useDBStatus();
   const data = useDBSelector(
     (state) => {
       const survey = state.surveys.find((s) => s.id === id);
@@ -45,6 +46,8 @@ function SurveyEditor() {
 
   const [activeTab, setActiveTab] = useState<string>("identificacao");
 
+  if (!hydrated) return <AppShell><p>Carregando levantamento...</p></AppShell>;
+
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
 
   // ---- Etapa de configuração inicial ----
@@ -57,6 +60,7 @@ function SurveyEditor() {
         <div className="mb-4">
           <div className="text-xs text-muted-foreground">{client?.name} / {project?.name}</div>
           <h1 className="text-2xl font-semibold">{survey.title}</h1>
+          {(persistPending || persistenceError) && <p className="text-xs text-muted-foreground mt-1">{persistenceError ?? "Salvando alterações..."}</p>}
         </div>
         <ModuleConfigStep
           surveyType={survey.type}
@@ -73,13 +77,16 @@ function SurveyEditor() {
       clientName={client?.name ?? ""}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
+      persistPending={persistPending}
+      persistenceError={persistenceError}
     />
   );
 }
 
 function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActiveTab }: {
-  survey: any; projectName: string; clientName: string; activeTab: string; setActiveTab: (t: string) => void;
+  survey: any; projectName: string; clientName: string; activeTab: string; setActiveTab: (t: string) => void; persistPending?: boolean; persistenceError?: string;
 }) {
+  const { persistPending, persistenceError } = arguments[0] as { persistPending?: boolean; persistenceError?: string };
   const allModules = getModulesForType(survey.type);
   const enabled: string[] = survey.enabledModules ?? allModules.map((m: any) => m.id);
   const enabledSet = useMemo(() => new Set(enabled), [enabled]);
@@ -105,6 +112,7 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
           <div className="text-xs text-muted-foreground">{clientName} / {projectName}</div>
           <h1 className="text-2xl font-semibold">{survey.title}</h1>
           <div className="text-sm text-muted-foreground">{typeLabel}</div>
+          {(persistPending || persistenceError) && <div className="text-xs text-muted-foreground mt-1">{persistenceError ?? "Salvando alterações..."}</div>}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEnabledModules(survey.id, [])}>

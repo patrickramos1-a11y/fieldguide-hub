@@ -1,5 +1,5 @@
-import type { FieldDef, ModuleDef, SurveyType } from "./types";
-import type { FieldStatus, ModuleState, SubgroupDef } from "./types";
+import type { FieldDef, ModuleDef, SurveyType, ModulePurpose } from "./types";
+import type { FieldStatus, ModuleState, SubgroupDef, Person, HoursValue } from "./types";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -107,33 +107,27 @@ export const MODULES: ModuleDef[] = [
     title: "Pessoas Envolvidas",
     description: "Pessoas que participaram desta visita.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento", "outorga", "vazao"],
     subgroups: [
       {
         id: "colaborador",
         title: "Colaborador que acompanhou o levantamento",
         fields: [
-          { id: "colab_nome", label: "Nome do colaborador", type: "text" },
-          { id: "colab_cargo", label: "Cargo do colaborador", type: "text" },
-          { id: "colab_telefone", label: "Telefone", type: "text" },
-          { id: "colab_email", label: "E-mail", type: "text" },
+          { id: "colaboradores", label: "Colaboradores que acompanharam", type: "people" },
         ],
       },
       {
         id: "tecnico",
         title: "Técnico responsável pelo levantamento",
         fields: [
-          { id: "tec_nome", label: "Nome do técnico responsável", type: "text" },
-          { id: "tec_cargo", label: "Cargo do técnico", type: "text" },
-          { id: "tec_registro", label: "Registro profissional (CREA/CRQ/etc.)", type: "text" },
-          { id: "tec_telefone", label: "Telefone", type: "text" },
-          { id: "tec_email", label: "E-mail", type: "text" },
+          { id: "tecnicos", label: "Técnico(s) responsável(eis)", type: "people" },
         ],
       },
       {
         id: "outros",
         title: "Outras pessoas presentes",
         fields: [
-          { id: "outros_presentes", label: "Outras pessoas presentes (nome / cargo / vínculo)", type: "textarea" },
+          { id: "outros_pessoas", label: "Outras pessoas presentes", type: "people" },
         ],
       },
     ],

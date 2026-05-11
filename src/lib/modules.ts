@@ -1032,24 +1032,24 @@ export const MODULES_BY_TYPE: Record<SurveyType, string[]> = {
   geral: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "operacionais",
     "areas", "agua", "pocos", "processo", "emissoes", "residuos", "ete",
-    "politica", "rotinas", "infraestrutura", "vizinhanca", "croqui", "fotos",
-    "documentos", "observacoes", "validacao",
+    "politica", "rotinas", "infraestrutura", "vizinhanca", "fotos",
+    "documentos", "validacao",
   ],
   ambiental: [
     "identificacao", "empreendimento", "pessoas", "politica", "residuos",
-    "ete", "rotinas", "operacionais", "documentos", "fotos", "observacoes", "validacao",
+    "ete", "rotinas", "operacionais", "documentos", "fotos", "validacao",
   ],
   vazao: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "vazao",
-    "croqui", "fotos", "observacoes", "validacao",
+    "fotos", "validacao",
   ],
   outorga: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "agua",
-    "pocos", "outorga", "operacionais", "documentos", "observacoes", "fotos", "validacao",
+    "pocos", "outorga", "operacionais", "documentos", "fotos", "validacao",
   ],
   terreno: [
     "identificacao", "empreendimento", "localizacao", "areas", "infraestrutura",
-    "vizinhanca", "croqui", "fotos", "observacoes", "validacao",
+    "vizinhanca", "fotos", "validacao",
   ],
 };
 
@@ -1212,7 +1212,7 @@ export interface FactoryTemplate { id: string; name: string; type: SurveyType; m
 export const FACTORY_TEMPLATES: FactoryTemplate[] = [
   { id: "factory-geral-completo", name: "Completo (todos os módulos)", type: "geral", moduleIds: MODULES_BY_TYPE.geral },
   { id: "factory-geral-essencial", name: "Essencial", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","operacionais","fotos","documentos","validacao"] },
-  { id: "factory-geral-projeto", name: "Foco em Projeto", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","localizacao","operacionais","areas","agua","processo","emissoes","residuos","croqui","fotos","documentos","validacao"] },
+  { id: "factory-geral-projeto", name: "Foco em Projeto", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","localizacao","operacionais","areas","agua","processo","emissoes","residuos","fotos","documentos","validacao"] },
   { id: "factory-ambiental-padrao", name: "Acompanhamento padrão", type: "ambiental", moduleIds: MODULES_BY_TYPE.ambiental },
   { id: "factory-ambiental-curto", name: "Visita curta", type: "ambiental", moduleIds: ["identificacao","ete","residuos","rotinas","fotos","documentos","validacao"] },
   { id: "factory-vazao-padrao", name: "Medição padrão", type: "vazao", moduleIds: MODULES_BY_TYPE.vazao },

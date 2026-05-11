@@ -285,6 +285,12 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
   const naSubMap = state.naSubgroups ?? {};
   const effective = computeModuleStatus(m, state);
 
+  const subgroups: SubgroupDef[] = m.subgroups ?? [];
+  const useSubTabs = subgroups.length >= 3;
+  const [activeSubId, setActiveSubId] = useState<string>(subgroups[0]?.id ?? "");
+  // Reset sub-tab when module changes
+  useEffect(() => { setActiveSubId(subgroups[0]?.id ?? ""); }, [m.id]);
+
   const handleFieldChange = useCallback((fieldId: string, value: unknown) => {
     setFieldValue(survey.id, m.id, fieldId, value);
   }, [survey.id, m.id]);
@@ -346,9 +352,9 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
 
         {m.fields.length > 0 && <div className="grid gap-2.5">{m.fields.map(renderField)}</div>}
 
-        {m.subgroups && m.subgroups.length > 0 && (
+        {subgroups.length > 0 && !useSubTabs && (
           <div className="mt-2 grid gap-3">
-            {m.subgroups.map((sg: SubgroupDef) => (
+            {subgroups.map((sg: SubgroupDef) => (
               <SubgroupBlock
                 key={sg.id}
                 subgroup={sg}
@@ -360,22 +366,70 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
             ))}
           </div>
         )}
+
+        {subgroups.length > 0 && useSubTabs && (
+          <div className="mt-2">
+            <div className="overflow-x-auto -mx-1 px-1 mb-3">
+              <div className="flex gap-1.5 min-w-max pb-1">
+                {subgroups.map((sg) => {
+                  const sgNa = !!naSubMap[sg.id];
+                  const sgEff = sgNa ? "nao_se_aplica" : computeSubgroupStatus(sg, state);
+                  const { filled, total } = subgroupProgress(sg, state);
+                  const active = activeSubId === sg.id;
+                  const done = sgEff === "concluido";
+                  return (
+                    <button
+                      key={sg.id}
+                      onClick={() => setActiveSubId(sg.id)}
+                      className={`rounded-full px-3 py-1 text-xs whitespace-nowrap flex items-center gap-1.5 border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
+                    >
+                      {done ? (
+                        <Check className="h-3 w-3" style={{ color: active ? undefined : "var(--status-done)" }} />
+                      ) : (
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(sgEff)})` }} />
+                      )}
+                      <span>{sg.title}</span>
+                      {!sgNa && <span className={`opacity-70 ${active ? "" : "text-muted-foreground"}`}>{filled}/{total}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {(() => {
+              const sg = subgroups.find((s) => s.id === activeSubId) ?? subgroups[0];
+              if (!sg) return null;
+              return (
+                <SubgroupBlock
+                  key={sg.id}
+                  subgroup={sg}
+                  renderField={renderField}
+                  state={state}
+                  isNA={!!naSubMap[sg.id]}
+                  onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
+                  forceOpen
+                />
+              );
+            })()}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA }: {
+function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOpen }: {
   subgroup: SubgroupDef;
   renderField: (f: FieldDef) => React.ReactNode;
   state: ModuleState;
   isNA: boolean;
   onToggleNA: (na: boolean) => void;
+  forceOpen?: boolean;
 }) {
   const effective = computeSubgroupStatus(subgroup, state);
   const { filled, total } = subgroupProgress(subgroup, state);
   const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, state.values));
-  const [open, setOpen] = useState(() => filled === 0);
+  const [openInternal, setOpen] = useState(() => filled === 0);
+  const open = forceOpen ? true : openInternal;
 
   if (isNA) {
     return (

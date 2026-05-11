@@ -632,22 +632,79 @@ function EncerramentoPanel({ survey }: { survey: any }) {
   const pendAbertas = survey.pendencias.filter((p: any) => p.status !== "concluido");
   const pendResolvidas = survey.pendencias.filter((p: any) => p.status === "concluido");
 
+  const ident = survey.modules.identificacao?.values ?? {};
+  const dataVisita: string = ident.data_visita ?? "";
+  const horaChegada: string = ident.hora_chegada ?? "";
+  const [horaSaida, setHoraSaida] = useState<string>(survey.closedAtSaida ?? "");
+
+  const duration = useMemo(() => computeDuration(dataVisita, horaChegada, horaSaida || nowHHMM()), [dataVisita, horaChegada, horaSaida]);
+  const closed = !!survey.closedAt;
+  const blockers = emAndamento.length + pendAbertas.length;
+
   return (
     <div className="space-y-4">
+      {closed && (
+        <Card style={{ borderLeft: `4px solid var(--status-done)` }}>
+          <CardContent className="p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Lock className="h-4 w-4" style={{ color: "var(--status-done)" }} />
+              Levantamento encerrado em {new Date(survey.closedAt).toLocaleString()}.
+            </div>
+            <Button variant="outline" size="sm" onClick={() => reopenSurvey(survey.id)}>
+              <Unlock className="h-4 w-4 mr-1" /> Reabrir
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="font-semibold mb-3 flex items-center gap-2"><Clock className="h-4 w-4" /> Duração da visita</h3>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <Label className="text-xs">Data</Label>
+              <div className="text-sm">{dataVisita || <span className="text-muted-foreground">não informada</span>}</div>
+            </div>
+            <div>
+              <Label className="text-xs">Chegada</Label>
+              <div className="text-sm">{horaChegada || <span className="text-muted-foreground">—</span>}</div>
+            </div>
+            <div>
+              <Label className="text-xs">Saída</Label>
+              <Input type="time" value={horaSaida} onChange={(e) => setHoraSaida(e.target.value)} disabled={closed} />
+            </div>
+          </div>
+          <div className="mt-3 text-sm">
+            Tempo decorrido: <strong>{duration ?? "—"}</strong>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-5">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Signature className="h-5 w-5" /> Validação e Encerramento</h2>
           <div className="grid sm:grid-cols-3 gap-4 mb-4">
-            <div><Label>Assinatura cliente</Label><Input value={validacao?.values.assinatura_cliente ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_cliente", e.target.value)} placeholder="Nome de quem assinou" /></div>
-            <div><Label>Assinatura técnico</Label><Input value={validacao?.values.assinatura_tecnico ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_tecnico", e.target.value)} /></div>
-            <div><Label>Data</Label><Input type="date" value={validacao?.values.data_validacao ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "data_validacao", e.target.value)} /></div>
+            <div><Label>Assinatura cliente</Label><Input disabled={closed} value={validacao?.values.assinatura_cliente ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_cliente", e.target.value)} placeholder="Nome de quem assinou" /></div>
+            <div><Label>Assinatura técnico</Label><Input disabled={closed} value={validacao?.values.assinatura_tecnico ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_tecnico", e.target.value)} /></div>
+            <div><Label>Data</Label><Input disabled={closed} type="date" value={validacao?.values.data_validacao ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "data_validacao", e.target.value)} /></div>
           </div>
+          {blockers > 0 && !closed && (
+            <div className="mb-3 text-xs text-muted-foreground">
+              Atenção: ainda há {emAndamento.length} módulo(s) sem conclusão e {pendAbertas.length} pendência(s) aberta(s). Você pode encerrar mesmo assim.
+            </div>
+          )}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => updateModule(survey.id, "validacao", { status: "concluido" })}>
-              <CheckCircle2 className="h-4 w-4 mr-1" /> Marcar como concluído
-            </Button>
+            {!closed ? (
+              <Button onClick={() => { closeSurvey(survey.id, horaSaida || nowHHMM()); updateModule(survey.id, "validacao", { status: "concluido" }); }}>
+                <Lock className="h-4 w-4 mr-1" /> Encerrar levantamento
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => reopenSurvey(survey.id)}>
+                <Unlock className="h-4 w-4 mr-1" /> Reabrir
+              </Button>
+            )}
             <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
-              <Button><FileDown className="h-4 w-4 mr-1" /> Ver resumo final</Button>
+              <Button variant="outline"><FileDown className="h-4 w-4 mr-1" /> Ver resumo final</Button>
             </Link>
           </div>
         </CardContent>
@@ -671,6 +728,25 @@ function EncerramentoPanel({ survey }: { survey: any }) {
       </Card>
     </div>
   );
+}
+
+function nowHHMM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function computeDuration(date: string, start: string, end: string): string | null {
+  if (!date || !start || !end) return null;
+  const s = new Date(`${date}T${start}`);
+  const e = new Date(`${date}T${end}`);
+  let diff = e.getTime() - s.getTime();
+  if (Number.isNaN(diff)) return null;
+  if (diff < 0) diff += 24 * 60 * 60 * 1000; // virou o dia
+  const totalMin = Math.floor(diff / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}min`;
+  return `${h}h ${String(m).padStart(2, "0")}min`;
 }
 
 function SummaryRow({ label, items, tone }: { label: string; items: string[]; tone: string }) {

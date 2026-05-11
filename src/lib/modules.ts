@@ -299,9 +299,21 @@ export const MODULES: ModuleDef[] = [
         id: "captacao",
         title: "Captação de água",
         fields: [
-          { id: "tipo_captacao", label: "Tipo(s) de captação", type: "button-select", multi: true, options: ["Superficial", "Subterrânea", "Rede pública", "Caminhão pipa", "Reuso"] },
+          { id: "tipo_captacao", label: "Tipo(s) de captação", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Superficial", "Subterrânea", "Rede pública", "Caminhão pipa", "Reuso"] },
           { id: "fornecedor_publico", label: "Concessionária (se rede pública)", type: "text", showIf: { field: "tipo_captacao", in: ["Rede pública"] } },
-          { id: "consumo", label: "Estimativa de consumo", type: "number", unit: "m³/dia" },
+          { id: "consumo", label: "Estimativa de consumo", type: "number", unit: "m³/dia", presets: [1, 5, 10, 20, 50, 100, 500] },
+          {
+            id: "pontos_captacao",
+            label: "Pontos de captação",
+            type: "repeater",
+            addItemLabel: "Adicionar ponto de captação",
+            itemFields: [
+              { id: "nome", label: "Identificação do ponto", type: "text", enterToAdd: true },
+              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, learn: true, options: ["Poço", "Rio", "Nascente", "Açude", "Cisterna", "Rede pública"] },
+              { id: "coords", label: "Coordenadas", type: "coords" },
+            ],
+            noPresetMemory: true,
+          },
         ],
       },
       {
@@ -316,9 +328,9 @@ export const MODULES: ModuleDef[] = [
             addItemLabel: "Adicionar reservatório",
             showIf: { field: "tem_reservatorio", equals: "Sim" },
             itemFields: [
-              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, options: ["Caixa elevada", "Cisterna", "Tanque", "Reservatório de fibra", "Reservatório metálico"] },
+              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, learn: true, options: ["Caixa elevada", "Cisterna", "Tanque", "Reservatório de fibra", "Reservatório metálico"] },
               { id: "capacidade", label: "Capacidade", type: "number", unit: "L", presets: [500, 1000, 2000, 5000, 10000, 20000] },
-              { id: "quantidade", label: "Quantidade", type: "number", decimal: false },
+              { id: "quantidade", label: "Quantidade", type: "quantity" },
             ],
           },
         ],
@@ -327,7 +339,17 @@ export const MODULES: ModuleDef[] = [
         id: "uso",
         title: "Uso da água",
         fields: [
-          { id: "usos_agua", label: "Tipos de uso", type: "button-select", multi: true, allowOther: true, options: ["Consumo humano", "Sanitário", "Processo industrial", "Limpeza", "Irrigação", "Resfriamento", "Dessedentação animal", "Lavagem de veículos", "Combate a incêndio"] },
+          { id: "usos_agua", label: "Tipos de uso", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Consumo humano", "Sanitário", "Processo industrial", "Limpeza", "Irrigação", "Resfriamento", "Dessedentação animal", "Lavagem de veículos", "Combate a incêndio"] },
+          {
+            id: "consumo_por_uso",
+            label: "Consumo estimado por uso",
+            type: "repeater",
+            addItemLabel: "Adicionar consumo por uso",
+            itemFields: [
+              { id: "uso", label: "Uso", type: "button-select", allowOther: true, learn: true, options: ["Consumo humano", "Sanitário", "Processo industrial", "Limpeza", "Irrigação", "Resfriamento", "Dessedentação animal"] },
+              { id: "consumo", label: "Consumo", type: "number", unit: "m³/dia", presets: [0.5, 1, 5, 10, 20, 50] },
+            ],
+          },
         ],
       },
       {

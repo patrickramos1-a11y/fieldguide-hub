@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { getModulesForType } from "@/lib/modules";
 import { SURVEY_TYPES } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/levantamentos/$id/resumo")({
   component: ResumoPage,
@@ -26,7 +27,9 @@ function ResumoPage() {
   const { id } = Route.useParams();
   const { hydrated } = useDBStatus();
   const db = useDB();
-  if (!hydrated) return <AppShell><p>Carregando resumo...</p></AppShell>;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted || !hydrated) return <AppShell><p>Carregando resumo...</p></AppShell>;
   const survey = db.surveys.find((s) => s.id === id);
   if (!survey) return <AppShell><p>Não encontrado.</p></AppShell>;
   const project = db.projects.find((p) => p.id === survey.projectId);

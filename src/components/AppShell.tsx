@@ -1,11 +1,12 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, Users, FolderKanban, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, ClipboardList, Settings } from "lucide-react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/projetos", label: "Projetos", icon: FolderKanban },
   { to: "/levantamentos", label: "Levantamentos", icon: ClipboardList },
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {

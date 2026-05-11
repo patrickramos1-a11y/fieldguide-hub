@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as LevantamentosIndexRouteImport } from './routes/levantamentos.index'
@@ -19,6 +20,11 @@ import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 import { Route as LevantamentosIdIndexRouteImport } from './routes/levantamentos.$id.index'
 import { Route as LevantamentosIdResumoRouteImport } from './routes/levantamentos.$id.resumo'
 
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -67,6 +73,7 @@ const LevantamentosIdResumoRoute = LevantamentosIdResumoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/clientes/$id': typeof ClientesIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/clientes/$id': typeof ClientesIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/clientes/$id': typeof ClientesIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/configuracoes'
     | '/clientes/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/configuracoes'
     | '/clientes/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/configuracoes'
     | '/clientes/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   ClientesIdRoute: typeof ClientesIdRoute
   LevantamentosNovoRoute: typeof LevantamentosNovoRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
@@ -149,6 +162,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -217,6 +237,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   ClientesIdRoute: ClientesIdRoute,
   LevantamentosNovoRoute: LevantamentosNovoRoute,
   ProjetosIdRoute: ProjetosIdRoute,

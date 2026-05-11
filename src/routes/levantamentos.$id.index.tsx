@@ -97,6 +97,25 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
   const hasDocs = enabledSet.has("documentos");
   const hasValidacao = enabledSet.has("validacao");
 
+  // Módulos disponíveis mas não selecionados (excluindo centrais e obrigatórios)
+  const hiddenModules = allModules.filter(
+    (m) => !enabledSet.has(m.id) && !CENTRAL_TAB_MODULES.has(m.id),
+  );
+
+  // Contadores agregados
+  const counters = useMemo(() => {
+    const c = { concluido: 0, em_andamento: 0, nao_iniciado: 0, nao_se_aplica: 0, pendente: 0 };
+    for (const m of regularTabs) {
+      const st = computeModuleStatus(m, survey.modules[m.id] as ModuleState);
+      if (st === "concluido") c.concluido++;
+      else if (st === "em_andamento") c.em_andamento++;
+      else if (st === "nao_se_aplica") c.nao_se_aplica++;
+      else if (st === "pendente") c.pendente++;
+      else c.nao_iniciado++;
+    }
+    return c;
+  }, [regularTabs, survey.modules]);
+
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
 
   // Resolve aba ativa
@@ -114,6 +133,13 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
           <div className="text-xs text-muted-foreground">{clientName} / {projectName}</div>
           <h1 className="text-2xl font-semibold">{survey.title}</h1>
           <div className="text-sm text-muted-foreground">{typeLabel}</div>
+          <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+            <CounterChip tone="done" icon={<Check className="h-3 w-3" />} value={counters.concluido} label="concluídos" />
+            <CounterChip tone="progress" value={counters.em_andamento} label="em andamento" />
+            <CounterChip tone="todo" value={counters.nao_iniciado} label="não iniciados" />
+            {counters.nao_se_aplica > 0 && <CounterChip tone="na" value={counters.nao_se_aplica} label="N/A" />}
+            {counters.pendente > 0 && <CounterChip tone="pending" value={counters.pendente} label="pendência" />}
+          </div>
           {(persistPending || persistenceError) && <div className="text-xs text-muted-foreground mt-1">{persistenceError ?? "Salvando alterações..."}</div>}
         </div>
         <div className="flex gap-2">
@@ -130,19 +156,29 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
       <div className="mb-4 overflow-x-auto -mx-1 px-1">
         <div className="flex gap-1.5 min-w-max pb-2">
           {regularTabs.map((m) => {
-            const st = survey.modules[m.id];
+            const st = survey.modules[m.id] as ModuleState;
+            const eff = computeModuleStatus(m, st);
             const active = activeTab === m.id;
+            const done = eff === "concluido";
             return (
               <button
                 key={m.id}
                 onClick={() => setActiveTab(m.id)}
-                className={`rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap flex items-center gap-2 ${active ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-secondary"}`}
+                className={`rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap flex items-center gap-2 border ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
+                style={!active && done ? { borderColor: `var(--status-done)` } : undefined}
               >
+                {done ? (
+                  <Check className="h-3.5 w-3.5" style={{ color: active ? undefined : "var(--status-done)" }} />
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(eff)})` }} />
+                )}
                 <span>{m.title}</span>
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(st.status)})` }} />
               </button>
             );
           })}
+          {hiddenModules.length > 0 && (
+            <HiddenModulesPill survey={survey} hidden={hiddenModules} />
+          )}
           <span className="self-center text-muted-foreground"><ChevronRight className="h-4 w-4" /></span>
           {hasDocs && (
             <TabPill icon={<Files className="h-3.5 w-3.5" />} active={activeTab === "__documentos"} onClick={() => setActiveTab("__documentos")}>Documentos</TabPill>

@@ -469,6 +469,26 @@ export function deleteSurvey(sid: string) {
   persist();
 }
 
+export function closeSurvey(sid: string, horaSaida?: string) {
+  store.db = {
+    ...store.db,
+    surveys: store.db.surveys.map((s) =>
+      s.id === sid ? { ...s, closedAt: new Date().toISOString(), closedAtSaida: horaSaida } : s,
+    ),
+  };
+  persist();
+}
+
+export function reopenSurvey(sid: string) {
+  store.db = {
+    ...store.db,
+    surveys: store.db.surveys.map((s) =>
+      s.id === sid ? { ...s, closedAt: undefined, closedAtSaida: undefined } : s,
+    ),
+  };
+  persist();
+}
+
 export function updateModule(sid: string, modId: string, patch: Partial<ModuleState>) {
   store.db = {
     ...store.db,

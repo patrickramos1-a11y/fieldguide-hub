@@ -191,6 +191,10 @@ export interface Survey {
   createdAt: string;
   /** IDs de módulos habilitados; quando undefined, etapa de configuração é exibida. */
   enabledModules?: string[];
+  /** Timestamp ISO de encerramento do levantamento (trava edições). */
+  closedAt?: string;
+  /** Horário de saída registrado no encerramento. */
+  closedAtSaida?: string;
 }
 
 /** Template de configuração de módulos (reutilizável entre levantamentos). */

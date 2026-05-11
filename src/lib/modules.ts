@@ -1269,3 +1269,65 @@ export const MODULE_PRESETS: Record<SurveyType, { all: string[]; minimal: string
     minimal: ["identificacao", "localizacao", "areas", "fotos", "validacao"],
   },
 };
+
+/** Templates de fábrica embutidos por tipo (não removíveis). */
+export interface FactoryTemplate { id: string; name: string; type: SurveyType; moduleIds: string[] }
+
+export const FACTORY_TEMPLATES: FactoryTemplate[] = [
+  { id: "factory-geral-completo", name: "Completo (todos os módulos)", type: "geral", moduleIds: MODULES_BY_TYPE.geral },
+  { id: "factory-geral-essencial", name: "Essencial", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","operacionais","fotos","documentos","validacao"] },
+  { id: "factory-geral-projeto", name: "Foco em Projeto", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","localizacao","operacionais","areas","agua","processo","emissoes","residuos","croqui","fotos","documentos","validacao"] },
+  { id: "factory-ambiental-padrao", name: "Acompanhamento padrão", type: "ambiental", moduleIds: MODULES_BY_TYPE.ambiental },
+  { id: "factory-ambiental-curto", name: "Visita curta", type: "ambiental", moduleIds: ["identificacao","ete","residuos","rotinas","fotos","documentos","validacao"] },
+  { id: "factory-vazao-padrao", name: "Medição padrão", type: "vazao", moduleIds: MODULES_BY_TYPE.vazao },
+  { id: "factory-outorga-padrao", name: "Processo de outorga", type: "outorga", moduleIds: MODULES_BY_TYPE.outorga },
+  { id: "factory-outorga-renovacao", name: "Renovação de outorga", type: "outorga", moduleIds: ["identificacao","empreendimento","agua","pocos","outorga","documentos","fotos","validacao"] },
+  { id: "factory-terreno-padrao", name: "Visita ao terreno", type: "terreno", moduleIds: MODULES_BY_TYPE.terreno },
+];
+
+/** Adapter retrocompatível: gera valores novos a partir dos campos antigos. */
+export function ensureLegacyAdapters(modules: Record<string, ModuleState>): Record<string, ModuleState> {
+  const out = { ...modules };
+  // Pessoas — colaborador
+  const pessoas = out.pessoas;
+  if (pessoas) {
+    const v = { ...pessoas.values };
+    let changed = false;
+    if (!Array.isArray(v.colaboradores) && (v.colab_nome || v.colab_cargo || v.colab_telefone || v.colab_email)) {
+      const p: Person = { id: "legacy-colab", nome: String(v.colab_nome ?? ""), cargo: v.colab_cargo, telefone: v.colab_telefone, email: v.colab_email };
+      v.colaboradores = [p];
+      changed = true;
+    }
+    if (!Array.isArray(v.tecnicos) && (v.tec_nome || v.tec_cargo || v.tec_registro || v.tec_telefone || v.tec_email)) {
+      const p: Person = { id: "legacy-tec", nome: String(v.tec_nome ?? ""), cargo: v.tec_cargo, registro: v.tec_registro, telefone: v.tec_telefone, email: v.tec_email };
+      v.tecnicos = [p];
+      changed = true;
+    }
+    if (!Array.isArray(v.outros_pessoas) && typeof v.outros_presentes === "string" && v.outros_presentes.trim()) {
+      v.outros_pessoas = [{ id: "legacy-outros", nome: v.outros_presentes }];
+      changed = true;
+    }
+    if (changed) out.pessoas = { ...pessoas, values: v };
+  }
+  // Operação — funcionamento
+  const oper = out.operacionais;
+  if (oper) {
+    const v = { ...oper.values };
+    if (!v.funcionamento || typeof v.funcionamento !== "object") {
+      const hasLegacy = v.horario_inicio || v.horario_fim || v.horario_func || (Array.isArray(v.dias_semana) && v.dias_semana.length);
+      if (hasLegacy) {
+        const hv: HoursValue = {
+          preset: "outro",
+          dias: Array.isArray(v.dias_semana) ? (v.dias_semana as string[]) : undefined,
+          turnos: v.horario_inicio || v.horario_fim
+            ? [{ id: "t1", inicio: String(v.horario_inicio ?? ""), fim: String(v.horario_fim ?? "") }]
+            : [],
+          observacao: typeof v.horario_func === "string" ? v.horario_func : undefined,
+        };
+        v.funcionamento = hv;
+        out.operacionais = { ...oper, values: v };
+      }
+    }
+  }
+  return out;
+}

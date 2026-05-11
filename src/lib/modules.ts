@@ -620,7 +620,7 @@ export const MODULES: ModuleDef[] = [
             type: "repeater",
             addItemLabel: "Adicionar matéria-prima",
             itemFields: [
-              { id: "nome", label: "Nome", type: "text" },
+              { id: "nome", label: "Nome", type: "button-select", allowOther: true, options: ["Água", "Areia", "Cimento", "Madeira", "Aço", "Papel", "Papelão", "Plástico", "Vidro", "Tinta", "Combustível", "Óleo", "Energia elétrica", "Produtos químicos", "Embalagens"] },
               { id: "quantidade", label: "Quantidade", type: "text" },
               { id: "periodicidade", label: "Periodicidade", type: "button-select", allowOther: true, options: ["Diária", "Semanal", "Mensal", "Anual"] },
             ],
@@ -654,7 +654,7 @@ export const MODULES: ModuleDef[] = [
             type: "repeater",
             addItemLabel: "Adicionar etapa",
             itemFields: [
-              { id: "nome", label: "Nome da etapa", type: "text" },
+              { id: "nome", label: "Nome da etapa", type: "button-select", allowOther: true, options: ["Recebimento", "Armazenamento", "Pré-tratamento", "Mistura", "Reação", "Separação", "Filtragem", "Secagem", "Montagem", "Embalagem", "Expedição", "Limpeza", "Manutenção", "Controle de qualidade"] },
               { id: "descricao", label: "Descrição (opcional)", type: "textarea" },
             ],
           },

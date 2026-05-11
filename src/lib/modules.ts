@@ -945,47 +945,33 @@ export const MODULES: ModuleDef[] = [
     purposes: ["projeto"],
     subgroups: [
       {
-        id: "acesso_frente",
-        title: "Acesso — Frente",
+        id: "acessos",
+        title: "Acessos",
         fields: [
-          { id: "af_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "af_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "af_rua", label: "Nome da rua", type: "text" },
-        ],
-      },
-      {
-        id: "acesso_fundos",
-        title: "Acesso — Fundos",
-        fields: [
-          { id: "afu_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "afu_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "afu_rua", label: "Nome da rua", type: "text" },
-        ],
-      },
-      {
-        id: "acesso_dir",
-        title: "Acesso — Lado direito",
-        fields: [
-          { id: "ad_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "ad_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "ad_rua", label: "Nome da rua", type: "text" },
-        ],
-      },
-      {
-        id: "acesso_esq",
-        title: "Acesso — Lado esquerdo",
-        fields: [
-          { id: "ae_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "ae_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "ae_rua", label: "Nome da rua", type: "text" },
+          {
+            id: "pavimentacao_lados",
+            label: "Tipo de pavimentação por lado",
+            type: "apply-to-sides",
+            sides: ["Frente", "Fundos", "Lado direito", "Lado esquerdo"],
+            options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Bloquete", "Inexistente", "Outro"],
+          },
+          {
+            id: "ruas",
+            label: "Nome das ruas (por lado)",
+            type: "repeater",
+            addItemLabel: "Adicionar lado",
+            itemFields: [
+              { id: "lado", label: "Lado", type: "button-select", options: ["Frente", "Fundos", "Lado direito", "Lado esquerdo"] },
+              { id: "rua", label: "Nome da rua", type: "text" },
+            ],
+          },
         ],
       },
       {
         id: "publica",
         title: "Infraestrutura pública",
         fields: [
-          { id: "infra_servicos", label: "Serviços disponíveis", type: "multiselect", options: ["Abastecimento de água", "Energia elétrica", "Coleta de lixo", "Iluminação pública", "Rede de esgoto", "Telefone", "Rede de drenagem pluvial", "Alta tensão"] },
-          { id: "infra_obs", label: "Observações sobre a infraestrutura", type: "textarea" },
+          { id: "infra_servicos", label: "Serviços disponíveis", type: "button-select", multi: true, allowOther: true, options: ["Abastecimento de água", "Energia elétrica", "Coleta de lixo", "Iluminação pública", "Iluminação LED", "Rede de esgoto", "Telefone", "Internet / Fibra", "Rede de drenagem pluvial", "Alta tensão", "Asfalto / Pavimentação", "Coleta seletiva", "Posto de saúde", "Hospital", "Gás encanado", "Transporte público", "Ponto de ônibus"] },
         ],
       },
     ],

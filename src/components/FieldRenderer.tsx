@@ -338,16 +338,21 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
   const items: Array<Record<string, any>> = Array.isArray(value) ? value : [];
   const itemFields = field.itemFields ?? [];
   const [openIdx, setOpenIdx] = useState<number | null>(null);
-  const [picker, setPicker] = useState(items.length === 0);
+  const labelField0 = itemFields[0];
+  const hasPresets0 = !!(labelField0?.options && labelField0.options.length > 0);
+  const startsCollapsed = !hasPresets0 || !!field.noPresetMemory;
+  const [picker, setPicker] = useState(items.length === 0 && hasPresets0 && !field.noPresetMemory);
   const [pickerSel, setPickerSel] = useState<string[]>([]);
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherValue, setOtherValue] = useState("");
+  const [autoFocusIdx, setAutoFocusIdx] = useState<number | null>(null);
 
   function addItem(initial: Record<string, any> = {}) {
     const id = Math.random().toString(36).slice(2, 9);
     const next = [...items, { __id: id, ...initial }];
     onChange(next);
     setOpenIdx(next.length - 1);
+    setAutoFocusIdx(next.length - 1);
     setPicker(false);
   }
   function addManyByLabel(labels: string[]) {

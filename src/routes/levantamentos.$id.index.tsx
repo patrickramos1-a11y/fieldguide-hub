@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "rea
 import {
   useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment,
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
-  setEnabledModules, useDBStatus,
+  setEnabledModules, useDBStatus, setModuleNA, setSubgroupNA, enableModule,
 } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, FileText, Paperclip, Plus, Trash2, AlertTriangle, CheckCircle2,
-  FileDown, Settings2, Files, ClipboardList, Signature, ChevronRight,
+  FileDown, Settings2, Files, ClipboardList, Signature, ChevronRight, Ban, Check, EyeOff,
 } from "lucide-react";
-import { getModulesForType, shouldShowField, CENTRAL_TAB_MODULES } from "@/lib/modules";
+import {
+  getModulesForType, shouldShowField, CENTRAL_TAB_MODULES,
+  computeModuleStatus, computeSubgroupStatus, subgroupProgress,
+} from "@/lib/modules";
 import { FieldRenderer } from "@/components/FieldRenderer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ModuleConfigStep } from "@/components/ModuleConfigStep";
-import { STATUS_LABELS, SURVEY_TYPES, type FieldStatus, type FieldDef, type SubgroupDef } from "@/lib/types";
+import { SURVEY_TYPES, type FieldStatus, type FieldDef, type SubgroupDef, type ModuleState } from "@/lib/types";
 
 export const Route = createFileRoute("/levantamentos/$id/")({
   component: SurveyEditor,

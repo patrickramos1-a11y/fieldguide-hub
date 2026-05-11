@@ -560,11 +560,12 @@ function EncerramentoPanel({ survey }: { survey: any }) {
   const validacao = survey.modules.validacao;
   const allModules = getModulesForType(survey.type);
   const enabledIds: string[] = survey.enabledModules ?? allModules.map((m) => m.id);
-  const enabledModules = allModules.filter((m) => enabledIds.includes(m.id));
+  const enabledModules = allModules.filter((m) => enabledIds.includes(m.id) && !CENTRAL_TAB_MODULES.has(m.id));
 
-  const concluidos = enabledModules.filter((m) => survey.modules[m.id]?.status === "concluido");
-  const naMods = enabledModules.filter((m) => survey.modules[m.id]?.status === "nao_se_aplica");
-  const emAndamento = enabledModules.filter((m) => !["concluido", "nao_se_aplica"].includes(survey.modules[m.id]?.status));
+  const withStatus = enabledModules.map((m) => ({ m, st: computeModuleStatus(m, survey.modules[m.id] as ModuleState) }));
+  const concluidos = withStatus.filter(({ st }) => st === "concluido").map(({ m }) => m);
+  const naMods = withStatus.filter(({ st }) => st === "nao_se_aplica").map(({ m }) => m);
+  const emAndamento = withStatus.filter(({ st }) => st === "em_andamento" || st === "nao_iniciado").map(({ m }) => m);
   const pendAbertas = survey.pendencias.filter((p: any) => p.status !== "concluido");
   const pendResolvidas = survey.pendencias.filter((p: any) => p.status === "concluido");
 

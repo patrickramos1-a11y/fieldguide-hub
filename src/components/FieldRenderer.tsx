@@ -407,15 +407,22 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
             </div>
             {open && (
               <div className="border-t border-border p-2 grid gap-2">
-                {itemFields.map((f) => (
-                  <RepeaterItemField key={f.id} field={f} value={it[f.id]} onChange={(v) => updateItem(idx, { [f.id]: v })} />
+                {itemFields.map((f, fi) => (
+                  <RepeaterItemField
+                    key={f.id}
+                    field={f}
+                    value={it[f.id]}
+                    onChange={(v) => updateItem(idx, { [f.id]: v })}
+                    autoFocus={fi === 0 && autoFocusIdx === idx}
+                    onEnterAdd={fi === 0 && f.enterToAdd ? () => { setAutoFocusIdx(null); addItem(); } : undefined}
+                  />
                 ))}
               </div>
             )}
           </div>
         );
       })}
-      {picker && presets.length > 0 ? (
+      {picker && presets.length > 0 && !field.noPresetMemory ? (
         <div className="rounded-md border border-dashed border-border p-2 bg-card/50">
           <div className="text-[11px] text-muted-foreground mb-1.5">Selecione um ou mais para adicionar:</div>
           <div className="flex flex-wrap gap-1.5">

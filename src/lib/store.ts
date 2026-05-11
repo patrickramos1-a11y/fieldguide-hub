@@ -686,3 +686,23 @@ export function setTemplateDefault(tid: string, isDefault: boolean) {
   };
   persist();
 }
+
+export function duplicateTemplate(tid: string) {
+  const list = store.db.templates ?? [];
+  const target = list.find((t) => t.id === tid);
+  if (!target) return;
+  const copy: SurveyTemplate = {
+    ...target,
+    id: id(),
+    name: `${target.name} (cópia)`,
+    isDefault: false,
+    createdAt: new Date().toISOString(),
+    subgroupOverrides: target.subgroupOverrides
+      ? Object.fromEntries(Object.entries(target.subgroupOverrides).map(([k, v]) => [k, [...v]]))
+      : undefined,
+    moduleIds: [...target.moduleIds],
+  };
+  store.db = { ...store.db, templates: [copy, ...list] };
+  persist();
+  return copy;
+}

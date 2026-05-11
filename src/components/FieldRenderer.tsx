@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import type { FieldDef, FieldStatus, Person, HoursValue, HoursTurno, HoursPreset } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { MapPin, MessageSquarePlus, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock } from "lucide-react";
+import { MapPin, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock, Copy } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 
 interface Props {
@@ -51,6 +51,17 @@ function summarize(field: FieldDef, value: any): string {
     const presetLabel = HOURS_PRESET_LABEL[v.preset ?? "outro"];
     const turnos = v.turnos?.length ? ` · ${v.turnos.length} turno(s)` : "";
     return `${presetLabel}${turnos}`;
+  }
+  if (field.type === "repeater" && Array.isArray(value)) {
+    return `${value.length} item(ns)`;
+  }
+  if (field.type === "apply-to-sides" && typeof value === "object") {
+    const sides = field.sides ?? ["Frente", "Fundos", "Lado direito", "Lado esquerdo"];
+    const filled = sides.filter((s) => (value as Record<string, string>)[s]).length;
+    return `${filled}/${sides.length} lados`;
+  }
+  if (field.type === "number" && field.unitOptions && typeof value === "object" && value !== null) {
+    return `${(value as any).value ?? ""} ${(value as any).unit ?? ""}`.trim();
   }
   if (Array.isArray(value)) return value.join(", ");
   return String(value);
@@ -190,8 +201,12 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
 }
 
 function FieldRendererComponent({ field, value, status, note, na, onChange, onStatus, onNote, onNA }: Props) {
-  const [noteOpen, setNoteOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(hasValue(value));
+
+  // Auto-collapse quando concluído ou quando vira N/A
+  useEffect(() => {
+    if (status === "concluido" && hasValue(value)) setCollapsed(true);
+  }, [status, value]);
 
   function captureCoords() {
     if (!navigator.geolocation) return alert("Geolocalização não disponível");
@@ -243,11 +258,6 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           {field.label}{field.unit && <span className="text-muted-foreground font-normal"> ({field.unit})</span>}
         </label>
         <div className="flex items-center gap-1">
-          {onNote && (
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" title="Adicionar observação" onClick={() => setNoteOpen((v) => !v)}>
-              <MessageSquarePlus className={`h-3.5 w-3.5 ${note ? "text-primary" : ""}`} />
-            </Button>
-          )}
           {onNA && (
             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" title="Marcar como não se aplica" onClick={() => onNA(true)}>
               <Ban className="h-3.5 w-3.5" />
@@ -263,7 +273,7 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
       </div>
 
       {field.type === "text" && <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
-      {field.type === "number" && <Input type="number" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
+      {field.type === "number" && <NumberField field={field} value={value} onChange={onChange} onBlur={() => hasValue(value) && setCollapsed(true)} />}
       {field.type === "date" && <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
       {field.type === "time" && <Input type="time" value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
       {field.type === "textarea" && <Textarea rows={3} value={value ?? ""} onChange={(e) => onChange(e.target.value)} onBlur={() => hasValue(value) && setCollapsed(true)} />}
@@ -290,6 +300,15 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           })}
         </div>
       )}
+      {field.type === "button-select" && (
+        <ButtonSelectField field={field} value={value} onChange={onChange} />
+      )}
+      {field.type === "apply-to-sides" && (
+        <ApplyToSidesField field={field} value={value} onChange={onChange} />
+      )}
+      {field.type === "repeater" && (
+        <RepeaterField field={field} value={value} onChange={onChange} />
+      )}
       {field.type === "coords" && (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
@@ -305,18 +324,6 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
       )}
       {field.type === "hours-presets" && (
         <HoursPresetEditor value={value as HoursValue | undefined} onChange={onChange} />
-      )}
-
-      {(noteOpen || note) && onNote && (
-        <div className="mt-2">
-          <Textarea
-            rows={2}
-            placeholder="Observação sobre este item…"
-            value={note ?? ""}
-            onChange={(e) => onNote(e.target.value)}
-            className="text-xs"
-          />
-        </div>
       )}
 
       {hasValue(value) && (

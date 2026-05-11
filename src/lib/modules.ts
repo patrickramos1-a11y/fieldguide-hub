@@ -9,6 +9,7 @@ export const MODULES: ModuleDef[] = [
     title: "Identificação do Levantamento",
     description: "Contexto da visita: data, horários, motivo e objetivo.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento", "outorga", "vazao"],
     subgroups: [
       {
         id: "visita",
@@ -47,6 +48,7 @@ export const MODULES: ModuleDef[] = [
     title: "Dados Cadastrais do Empreendimento",
     description: "Confirme/complete os dados cadastrais utilizados neste levantamento.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "outorga"],
     subgroups: [
       {
         id: "identificacao_empresa",

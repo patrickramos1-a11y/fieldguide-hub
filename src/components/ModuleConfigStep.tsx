@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { getModulesForType, MODULE_PRESETS } from "@/lib/modules";
-import type { SurveyType } from "@/lib/types";
-import { useDB, addTemplate, removeTemplate } from "@/lib/store";
-import { Trash2, Save } from "lucide-react";
+import { getModulesForType, MODULE_PRESETS, FACTORY_TEMPLATES } from "@/lib/modules";
+import type { SurveyType, ModulePurpose } from "@/lib/types";
+import { MODULE_PURPOSE_LABELS } from "@/lib/types";
+import { useDB, addTemplate, removeTemplate, setTemplateDefault } from "@/lib/store";
+import { Trash2, Save, Star } from "lucide-react";
 
 const REQUIRED = new Set(["identificacao", "validacao"]);
 
@@ -25,7 +26,20 @@ export function ModuleConfigStep({ surveyType, initial, onConfirm }: Props) {
   );
   const db = useDB();
   const templates = useMemo(() => (db.templates ?? []).filter((t) => t.type === surveyType), [db.templates, surveyType]);
+  const factoryTemplates = useMemo(() => FACTORY_TEMPLATES.filter((t) => t.type === surveyType), [surveyType]);
   const [tplName, setTplName] = useState("");
+  const [purposeFilter, setPurposeFilter] = useState<ModulePurpose | null>(null);
+
+  const allPurposes: ModulePurpose[] = useMemo(() => {
+    const s = new Set<ModulePurpose>();
+    all.forEach((m) => m.purposes?.forEach((p) => s.add(p)));
+    return Array.from(s);
+  }, [all]);
+
+  const visibleModules = useMemo(() => {
+    if (!purposeFilter) return all;
+    return all.filter((m) => REQUIRED.has(m.id) || (m.purposes ?? []).includes(purposeFilter));
+  }, [all, purposeFilter]);
 
   function toggle(id: string) {
     if (REQUIRED.has(id)) return;
@@ -63,6 +77,20 @@ export function ModuleConfigStep({ surveyType, initial, onConfirm }: Props) {
           <Button variant="ghost" size="sm" onClick={() => applyPreset([])}>Limpar</Button>
         </div>
 
+        {factoryTemplates.length > 0 && (
+          <div className="mb-4">
+            <Label className="text-xs text-muted-foreground">Templates de fábrica</Label>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {factoryTemplates.map((t) => (
+                <button key={t.id} type="button" onClick={() => applyPreset(t.moduleIds)}
+                  className="text-xs rounded-full border border-border bg-secondary/40 px-3 py-1 hover:bg-secondary">
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {templates.length > 0 && (
           <div className="mb-4">
             <Label className="text-xs text-muted-foreground">Templates salvos</Label>
@@ -70,6 +98,14 @@ export function ModuleConfigStep({ surveyType, initial, onConfirm }: Props) {
               {templates.map((t) => (
                 <span key={t.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 pl-3 pr-1 py-0.5 text-xs">
                   <button type="button" className="hover:underline" onClick={() => applyPreset(t.moduleIds)}>{t.name}</button>
+                  <button type="button"
+                    className="rounded-full p-1 hover:bg-secondary"
+                    onClick={() => setTemplateDefault(t.id, !t.isDefault)}
+                    aria-label={t.isDefault ? "Remover como padrão" : "Tornar padrão para este tipo"}
+                    title={t.isDefault ? "Padrão para este tipo (clique para remover)" : "Tornar padrão para este tipo"}
+                  >
+                    <Star className="h-3 w-3" style={t.isDefault ? { color: "var(--status-progress)", fill: "currentColor" } : undefined} />
+                  </button>
                   <button type="button" className="rounded-full p-1 hover:bg-secondary" onClick={() => removeTemplate(t.id)} aria-label="Remover template">
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -79,8 +115,24 @@ export function ModuleConfigStep({ surveyType, initial, onConfirm }: Props) {
           </div>
         )}
 
+        {allPurposes.length > 0 && (
+          <div className="mb-3">
+            <Label className="text-xs text-muted-foreground">Filtrar por finalidade</Label>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => setPurposeFilter(null)}
+                className={`text-xs rounded-full px-2.5 py-1 border ${!purposeFilter ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}>Todos</button>
+              {allPurposes.map((p) => (
+                <button type="button" key={p} onClick={() => setPurposeFilter(purposeFilter === p ? null : p)}
+                  className={`text-xs rounded-full px-2.5 py-1 border ${purposeFilter === p ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}>
+                  {MODULE_PURPOSE_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid sm:grid-cols-2 gap-2 mb-6">
-          {all.map((m) => {
+          {visibleModules.map((m) => {
             const required = REQUIRED.has(m.id);
             const checked = selected.has(m.id) || required;
             return (
@@ -95,6 +147,15 @@ export function ModuleConfigStep({ surveyType, initial, onConfirm }: Props) {
                     {required && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">obrigatório</span>}
                   </div>
                   {m.description && <div className="text-xs text-muted-foreground line-clamp-2">{m.description}</div>}
+                  {m.purposes && m.purposes.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {m.purposes.map((p) => (
+                        <span key={p} className="text-[10px] rounded-full border border-border px-1.5 py-0 text-muted-foreground">
+                          {MODULE_PURPOSE_LABELS[p]}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </label>
             );

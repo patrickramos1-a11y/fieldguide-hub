@@ -696,88 +696,40 @@ export const MODULES: ModuleDef[] = [
     purposes: ["projeto", "acompanhamento", "monitoramento"],
     subgroups: [
       {
-        id: "tipos",
-        title: "Tipos de resíduos gerados",
+        id: "lista",
+        title: "Resíduos gerados",
+        description: "Adicione cada resíduo gerado pela operação. Selecione o tipo e preencha os detalhes.",
         fields: [
-          { id: "tipos", label: "Categorias geradas", type: "multiselect", options: ["Papel", "Plástico", "Vidro", "Metal", "Orgânicos", "Perigosos", "Outros"] },
-        ],
-      },
-      {
-        id: "papel",
-        title: "Papel",
-        fields: [
-          { id: "papel_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "papel_periodo", label: "Período / frequência", type: "text" },
-          { id: "papel_acond", label: "Acondicionamento", type: "text" },
-          { id: "papel_destino", label: "Destinação", type: "text" },
-          { id: "papel_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "plastico",
-        title: "Plástico",
-        fields: [
-          { id: "plastico_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "plastico_periodo", label: "Período / frequência", type: "text" },
-          { id: "plastico_acond", label: "Acondicionamento", type: "text" },
-          { id: "plastico_destino", label: "Destinação", type: "text" },
-          { id: "plastico_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "vidro",
-        title: "Vidro",
-        fields: [
-          { id: "vidro_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "vidro_periodo", label: "Período / frequência", type: "text" },
-          { id: "vidro_acond", label: "Acondicionamento", type: "text" },
-          { id: "vidro_destino", label: "Destinação", type: "text" },
-          { id: "vidro_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "metal",
-        title: "Metal",
-        fields: [
-          { id: "metal_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "metal_periodo", label: "Período / frequência", type: "text" },
-          { id: "metal_acond", label: "Acondicionamento", type: "text" },
-          { id: "metal_destino", label: "Destinação", type: "text" },
-          { id: "metal_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "organicos",
-        title: "Orgânicos",
-        fields: [
-          { id: "org_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "org_periodo", label: "Período / frequência", type: "text" },
-          { id: "org_acond", label: "Acondicionamento", type: "text" },
-          { id: "org_destino", label: "Destinação", type: "text" },
-          { id: "org_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "perigosos",
-        title: "Perigosos",
-        fields: [
-          { id: "per_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "per_periodo", label: "Período / frequência", type: "text" },
-          { id: "per_acond", label: "Acondicionamento", type: "text" },
-          { id: "per_destino", label: "Destinação", type: "text" },
-          { id: "per_coletor", label: "Quem coleta", type: "text" },
-        ],
-      },
-      {
-        id: "outros",
-        title: "Outros resíduos",
-        fields: [
-          { id: "outros_desc", label: "Descrição do resíduo", type: "text" },
-          { id: "outros_qtd", label: "Quantidade", type: "number", unit: "kg" },
-          { id: "outros_periodo", label: "Período / frequência", type: "text" },
-          { id: "outros_acond", label: "Acondicionamento", type: "text" },
-          { id: "outros_destino", label: "Destinação", type: "text" },
-          { id: "outros_coletor", label: "Quem coleta", type: "text" },
+          {
+            id: "residuos_lista",
+            label: "Resíduos",
+            type: "repeater",
+            addItemLabel: "Adicionar resíduo",
+            itemFields: [
+              {
+                id: "tipo",
+                label: "Tipo de resíduo",
+                type: "button-select",
+                allowOther: true,
+                options: [
+                  // Recicláveis
+                  "Papel", "Plástico", "Vidro", "Metal", "Papelão",
+                  // Não recicláveis
+                  "Orgânico", "Rejeito",
+                  // Perigosos
+                  "Químicos", "Óleos", "Pilhas/baterias", "Lâmpadas", "EPI contaminado",
+                  // Inertes / construção
+                  "Entulho", "Construção civil", "Não inerte",
+                ],
+              },
+              { id: "categoria", label: "Categoria", type: "button-select", options: ["Reciclável", "Não reciclável", "Perigoso", "Inerte", "Não inerte"] },
+              { id: "quantidade", label: "Quantidade", type: "number", unit: "kg" },
+              { id: "periodicidade", label: "Periodicidade", type: "button-select", options: ["Diária", "Semanal", "Quinzenal", "Mensal", "Eventual"] },
+              { id: "acondicionamento", label: "Acondicionamento", type: "text" },
+              { id: "destino", label: "Destinação", type: "text" },
+              { id: "coletor", label: "Quem coleta", type: "text" },
+            ],
+          },
         ],
       },
       {

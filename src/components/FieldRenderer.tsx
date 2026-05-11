@@ -273,6 +273,9 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
   const itemFields = field.itemFields ?? [];
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [picker, setPicker] = useState(items.length === 0);
+  const [pickerSel, setPickerSel] = useState<string[]>([]);
+  const [otherOpen, setOtherOpen] = useState(false);
+  const [otherValue, setOtherValue] = useState("");
 
   function addItem(initial: Record<string, any> = {}) {
     const id = Math.random().toString(36).slice(2, 9);
@@ -280,6 +283,17 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
     onChange(next);
     setOpenIdx(next.length - 1);
     setPicker(false);
+  }
+  function addManyByLabel(labels: string[]) {
+    if (!labels.length || !labelField) return;
+    const novos = labels.map((l) => ({ __id: Math.random().toString(36).slice(2, 9), [labelField.id]: l }));
+    onChange([...items, ...novos]);
+    setPickerSel([]);
+    setPicker(false);
+    setOpenIdx(null);
+  }
+  function togglePickerSel(opt: string) {
+    setPickerSel((cur) => cur.includes(opt) ? cur.filter((x) => x !== opt) : [...cur, opt]);
   }
   function updateItem(idx: number, patch: Record<string, any>) {
     onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -294,6 +308,7 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
 
   // Picker de presets (se primeiro field for button-select com options)
   const presets: string[] = labelField?.options ?? [];
+  const usedLabels = new Set(items.map((it) => labelField ? String(it[labelField.id] ?? "") : "").filter(Boolean));
 
   return (
     <div className="grid gap-2">
@@ -331,32 +346,57 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
       })}
       {picker && presets.length > 0 ? (
         <div className="rounded-md border border-dashed border-border p-2 bg-card/50">
-          <div className="text-[11px] text-muted-foreground mb-1.5">Selecione para adicionar:</div>
+          <div className="text-[11px] text-muted-foreground mb-1.5">Selecione um ou mais para adicionar:</div>
           <div className="flex flex-wrap gap-1.5">
-            {presets.map((p) => (
-              <button key={p} type="button" onClick={() => addItem({ [labelField!.id]: p })}
-                className="text-xs rounded-full px-2.5 py-1 border border-border hover:bg-secondary">
-                {p}
+            {presets.map((p) => {
+              const checked = pickerSel.includes(p);
+              const used = usedLabels.has(p);
+              return (
+                <button key={p} type="button" onClick={() => !used && togglePickerSel(p)} disabled={used}
+                  className={`text-xs rounded-full px-2.5 py-1 border transition-colors ${used ? "opacity-40 cursor-not-allowed border-border" : checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}
+                  title={used ? "Já adicionado" : undefined}>
+                  {p}
+                </button>
+              );
+            })}
+            {labelField?.allowOther && !otherOpen && (
+              <button type="button" onClick={() => setOtherOpen(true)}
+                className="text-xs rounded-full px-2.5 py-1 border border-dashed border-border hover:bg-secondary inline-flex items-center gap-1">
+                <Plus className="h-3 w-3" /> Outro
               </button>
-            ))}
-            <button type="button" onClick={() => addItem()}
-              className="text-xs rounded-full px-2.5 py-1 border border-dashed border-border hover:bg-secondary inline-flex items-center gap-1">
-              <Plus className="h-3 w-3" /> {field.addItemLabel ?? "Outro"}
-            </button>
+            )}
+            {labelField?.allowOther && otherOpen && (
+              <div className="inline-flex items-center gap-1">
+                <Input className="h-7 w-40 text-xs" autoFocus value={otherValue}
+                  onChange={(e) => setOtherValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); const v = otherValue.trim(); if (v) { setPickerSel((c) => c.includes(v) ? c : [...c, v]); setOtherValue(""); setOtherOpen(false); } }
+                    if (e.key === "Escape") { setOtherOpen(false); setOtherValue(""); }
+                  }}
+                  placeholder="Descreva…" />
+                <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => { const v = otherValue.trim(); if (v) { setPickerSel((c) => c.includes(v) ? c : [...c, v]); setOtherValue(""); setOtherOpen(false); } }}>Adicionar</Button>
+                <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => { setOtherOpen(false); setOtherValue(""); }}>Cancelar</Button>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <Button type="button" size="sm" variant="default" className="h-7" disabled={pickerSel.length === 0}
+              onClick={() => addManyByLabel(pickerSel)}>
+              <Check className="h-3.5 w-3.5 mr-1" /> Concluir seleção {pickerSel.length > 0 ? `(${pickerSel.length})` : ""}
+            </Button>
+            {pickerSel.length > 0 && (
+              <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => setPickerSel([])}>Limpar</Button>
+            )}
+            {items.length > 0 && (
+              <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => { setPicker(false); setPickerSel([]); }}>Cancelar</Button>
+            )}
           </div>
         </div>
       ) : (
         <div className="flex gap-2">
-          {presets.length > 0 && (
-            <Button type="button" variant="outline" size="sm" onClick={() => setPicker(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> {field.addItemLabel ?? "Adicionar"}
-            </Button>
-          )}
-          {presets.length === 0 && (
-            <Button type="button" variant="outline" size="sm" onClick={() => addItem()}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> {field.addItemLabel ?? "Adicionar"}
-            </Button>
-          )}
+          <Button type="button" variant="outline" size="sm" onClick={() => presets.length > 0 ? setPicker(true) : addItem()}>
+            <Plus className="h-3.5 w-3.5 mr-1" /> {field.addItemLabel ?? "Adicionar"}
+          </Button>
         </div>
       )}
     </div>

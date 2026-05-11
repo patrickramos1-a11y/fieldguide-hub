@@ -1125,33 +1125,49 @@ export function computeModuleStatus(m: ModuleDef, state: ModuleState): FieldStat
   if (state.naModule) return "nao_se_aplica";
   if (state.moduleDone) return "concluido";
 
-  const visible = visibleFieldsOfModule(m, state.values, state.naSubgroups);
+  // Conta por campo, mas trata subgrupos concluídos manualmente como totalmente preenchidos.
+  const moduleFields = m.fields.filter((f) => shouldShowField(f, state.values));
+  let totalFields = 0;
+  let filledFields = 0;
+  let hasPending = false;
 
-  // Pendência declarada em qualquer campo já marca o módulo como pendente.
-  for (const f of visible) {
+  for (const f of moduleFields) {
+    totalFields++;
     const fs = state.fieldStatus[f.id];
-    if (fs && PENDING_STATUSES.has(fs)) return "pendente";
+    if (fs && PENDING_STATUSES.has(fs)) hasPending = true;
+    if (state.nonApplicable?.[f.id]) { filledFields++; continue; }
+    if (fieldHasValue(state.values[f.id])) filledFields++;
   }
 
-  if (visible.length === 0) {
-    // módulos só com ações (ex.: validação) — preserva status manual
-    return state.status ?? "nao_iniciado";
+  for (const sg of m.subgroups ?? []) {
+    if (state.naSubgroups?.[sg.id]) continue;
+    if (sg.optional) continue;
+    const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
+    if (state.subgroupDone?.[sg.id]) {
+      totalFields += visible.length;
+      filledFields += visible.length;
+      continue;
+    }
+    for (const f of visible) {
+      totalFields++;
+      const fs = state.fieldStatus[f.id];
+      if (fs && PENDING_STATUSES.has(fs)) hasPending = true;
+      if (state.nonApplicable?.[f.id]) { filledFields++; continue; }
+      if (fieldHasValue(state.values[f.id])) filledFields++;
+    }
   }
 
-  let filled = 0;
-  for (const f of visible) {
-    if (state.nonApplicable?.[f.id]) { filled++; continue; }
-    if (fieldHasValue(state.values[f.id])) filled++;
-  }
-
-  if (filled === visible.length) return "concluido";
-  if (filled > 0) return "em_andamento";
+  if (hasPending) return "pendente";
+  if (totalFields === 0) return state.status ?? "nao_iniciado";
+  if (filledFields === totalFields) return "concluido";
+  if (filledFields > 0) return "em_andamento";
   return "nao_iniciado";
 }
 
 /** Status efetivo de um subgrupo. */
 export function computeSubgroupStatus(sg: SubgroupDef, state: ModuleState): FieldStatus {
   if (state.naSubgroups?.[sg.id]) return "nao_se_aplica";
+  if (state.subgroupDone?.[sg.id]) return "concluido";
   const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
   if (!visible.length) return sg.optional ? "concluido" : "nao_iniciado";
 

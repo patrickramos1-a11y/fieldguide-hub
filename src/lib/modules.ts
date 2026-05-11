@@ -165,8 +165,8 @@ export const MODULES: ModuleDef[] = [
             type: "repeater",
             addItemLabel: "Adicionar setor",
             itemFields: [
-              { id: "setor", label: "Setor", type: "button-select", options: ["Administrativo", "Operacional", "Produção", "Manutenção", "Limpeza", "Segurança", "Logística", "Outros"], allowOther: true },
-              { id: "quantidade", label: "Quantidade", type: "number", decimal: false },
+              { id: "setor", label: "Setor", type: "button-select", options: ["Administrativo", "Operacional", "Produção", "Manutenção", "Limpeza", "Segurança", "Logística", "Outros"], allowOther: true, learn: true },
+              { id: "quantidade", label: "Quantidade", type: "quantity" },
             ],
           },
         ],

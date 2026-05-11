@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2, ClipboardList } from "lucide-react";
 import { SURVEY_TYPES, type SurveyType } from "@/lib/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,10 +24,12 @@ function ProjetoDetail() {
   const empreendimento = project?.empreendimentoId ? db.empreendimentos.find((e) => e.id === project.empreendimentoId) : null;
   const surveys = db.surveys.filter((s) => s.projectId === id);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [type, setType] = useState<SurveyType>("geral");
   const [title, setTitle] = useState("");
 
-  if (!hydrated) return <AppShell><p>Carregando projeto...</p></AppShell>;
+  if (!mounted || !hydrated) return <AppShell><p>Carregando projeto...</p></AppShell>;
   if (!project) return <AppShell><p>Projeto não encontrado.</p></AppShell>;
 
   function create() {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment } from "./types";
+import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment, SurveyTemplate } from "./types";
 import { getModulesForType } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
@@ -12,6 +12,7 @@ interface DB {
   empreendimentos: Empreendimento[];
   projects: Project[];
   surveys: Survey[];
+  templates: SurveyTemplate[];
 }
 
 interface DBStatus {
@@ -30,7 +31,7 @@ interface StoreRuntime {
   persistChain: Promise<void>;
 }
 
-const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [] };
+const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [], templates: [] };
 
 function createModuleState(): ModuleState {
   return {
@@ -77,6 +78,7 @@ function normalizeDB(raw: Partial<DB> | null | undefined): DB {
     empreendimentos: Array.isArray(raw?.empreendimentos) ? raw.empreendimentos : [],
     projects: Array.isArray(raw?.projects) ? raw.projects : [],
     surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
+    templates: Array.isArray(raw?.templates) ? raw.templates : [],
   };
 }
 
@@ -84,7 +86,8 @@ function isEmptyDB(nextDB: DB) {
   return nextDB.clients.length === 0
     && nextDB.empreendimentos.length === 0
     && nextDB.projects.length === 0
-    && nextDB.surveys.length === 0;
+    && nextDB.surveys.length === 0
+    && nextDB.templates.length === 0;
 }
 
 function loadLegacyLocalStorage(): DB {
@@ -413,16 +416,37 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
     modules[module.id] = createModuleState();
   });
 
+  // Pré-preenche data e horário de chegada na Identificação.
+  const now = new Date();
+  const todayISO = now.toISOString().slice(0, 10);
+  const hhmm = now.toTimeString().slice(0, 5);
+  if (modules["identificacao"]) {
+    modules["identificacao"] = {
+      ...modules["identificacao"],
+      values: {
+        ...modules["identificacao"].values,
+        data_visita: todayISO,
+        hora_chegada: hhmm,
+      },
+      fieldStatus: {
+        ...modules["identificacao"].fieldStatus,
+        data_visita: "concluido",
+        hora_chegada: "concluido",
+      },
+      status: "em_andamento",
+    };
+  }
+
   const survey: Survey = {
     id: id(),
     projectId: data.projectId,
     type: data.type,
     title: data.title,
-    date: new Date().toISOString().slice(0, 10),
+    date: todayISO,
     modules,
     pendencias: [],
     signatures: {},
-    createdAt: new Date().toISOString(),
+    createdAt: now.toISOString(),
   };
 
   store.db = { ...store.db, surveys: [survey, ...store.db.surveys] };
@@ -532,4 +556,18 @@ export function removePendencia(sid: string, pid: string) {
   const survey = store.db.surveys.find((entry) => entry.id === sid);
   if (!survey) return;
   updateSurvey(sid, { pendencias: survey.pendencias.filter((pendencia) => pendencia.id !== pid) });
+}
+
+// =================== Templates de módulos ===================
+
+export function addTemplate(data: Omit<SurveyTemplate, "id" | "createdAt">) {
+  const tpl: SurveyTemplate = { ...data, id: id(), createdAt: new Date().toISOString() };
+  store.db = { ...store.db, templates: [tpl, ...(store.db.templates ?? [])] };
+  persist();
+  return tpl;
+}
+
+export function removeTemplate(tid: string) {
+  store.db = { ...store.db, templates: (store.db.templates ?? []).filter((t) => t.id !== tid) };
+  persist();
 }

@@ -188,3 +188,12 @@ export interface Survey {
   /** IDs de módulos habilitados; quando undefined, etapa de configuração é exibida. */
   enabledModules?: string[];
 }
+
+/** Template de configuração de módulos (reutilizável entre levantamentos). */
+export interface SurveyTemplate {
+  id: string;
+  name: string;
+  type: SurveyType;
+  moduleIds: string[];
+  createdAt: string;
+}

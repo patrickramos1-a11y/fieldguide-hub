@@ -1,4 +1,4 @@
-import type { ModuleDef, SurveyType } from "./types";
+import type { FieldDef, ModuleDef, SurveyType } from "./types";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -169,7 +169,7 @@ export const MODULES: ModuleDef[] = [
           { id: "n_funcionarios_admin", label: "Funcionários administrativos", type: "number" },
           { id: "n_funcionarios_oper", label: "Funcionários operacionais", type: "number" },
           { id: "alteracao_quadro", label: "Houve alteração no quadro?", type: "boolean" },
-          { id: "alteracao_quadro_obs", label: "Descrição da alteração no quadro", type: "textarea" },
+          { id: "alteracao_quadro_obs", label: "Descrição da alteração no quadro", type: "textarea", showIf: { field: "alteracao_quadro", truthy: true } },
         ],
       },
       {
@@ -177,7 +177,7 @@ export const MODULES: ModuleDef[] = [
         title: "Produção e operação",
         fields: [
           { id: "alteracao_producao", label: "Houve alteração na produção?", type: "boolean" },
-          { id: "alteracao_producao_obs", label: "Descrição da alteração na produção", type: "textarea" },
+          { id: "alteracao_producao_obs", label: "Descrição da alteração na produção", type: "textarea", showIf: { field: "alteracao_producao", truthy: true } },
           { id: "capacidade_produtiva", label: "Capacidade produtiva atual", type: "text" },
           { id: "obs_operacionais", label: "Observações operacionais", type: "textarea" },
         ],
@@ -268,15 +268,15 @@ export const MODULES: ModuleDef[] = [
         title: "Construções existentes",
         fields: [
           { id: "constr_alvenaria", label: "Construção em alvenaria?", type: "boolean" },
-          { id: "area_alvenaria", label: "Área aproximada de alvenaria", type: "number", unit: "m²" },
+          { id: "area_alvenaria", label: "Área aproximada de alvenaria", type: "number", unit: "m²", showIf: { field: "constr_alvenaria", truthy: true } },
           { id: "constr_madeira", label: "Construção em madeira?", type: "boolean" },
-          { id: "area_madeira", label: "Área aproximada de madeira", type: "number", unit: "m²" },
+          { id: "area_madeira", label: "Área aproximada de madeira", type: "number", unit: "m²", showIf: { field: "constr_madeira", truthy: true } },
           { id: "constr_residuos", label: "Há resíduos no terreno?", type: "boolean" },
-          { id: "constr_residuos_desc", label: "Descrição dos resíduos", type: "text" },
+          { id: "constr_residuos_desc", label: "Descrição dos resíduos", type: "text", showIf: { field: "constr_residuos", truthy: true } },
           { id: "patrimonio", label: "Patrimônio histórico?", type: "boolean" },
-          { id: "area_patrimonio", label: "Área aproximada do patrimônio", type: "number", unit: "m²" },
+          { id: "area_patrimonio", label: "Área aproximada do patrimônio", type: "number", unit: "m²", showIf: { field: "patrimonio", truthy: true } },
           { id: "invasao", label: "Há invasão?", type: "boolean" },
-          { id: "area_invasao", label: "Área aproximada de invasão", type: "number", unit: "m²" },
+          { id: "area_invasao", label: "Área aproximada de invasão", type: "number", unit: "m²", showIf: { field: "invasao", truthy: true } },
           { id: "sem_construcoes", label: "Não existem construções", type: "boolean" },
         ],
       },
@@ -293,8 +293,8 @@ export const MODULES: ModuleDef[] = [
         title: "Corpo hídrico",
         fields: [
           { id: "corpo_hidrico", label: "Existe corpo hídrico receptor?", type: "boolean" },
-          { id: "corpo_hidrico_desc", label: "Identificação do corpo hídrico (nome / tipo)", type: "text" },
-          { id: "corpo_hidrico_obs", label: "Observações sobre o corpo hídrico", type: "textarea" },
+          { id: "corpo_hidrico_desc", label: "Identificação do corpo hídrico (nome / tipo)", type: "text", showIf: { field: "corpo_hidrico", truthy: true } },
+          { id: "corpo_hidrico_obs", label: "Observações sobre o corpo hídrico", type: "textarea", showIf: { field: "corpo_hidrico", truthy: true } },
         ],
       },
       {
@@ -302,7 +302,7 @@ export const MODULES: ModuleDef[] = [
         title: "Captação de água",
         fields: [
           { id: "tipo_captacao", label: "Tipo(s) de captação", type: "multiselect", options: ["Superficial", "Subterrânea", "Rede pública"] },
-          { id: "fornecedor_publico", label: "Concessionária (se rede pública)", type: "text" },
+          { id: "fornecedor_publico", label: "Concessionária (se rede pública)", type: "text", showIf: { field: "tipo_captacao", in: ["Rede pública"] } },
           { id: "consumo", label: "Estimativa de consumo", type: "number", unit: "m³/dia" },
           { id: "captacao_obs", label: "Observações da captação", type: "textarea" },
         ],
@@ -312,9 +312,9 @@ export const MODULES: ModuleDef[] = [
         title: "Reservatório de água",
         fields: [
           { id: "reservatorio", label: "Possui reservatório?", type: "boolean" },
-          { id: "tipo_reservatorio", label: "Tipo de reservatório", type: "select", options: ["Caixa elevada", "Cisterna", "Tanque", "Outro"] },
-          { id: "capacidade_reservatorio", label: "Capacidade do reservatório", type: "number", unit: "L" },
-          { id: "tamanho_reservatorio", label: "Descrição / dimensões", type: "text" },
+          { id: "tipo_reservatorio", label: "Tipo de reservatório", type: "select", options: ["Caixa elevada", "Cisterna", "Tanque", "Outro"], showIf: { field: "reservatorio", truthy: true } },
+          { id: "capacidade_reservatorio", label: "Capacidade do reservatório", type: "number", unit: "L", showIf: { field: "reservatorio", truthy: true } },
+          { id: "tamanho_reservatorio", label: "Descrição / dimensões", type: "text", showIf: { field: "reservatorio", truthy: true } },
         ],
       },
       {
@@ -521,7 +521,7 @@ export const MODULES: ModuleDef[] = [
         description: "Preencher se possui ETE.",
         fields: [
           { id: "problema_ete", label: "Algum problema na operação da ETE?", type: "select", options: ["Sim", "Não", "Não se aplica"] },
-          { id: "problema_ete_desc", label: "Descrição do problema", type: "textarea" },
+          { id: "problema_ete_desc", label: "Descrição do problema", type: "textarea", showIf: { field: "problema_ete", equals: "Sim" } },
           { id: "funcionamento_ete", label: "Funcionamento da ETE", type: "select", options: ["Adequado", "Com problemas", "Parada"] },
         ],
       },
@@ -1023,7 +1023,7 @@ export const MODULES: ModuleDef[] = [
         title: "Documento entregue na visita",
         fields: [
           { id: "doc_entregue_visita", label: "Foi entregue algum documento nesta visita?", type: "select", options: ["Sim", "Não"] },
-          { id: "entregues", label: "Documentos entregues (descrição)", type: "textarea" },
+          { id: "entregues", label: "Documentos entregues (descrição)", type: "textarea", showIf: { field: "doc_entregue_visita", equals: "Sim" } },
         ],
       },
       {
@@ -1123,3 +1123,44 @@ const MODULES_BY_TYPE_CACHE: Record<SurveyType, typeof MODULES> = {
 export function getModulesForType(type: SurveyType) {
   return MODULES_BY_TYPE_CACHE[type];
 }
+
+/** Avaliador de regra `showIf` para campos condicionais. */
+export function shouldShowField(field: FieldDef, values: Record<string, unknown>): boolean {
+  const rule = field.showIf;
+  if (!rule) return true;
+  const v = values[rule.field];
+  if (rule.equals !== undefined) return v === rule.equals;
+  if (rule.in && rule.in.length) {
+    if (Array.isArray(v)) return v.some((x) => rule.in!.includes(x));
+    return rule.in.includes(v as unknown);
+  }
+  if (rule.truthy) {
+    if (Array.isArray(v)) return v.length > 0;
+    return Boolean(v);
+  }
+  return true;
+}
+
+/** Módulos que ganham aba dedicada centralizada (não aparecem como aba comum). */
+export const CENTRAL_TAB_MODULES = new Set(["documentos", "validacao"]);
+
+/** Sugestões de presets de módulos por tipo de levantamento. */
+export const MODULE_PRESETS: Record<SurveyType, { all: string[]; minimal: string[] }> = {
+  geral: {
+    all: MODULES_BY_TYPE.geral,
+    minimal: ["identificacao", "empreendimento", "localizacao", "fotos", "documentos", "validacao"],
+  },
+  ambiental: {
+    all: MODULES_BY_TYPE.ambiental,
+    minimal: ["identificacao", "ete", "residuos", "rotinas", "fotos", "documentos", "validacao"],
+  },
+  vazao: { all: MODULES_BY_TYPE.vazao, minimal: MODULES_BY_TYPE.vazao },
+  outorga: {
+    all: MODULES_BY_TYPE.outorga,
+    minimal: ["identificacao", "agua", "pocos", "outorga", "documentos", "validacao"],
+  },
+  terreno: {
+    all: MODULES_BY_TYPE.terreno,
+    minimal: ["identificacao", "localizacao", "areas", "fotos", "validacao"],
+  },
+};

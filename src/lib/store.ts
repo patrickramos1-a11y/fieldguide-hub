@@ -24,6 +24,8 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
     fieldStatus: module?.fieldStatus ?? {},
     notes: module?.notes,
     attachments: Array.isArray(module?.attachments) ? module.attachments : [],
+    fieldNotes: module?.fieldNotes ?? {},
+    nonApplicable: module?.nonApplicable ?? {},
   };
 }
 
@@ -274,6 +276,32 @@ export function setFieldStatus(sid: string, modId: string, fieldId: string, stat
   if (!survey) return;
   const mod = survey.modules[modId];
   updateModule(sid, modId, { fieldStatus: { ...mod.fieldStatus, [fieldId]: status } });
+}
+
+export function setFieldNote(sid: string, modId: string, fieldId: string, note: string) {
+  const survey = db.surveys.find((s) => s.id === sid);
+  if (!survey) return;
+  const mod = survey.modules[modId];
+  const next = { ...(mod.fieldNotes ?? {}) };
+  if (note.trim()) next[fieldId] = note;
+  else delete next[fieldId];
+  updateModule(sid, modId, { fieldNotes: next });
+}
+
+export function setFieldNA(sid: string, modId: string, fieldId: string, na: boolean) {
+  const survey = db.surveys.find((s) => s.id === sid);
+  if (!survey) return;
+  const mod = survey.modules[modId];
+  const next = { ...(mod.nonApplicable ?? {}) };
+  if (na) next[fieldId] = true; else delete next[fieldId];
+  const nextFieldStatus = { ...mod.fieldStatus };
+  if (na) nextFieldStatus[fieldId] = "nao_se_aplica";
+  else if (nextFieldStatus[fieldId] === "nao_se_aplica") delete nextFieldStatus[fieldId];
+  updateModule(sid, modId, { nonApplicable: next, fieldStatus: nextFieldStatus });
+}
+
+export function setEnabledModules(sid: string, ids: string[]) {
+  updateSurvey(sid, { enabledModules: ids });
 }
 
 export function addAttachment(sid: string, modId: string, att: Attachment) {

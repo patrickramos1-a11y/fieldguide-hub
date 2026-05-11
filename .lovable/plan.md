@@ -1,48 +1,159 @@
-Vou executar em **3 lotes estratégicos**, cada um deixando o app utilizável e testável antes do próximo. Clique em **Implementar plano** para eu começar pelo Lote 1.
+
+# Plano de ajustes — Preenchimento dos Levantamentos
+
+Vamos dividir em **lotes pequenos e testáveis**. Cada lote pode ser entregue isoladamente. Você aprova em ordem ou pula o que não quiser agora.
 
 ---
 
-## Lote 1 — Fundação visual e de status (Fases 1, 2, 3)
+## Lote A — Fundamentos de UX (base reutilizável)
 
-Resolve o que mais incomoda hoje: nada muda quando você preenche, e módulos desmarcados continuam ocupando espaço.
+São mudanças transversais que destravam todos os módulos seguintes. Sem isso, repetiríamos código.
 
-- **Fase 1 — Status visual real**: cálculo automático de status (campo → subgrupo → módulo), check verde quando concluído, cor de borda lateral, indicador na pílula da aba (cinza / amarelo / verde / laranja / traço). Cabeçalho do levantamento ganha contadores `X concluídos · Y em andamento · Z N/A · W pendência`.
-- **Fase 2 — Módulos não selecionados viram contador**: abas só mostram o que está ativo; ao final da barra aparece pílula `+N não selecionados`, que abre painel para reativar item a item.
-- **Fase 3 — "Não se aplica" para módulo e subgrupo**: botão no cabeçalho de cada um; quando marcado, vira faixa cinza compacta com badge N/A e botão "Reabrir", e conta como resolvido no progresso.
+A1. **Auto-collapse ao concluir/N/A**
+- Ao marcar campo/subgrupo/módulo como concluído ou N/A, ele recolhe automaticamente em uma "barrinha" com resumo (label + valor curto + status).
+- Clicar na barrinha reabre. Não precisa de ícone extra.
 
-Resultado: você vê na hora o que já está pronto, o que falta e o que dispensou.
+A2. **Observação como item opcional**
+- Remover o campo "observação" sempre aberto.
+- Substituir por um link discreto "+ Observação" dentro do subgrupo. Só abre textarea ao clicar.
+- Limite: **uma observação por subgrupo** (não por campo).
+- Remover o "balão de comentário por campo".
 
----
+A3. **Novo tipo de campo `button-select`** (substitui `select`/`multiselect` quando há poucas opções)
+- Renderiza opções como chips/botões clicáveis (single ou multi).
+- Suporte a "+ Outra" inline (abre input curto).
 
-## Lote 2 — Reorganização da navegação (Fases 4, 9, 10)
+A4. **Novo tipo de campo `repeater`** (lista adicionável)
+- Botão "+" adiciona item; cada item tem subcampos definidos.
+- Item preenchido recolhe em chip-resumo. Clique reabre.
+- Usado em: setores, reservatórios, poços, matérias-primas, equipamentos, etapas, produtos químicos, frota, resíduos.
 
-Acaba com a lista corrida gigante e fecha o ciclo do levantamento.
+A5. **Campo numérico estrito**
+- `type: "number"` passa a aceitar **somente** dígitos (e separador decimal quando aplicável). Validação visual.
 
-- **Fase 4 — Sub-abas tipo fichário**: módulos com 3+ subgrupos (Identificação, Dados Cadastrais, Operação, Pessoas) ganham sub-abas internas com mesmo padrão visual da Fase 1.
-- **Fase 9 — Higienização estrutural de Dados Cadastrais**: sub-abas + botão N/A por sub-aba; subgrupo "Contato no local" sai daqui (vai para o módulo Pessoas no Lote 3).
-- **Fase 10 — Encerramento com duração**: aba Encerramento mostra chegada, saída, duração calculada, resumo de status, lista de pendências e assinaturas. Botão "Encerrar levantamento" trava edição.
+A6. **Campo `apply-to-sides`** (frente/fundos/dir/esq)
+- Seleção por botões com ação "aplicar a outros lados".
 
-Resultado: navegação curta e fluida, e fechamento do levantamento com indicadores reais.
-
----
-
-## Lote 3 — Componentes reutilizáveis e templates (Fases 5, 6, 7, 8)
-
-Transforma os blocos repetitivos em componentes inteligentes e termina o sistema de templates.
-
-- **Fase 5 — Pessoas/Contatos como lista dinâmica**: botão `+ Adicionar pessoa`, ícones discretos para telefone/e-mail/cargo/documento. Adapter lê dados antigos para retrocompatibilidade.
-- **Fase 6 — Operação com presets**: Horário comercial, 2 turnos, 3 turnos, 24 h, "Outro" libera campos atuais. Mesma lógica para alterações de quadro.
-- **Fase 7 — Templates de fábrica**: presets nomeados embutidos por tipo de levantamento, botão "Salvar como template" também dentro do levantamento, e "Tornar template padrão para este tipo".
-- **Fase 8 — Distinção entre tipos**: cada módulo recebe tag de finalidade (Projeto / Acompanhamento / Monitoramento / Outorga / Vazão); na configuração do "Geral" surgem filtros rápidos por finalidade.
-
-Resultado: configurar e preencher um levantamento vira questão de cliques, e cada tipo fica visualmente claro.
+> Após A1–A6, todos os lotes seguintes são edições pequenas em `src/lib/modules.ts`.
 
 ---
 
-## Estratégia de execução
+## Lote B — Dados Operacionais
 
-- Entrego o **Lote 1 inteiro** primeiro (alto impacto, baixo risco, sem mexer em dados).
-- Depois aviso e sigo para o **Lote 2** (mexe em layout, mantém dados intactos).
-- Por último o **Lote 3** (introduz componentes novos com adapter para os dados existentes — nada se perde).
+- Remover: `alteracao_quadro`, `alteracao_quadro_obs`, `alteracao_producao`, `alteracao_producao_obs`.
+- Manter: `capacidade_produtiva`.
+- Quadro de funcionários vira **repeater de setores** (`{setor, quantidade}`) com lista pré-definida (Administrativo, Operacional, Produção, Manutenção, Limpeza, Segurança, Logística, Outros) + "+".
+- Total de funcionários calculado automaticamente (somatório).
+- Remover observação geral; manter "+ Observação" opcional no subgrupo.
 
-Nenhuma migração de banco é necessária. Os levantamentos já criados continuam funcionando.
+---
+
+## Lote C — Áreas, Limites e Topografia
+
+- **Área total**: unidade selecionável (m² / hectares).
+- **Limites do terreno**: `apply-to-sides` (frente/fundos/lado dir/lado esq) com botões.
+- **Topografia atual**: remover.
+- **Conformação predominante**: vira `button-select` single.
+- **Tipo de solo**: vira `button-select` multi.
+- "Localização do solo no terreno" e "Sondagem existente": **marcar para revisão** — peço sua definição antes de mexer.
+- Remover observações fixas dos blocos.
+
+---
+
+## Lote D — Vegetação e Obstruções/Construções
+
+D1. **Vegetação**: substituir densidade/tipo estimados por `button-select` multi de identificação:
+Vegetação presente, Ausência, Degradada, Preservada, Antropizada, Capoeira, Árvores isoladas, Rasteira, Arbustiva, Arbórea.
+
+D2. **Obstruções**: ampliar lista + opção "Outra" com campo livre.
+
+D3. **Construções existentes**: `repeater` `{tipo, quantidade}` com botões pré-definidos: Galpão, Sede, Poço, Barragem, Curral, Caixa d'água, Escritório, Depósito, Área coberta, Banheiro, Casa, Muro, Cerca, Outra.
+
+---
+
+## Lote E — Água, Captação e Reservatório
+
+- **Corpo hídrico**: Sim/Não (botões). Campos extras só aparecem se "Sim".
+- Adicionar **Nascente** (Sim/Não).
+- Adicionar **Distância do corpo hídrico** + opção "Dentro da propriedade".
+- Identificação do corpo hídrico: vira "+ adicionar identificação" opcional.
+- **Tipo de captação**: `button-select`. Estimativa de consumo: numérico estrito.
+- **Reservatório**: Sim/Não → se Sim, **repeater** `{tipo, capacidade(L), quantidade}`.
+- Capacidade com presets: 500, 1000, 2000, 5000, 10000, "Outro".
+- Descrição/dimensões: link "+ Detalhes" opcional.
+- Remover todas as observações fixas.
+
+---
+
+## Lote F — Uso da Água e Outorga
+
+- **Uso da água**: ampliar lista de opções + botão "+" para uso manual.
+- Descrição: opcional ("+ Descrição").
+- **Situação da outorga**: dropdown → `button-select`.
+
+---
+
+## Lote G — Poços
+
+- Vira `repeater` (múltiplos poços), cada um com seus campos.
+- Profundidade, diâmetro, nível estático, nível dinâmico, vazão, tempo de captação: numérico estrito.
+
+---
+
+## Lote H — Processo Produtivo
+
+- **Remover** "relatório fotográfico" (será tratado depois em outro módulo).
+- **Matéria-prima**: `repeater` `{nome, quantidade, periodicidade(button-select: mensal/semanal/diária/outro)}`.
+- **Equipamentos**: `repeater` `{nome, quantidade, especificações(opcional)}`.
+- **Etapas**: `repeater` `{nome, descrição(opcional)}`.
+- **Produtos químicos**: `button-select` multi com exemplos pré-definidos + "+ Outro". Descrição opcional.
+- **Frota**: Sim/Não → se Sim, `repeater` `{tipo veículo, quantidade, descrição opcional}`.
+- **Caracterização do entorno**: **mover** para outro módulo (proponho criar subgrupo "Entorno" em "Áreas, Dimensões e Terreno"; confirmo com você no início do lote).
+
+---
+
+## Lote I — Emissões
+
+- **Ruído**: `button-select`, sem observação.
+- **Emissões líquidas (efluente)**: ampliar opções como `button-select`, sem observação.
+- **Emissões sólidas**: `button-select` multi.
+- **Emissões gasosas**: dropdown → botões; auto-collapse ao selecionar.
+- Remover observações fixas (manter "+ Observação" opcional).
+
+---
+
+## Lote J — Resíduos Sólidos
+
+- Lista mestre de tipos como `button-select` multi. Bloco de detalhe **só aparece** para os tipos selecionados.
+- Por resíduo selecionado: quantidade, frequência, acondicionamento, destinação — todos via `button-select` com "+ Outra".
+- **Periodicidade geral da coleta**: `button-select`.
+- **Gerenciamento**: botões; "Há dificuldade?" Sim/Não → descrição só se Sim.
+
+---
+
+## Lote K — ETE / Efluentes
+
+- Substituir dropdowns por `button-select`/chips.
+- **Produtos químicos**: `repeater` com "+".
+- **Tipo de efluentes (tratamento)**: ampliar opções como `button-select`.
+
+---
+
+## Detalhes técnicos (para registro)
+
+Arquivos impactados:
+- `src/lib/types.ts` — adicionar `FieldType` `"button-select" | "repeater" | "apply-to-sides"`; estender `FieldDef` com `multi?`, `allowOther?`, `presets?`, `itemFields?`, `unitOptions?`, `min?/max?`.
+- `src/components/FieldRenderer.tsx` — renderers novos; numérico estrito; chip-resumo de item recolhido.
+- `src/components/ModuleConfigStep.tsx` / `src/routes/levantamentos.$id.index.tsx` — auto-collapse ao concluir/N/A; "+ Observação" por subgrupo; remover balões por campo.
+- `src/lib/modules.ts` — reescrita por módulo conforme lotes B–K.
+- `src/lib/store.ts` — helpers para repeater (CRUD de itens) e somatórios derivados (ex.: total funcionários).
+
+Sem mudanças de schema do backend nesta rodada — tudo persiste em `ModuleState.values` (objetos/arrays JSON).
+
+---
+
+## Pontos que precisam da sua decisão antes de mexer
+
+1. **Lote C**: o que fazer com "Localização do solo no terreno" e "Sondagem existente" — manter, remover, ou redesenhar?
+2. **Lote H**: confirmar destino de "Caracterização do entorno" (sugiro mover para "Áreas, Dimensões e Terreno").
+3. Posso já começar pelo **Lote A**? Ele desbloqueia todos os outros e o resultado já fica visível em qualquer módulo.

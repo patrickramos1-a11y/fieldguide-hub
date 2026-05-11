@@ -50,7 +50,7 @@ function SurveyEditor() {
   );
   const { survey, project, client } = data;
 
-  const [activeTab, setActiveTab] = useState<string>("__modulos");
+  const [activeTab, setActiveTab] = useState<string>("identificacao");
 
   if (!mounted || !hydrated) return <AppShell><p>Carregando levantamento...</p></AppShell>;
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
@@ -121,6 +121,7 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
 
   const isVirtual = activeTab === "__documentos" || activeTab === "__pendencias" || activeTab === "__encerramento";
+  const activeModule = !isVirtual ? regularTabs.find((m) => m.id === activeTab) ?? regularTabs[0] : null;
 
   return (
     <AppShell>
@@ -168,9 +169,10 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
         {(persistPending || persistenceError) && <span className="text-muted-foreground ml-1 truncate">{persistenceError ?? "Salvando..."}</span>}
       </div>
 
-      {/* Barra superior: somente abas virtuais + módulos ocultos */}
-      <VirtualTabsBar
+      {/* Tabs de módulos com N/A inline */}
+      <ModuleTabsBar
         survey={survey}
+        regularTabs={regularTabs}
         hiddenModules={hiddenModules}
         hasDocs={hasDocs}
         hasValidacao={hasValidacao}
@@ -178,10 +180,7 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
         setActiveTab={setActiveTab}
       />
 
-      {/* Conteúdo principal: pilha de módulos (cards colapsáveis) */}
-      {!isVirtual && (
-        <StackedModules survey={survey} modules={regularTabs} />
-      )}
+      {activeModule && <ModulePanel survey={survey} module={activeModule} />}
       {activeTab === "__documentos" && <DocumentsPanel survey={survey} />}
       {activeTab === "__pendencias" && <PendenciasPanel survey={survey} />}
       {activeTab === "__encerramento" && <EncerramentoPanel survey={survey} />}
@@ -202,54 +201,87 @@ function statusVarSuffix(s: FieldStatus): string {
   }
 }
 
-function VirtualTabsBar({ survey, hiddenModules, hasDocs, hasValidacao, activeTab, setActiveTab }: {
-  survey: any; hiddenModules: any[]; hasDocs: boolean; hasValidacao: boolean;
+function ModuleTabsBar({ survey, regularTabs, hiddenModules, hasDocs, hasValidacao, activeTab, setActiveTab }: {
+  survey: any; regularTabs: any[]; hiddenModules: any[]; hasDocs: boolean; hasValidacao: boolean;
   activeTab: string; setActiveTab: (t: string) => void;
 }) {
-  return (
-    <div className="mb-3 overflow-x-auto -mx-1 px-1">
-      <div className="flex flex-wrap gap-1.5 pb-1">
-        <TabPill active={activeTab === "__modulos"} onClick={() => setActiveTab("__modulos")}>Módulos</TabPill>
-        {hasDocs && (
-          <TabPill icon={<Files className="h-3 w-3" />} active={activeTab === "__documentos"} onClick={() => setActiveTab("__documentos")}>Docs</TabPill>
-        )}
-        <TabPill icon={<ClipboardList className="h-3 w-3" />} active={activeTab === "__pendencias"} onClick={() => setActiveTab("__pendencias")}>
-          Pend.{survey.pendencias.length > 0 && <span className="ml-1 inline-flex items-center justify-center rounded-full bg-[var(--status-pending)] text-white text-[10px] h-4 min-w-4 px-1">{survey.pendencias.length}</span>}
-        </TabPill>
-        {hasValidacao && (
-          <TabPill icon={<Signature className="h-3 w-3" />} active={activeTab === "__encerramento"} onClick={() => setActiveTab("__encerramento")}>Encerrar</TabPill>
-        )}
-        {hiddenModules.length > 0 && (
-          <HiddenModulesPill survey={survey} hidden={hiddenModules} />
-        )}
-      </div>
-    </div>
-  );
-}
+  const [collapsed, setCollapsed] = useState(false);
+  const visibleTabs = regularTabs.filter((m) => !(survey.modules[m.id] as ModuleState)?.naModule);
+  const naTabs = regularTabs.filter((m) => (survey.modules[m.id] as ModuleState)?.naModule);
 
-function StackedModules({ survey, modules }: { survey: any; modules: any[] }) {
-  const visible = modules.filter((m) => !(survey.modules[m.id] as ModuleState)?.naModule);
-  const naList = modules.filter((m) => (survey.modules[m.id] as ModuleState)?.naModule);
   return (
-    <div className="space-y-2.5">
-      {visible.map((m) => (
-        <ModulePanel key={m.id} survey={survey} module={m} />
-      ))}
-      {naList.length > 0 && (
-        <div className="pt-2">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Não se aplicam</div>
-          <div className="flex flex-wrap gap-1.5">
-            {naList.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setModuleNA(survey.id, m.id, false)}
-                title={`Reabrir ${m.title}`}
-                className="rounded-full h-6 px-2 text-[10px] inline-flex items-center gap-1 border border-dashed bg-card hover:bg-secondary text-muted-foreground"
-              >
-                <Ban className="h-2.5 w-2.5" />
-                <span className="max-w-[120px] truncate">{m.title}</span>
-              </button>
-            ))}
+    <div className="mb-4">
+      <div className="flex items-center gap-1 mb-1.5">
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          title={collapsed ? "Expandir abas" : "Recolher abas"}
+        >
+          <ChevronRight className={`h-3 w-3 transition-transform ${collapsed ? "" : "rotate-90"}`} />
+          {visibleTabs.length} módulos
+          {naTabs.length > 0 && <span className="ml-1 opacity-70">· {naTabs.length} N/A</span>}
+        </button>
+      </div>
+      {!collapsed && (
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex flex-wrap gap-1.5 pb-1">
+            {visibleTabs.map((m) => {
+              const st = survey.modules[m.id] as ModuleState;
+              const eff = computeModuleStatus(m, st);
+              const active = activeTab === m.id;
+              const done = eff === "concluido";
+              return (
+                <div key={m.id} className="inline-flex items-stretch rounded-md border overflow-hidden"
+                  style={{ borderColor: active ? "var(--primary)" : (done ? "var(--status-done)" : "var(--border)") }}
+                >
+                  <button
+                    onClick={() => setActiveTab(m.id)}
+                    className={`px-2.5 py-1 text-xs whitespace-nowrap flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground" : "bg-card hover:bg-secondary"}`}
+                  >
+                    {done ? (
+                      <Check className="h-3 w-3" style={{ color: active ? undefined : "var(--status-done)" }} />
+                    ) : (
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(eff)})` }} />
+                    )}
+                    <span>{m.title}</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setModuleNA(survey.id, m.id, true); }}
+                    title="Marcar como não se aplica"
+                    className={`px-1.5 border-l flex items-center ${active ? "bg-primary/90 text-primary-foreground border-primary-foreground/30 hover:bg-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+                  >
+                    <Ban className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+            {naTabs.map((m) => {
+              const active = activeTab === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => setActiveTab(m.id)}
+                  title={`${m.title} (N/A)`}
+                  className={`rounded-full h-6 min-w-6 px-1.5 text-[10px] inline-flex items-center gap-1 border border-dashed ${active ? "bg-secondary" : "bg-card hover:bg-secondary"} text-muted-foreground`}
+                >
+                  <Ban className="h-2.5 w-2.5" />
+                  <span className="max-w-[80px] truncate">{m.title}</span>
+                </button>
+              );
+            })}
+            {hiddenModules.length > 0 && (
+              <HiddenModulesPill survey={survey} hidden={hiddenModules} />
+            )}
+            <span className="self-center text-muted-foreground mx-1">·</span>
+            {hasDocs && (
+              <TabPill icon={<Files className="h-3 w-3" />} active={activeTab === "__documentos"} onClick={() => setActiveTab("__documentos")}>Docs</TabPill>
+            )}
+            <TabPill icon={<ClipboardList className="h-3 w-3" />} active={activeTab === "__pendencias"} onClick={() => setActiveTab("__pendencias")}>
+              Pend.{survey.pendencias.length > 0 && <span className="ml-1 inline-flex items-center justify-center rounded-full bg-[var(--status-pending)] text-white text-[10px] h-4 min-w-4 px-1">{survey.pendencias.length}</span>}
+            </TabPill>
+            {hasValidacao && (
+              <TabPill icon={<Signature className="h-3 w-3" />} active={activeTab === "__encerramento"} onClick={() => setActiveTab("__encerramento")}>Encerrar</TabPill>
+            )}
           </div>
         </div>
       )}
@@ -320,11 +352,6 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
   const effective = computeModuleStatus(m, state);
 
   const subgroups: SubgroupDef[] = m.subgroups ?? [];
-  const useSubTabs = subgroups.length >= 3;
-  const [activeSubId, setActiveSubId] = useState<string>(subgroups[0]?.id ?? "");
-  const [open, setOpen] = useState(false);
-  // Reset sub-tab when module changes
-  useEffect(() => { setActiveSubId(subgroups[0]?.id ?? ""); }, [m.id]);
 
   const handleFieldChange = useCallback((fieldId: string, value: unknown) => {
     setFieldValue(survey.id, m.id, fieldId, value);
@@ -368,40 +395,27 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
 
   return (
     <Card style={{ borderLeft: `4px solid var(--status-${statusVarSuffix(effective)})` }}>
-      <CardContent className="p-0">
-        <div className="flex items-stretch">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex-1 text-left p-4 hover:bg-secondary/40 flex items-start gap-3 min-w-0"
-          >
-            <ChevronRight className={`h-4 w-4 mt-0.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <span className="truncate">{m.title}</span>
-                {effective === "concluido" && <Check className="h-4 w-4 shrink-0" style={{ color: "var(--status-done)" }} />}
-              </h2>
-              {m.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.description}</p>}
-              <div className="mt-1.5 flex items-center gap-2">
-                <StatusBadge status={effective} />
-              </div>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setModuleNA(survey.id, m.id, true); }}
-            title="Marcar módulo como não se aplica"
-            className="px-3 border-l border-border text-muted-foreground hover:text-foreground hover:bg-secondary/40 flex items-center"
-          >
-            <Ban className="h-4 w-4" />
-          </button>
+      <CardContent className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              {m.title}
+              {effective === "concluido" && <Check className="h-5 w-5" style={{ color: "var(--status-done)" }} />}
+            </h2>
+            {m.description && <p className="text-sm text-muted-foreground">{m.description}</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            <StatusBadge status={effective} />
+            <Button variant="outline" size="sm" onClick={() => setModuleNA(survey.id, m.id, true)} title="Marcar módulo como não se aplica">
+              <Ban className="h-3.5 w-3.5 mr-1" /> N/A
+            </Button>
+          </div>
         </div>
-        {open && (
-          <div className="border-t border-border p-4">
+
         {m.fields.length > 0 && <div className="grid gap-2.5">{m.fields.map(renderField)}</div>}
 
-        {subgroups.length > 0 && !useSubTabs && (
-          <div className="mt-2 grid gap-3">
+        {subgroups.length > 0 && (
+          <div className="mt-3 grid gap-2">
             {subgroups.map((sg: SubgroupDef) => (
               <SubgroupBlock
                 key={sg.id}
@@ -412,54 +426,6 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
                 onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
               />
             ))}
-          </div>
-        )}
-
-        {subgroups.length > 0 && useSubTabs && (
-          <div className="mt-2">
-            <div className="overflow-x-auto -mx-1 px-1 mb-3">
-              <div className="flex gap-1.5 min-w-max pb-1">
-                {subgroups.map((sg) => {
-                  const sgNa = !!naSubMap[sg.id];
-                  const sgEff = sgNa ? "nao_se_aplica" : computeSubgroupStatus(sg, state);
-                  const { filled, total } = subgroupProgress(sg, state);
-                  const active = activeSubId === sg.id;
-                  const done = sgEff === "concluido";
-                  return (
-                    <button
-                      key={sg.id}
-                      onClick={() => setActiveSubId(sg.id)}
-                      className={`rounded-full px-3 py-1 text-xs whitespace-nowrap flex items-center gap-1.5 border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
-                    >
-                      {done ? (
-                        <Check className="h-3 w-3" style={{ color: active ? undefined : "var(--status-done)" }} />
-                      ) : (
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(sgEff)})` }} />
-                      )}
-                      <span>{sg.title}</span>
-                      {!sgNa && <span className={`opacity-70 ${active ? "" : "text-muted-foreground"}`}>{filled}/{total}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {(() => {
-              const sg = subgroups.find((s) => s.id === activeSubId) ?? subgroups[0];
-              if (!sg) return null;
-              return (
-                <SubgroupBlock
-                  key={sg.id}
-                  subgroup={sg}
-                  renderField={renderField}
-                  state={state}
-                  isNA={!!naSubMap[sg.id]}
-                  onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
-                  forceOpen
-                />
-              );
-            })()}
-          </div>
-        )}
           </div>
         )}
       </CardContent>

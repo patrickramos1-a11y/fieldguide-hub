@@ -153,6 +153,8 @@ export interface SubgroupDef {
   title: string;
   description?: string;
   fields: FieldDef[];
+  /** Subgrupo opcional: não conta para "não iniciado" / progresso quando vazio. */
+  optional?: boolean;
 }
 
 export interface Client {

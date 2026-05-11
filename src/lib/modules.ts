@@ -814,39 +814,30 @@ export const MODULES: ModuleDef[] = [
         id: "respeito",
         title: "Respeito à política ambiental",
         fields: [
-          { id: "politica_status", label: "A política ambiental está sendo respeitada pelos colaboradores?", type: "select", options: ["Sim", "Não", "Parcialmente", "Em implantação", "Falta mais avisos", "Não há política", "Não foi avaliado"] },
-          { id: "politica_obs", label: "Observações", type: "textarea" },
+          { id: "politica_status", label: "A política está sendo respeitada?", type: "button-select", options: ["Sim", "Não", "Parcialmente", "Em implantação", "Falta mais avisos", "Não há política", "Não foi avaliado"] },
         ],
       },
       {
         id: "coleta_recicl",
         title: "Coleta de resíduos recicláveis e não recicláveis",
         fields: [
-          { id: "coleta_recicl_status", label: "Está sendo realizada?", type: "select", options: ["Sim", "Não", "Parcialmente", "Em fase de contratação", "Não há", "Não se aplica a essa visita"] },
+          { id: "coleta_recicl_status", label: "Está sendo realizada?", type: "button-select", options: ["Sim", "Não", "Parcialmente", "Em fase de contratação", "Não há", "Não se aplica a essa visita"] },
         ],
       },
       {
         id: "educacao",
         title: "Educação ambiental",
         fields: [
-          { id: "educacao_status", label: "Há necessidade de novas palestras?", type: "select", options: ["Sim", "Não", "Houve agendamento", "Não se aplica", "Não há perspectiva no momento", "Irá contactar o escritório havendo necessidade"] },
-          { id: "palestras", label: "Palestras / orientações realizadas", type: "textarea" },
+          { id: "educacao_status", label: "Há necessidade de novas palestras?", type: "button-select", options: ["Sim", "Não", "Houve agendamento", "Não se aplica", "Não há perspectiva no momento", "Irá contactar o escritório havendo necessidade"] },
+          { id: "palestras", label: "Palestras / orientações realizadas", type: "textarea", showIf: { field: "educacao_status", in: ["Sim", "Houve agendamento"] } },
         ],
       },
       {
         id: "demandas",
         title: "Levantamento de informações para projeto",
         fields: [
-          { id: "ha_demanda_projeto", label: "Há levantamento de informações para projeto?", type: "select", options: ["Sim", "Não"] },
-          { id: "tipo_demanda", label: "Tipo(s) de demanda / documento", type: "multiselect", options: ["OUTORGA", "PEA", "CAR", "PCA", "RCA", "PGRS", "RIAA"] },
-          { id: "demanda_obs", label: "Observações sobre a demanda", type: "textarea" },
-        ],
-      },
-      {
-        id: "conformidade",
-        title: "Conformidade operacional",
-        fields: [
-          { id: "conformidade", label: "Observações de conformidade", type: "textarea" },
+          { id: "ha_demanda_projeto", label: "Há levantamento para projeto?", type: "button-select", options: ["Sim", "Não"] },
+          { id: "tipo_demanda", label: "Tipo(s) de demanda / documento", type: "button-select", multi: true, options: ["OUTORGA", "PEA", "CAR", "PCA", "RCA", "PGRS", "RIAA"], showIf: { field: "ha_demanda_projeto", equals: "Sim" } },
         ],
       },
     ],
@@ -862,33 +853,32 @@ export const MODULES: ModuleDef[] = [
         id: "hidrometro",
         title: "Leitura do hidrômetro",
         fields: [
-          { id: "hidrometro_status", label: "Está havendo leitura diária do hidrômetro?", type: "select", options: ["Sim", "Não", "Não há tabela", "Não se aplica", "O colaborador não está fazendo o acompanhamento"] },
-          { id: "hidrometro", label: "Leitura registrada nesta visita", type: "text" },
-          { id: "hidrometro_obs", label: "Observações", type: "textarea" },
+          { id: "hidrometro_status", label: "Há leitura diária do hidrômetro?", type: "button-select", options: ["Sim", "Não", "Não há tabela", "Não se aplica", "O colaborador não está fazendo o acompanhamento"] },
+          { id: "hidrometro", label: "Leitura registrada nesta visita", type: "number" },
         ],
       },
       {
         id: "coleta_agua",
         title: "Coleta de água do poço",
         fields: [
-          { id: "coleta_agua_visita", label: "Houve coleta de água do poço para análise nesta visita?", type: "select", options: ["Sim", "Não"] },
-          { id: "coletas_agua", label: "Detalhes da coleta", type: "textarea" },
+          { id: "coleta_agua_visita", label: "Houve coleta nesta visita?", type: "button-select", options: ["Sim", "Não"] },
+          { id: "coletas_agua", label: "Detalhes da coleta", type: "textarea", showIf: { field: "coleta_agua_visita", equals: "Sim" } },
         ],
       },
       {
         id: "coleta_efluente",
         title: "Coleta de efluente na ETE",
         fields: [
-          { id: "coleta_efluente_visita", label: "Houve coleta de efluente na ETE para análise nesta visita?", type: "select", options: ["Sim", "Não"] },
-          { id: "coletas_efluente", label: "Detalhes da coleta", type: "textarea" },
+          { id: "coleta_efluente_visita", label: "Houve coleta nesta visita?", type: "button-select", options: ["Sim", "Não"] },
+          { id: "coletas_efluente", label: "Detalhes da coleta", type: "textarea", showIf: { field: "coleta_efluente_visita", equals: "Sim" } },
         ],
       },
       {
         id: "acompanhamento",
-        title: "Acompanhamento operacional",
+        title: "Acompanhamento operacional (opcional)",
+        optional: true,
         fields: [
-          { id: "acompanhamento_ete", label: "Acompanhamento da ETE", type: "textarea" },
-          { id: "acompanhamento_obs", label: "Outras rotinas observadas", type: "textarea" },
+          { id: "acompanhamento_obs", label: "Anotações livres", type: "textarea" },
         ],
       },
     ],
@@ -901,69 +891,48 @@ export const MODULES: ModuleDef[] = [
     purposes: ["projeto"],
     subgroups: [
       {
-        id: "viz_fundos",
-        title: "Vizinho — Fundos",
+        id: "vizinhos",
+        title: "Vizinhos confrontantes",
         fields: [
-          { id: "vf_material", label: "Material", type: "select", options: ["Madeira", "Alvenaria", "Misto", "Outro"] },
-          { id: "vf_estado", label: "Estado", type: "select", options: ["Bom", "Ruim"] },
-          { id: "vf_pavs", label: "Nº de pavimentos", type: "number" },
-          { id: "vf_habitado", label: "Habitado?", type: "boolean" },
-          { id: "vf_utilizacao", label: "Utilização", type: "select", options: ["Industrial", "Comercial", "Habitacional", "Misto"] },
-          { id: "vf_classe", label: "Classe social", type: "select", options: ["Alta", "Média", "Baixa"] },
-          { id: "vf_posicao", label: "Posição", type: "select", options: ["Afastada", "Próxima", "Encostada"] },
-          { id: "vf_reforco", label: "Necessita reforço?", type: "boolean" },
-        ],
-      },
-      {
-        id: "viz_dir",
-        title: "Vizinho — Lateral direita",
-        fields: [
-          { id: "vd_material", label: "Material", type: "select", options: ["Madeira", "Alvenaria", "Misto", "Outro"] },
-          { id: "vd_estado", label: "Estado", type: "select", options: ["Bom", "Ruim"] },
-          { id: "vd_pavs", label: "Nº de pavimentos", type: "number" },
-          { id: "vd_habitado", label: "Habitado?", type: "boolean" },
-          { id: "vd_utilizacao", label: "Utilização", type: "select", options: ["Industrial", "Comercial", "Habitacional", "Misto"] },
-          { id: "vd_classe", label: "Classe social", type: "select", options: ["Alta", "Média", "Baixa"] },
-          { id: "vd_posicao", label: "Posição", type: "select", options: ["Afastada", "Próxima", "Encostada"] },
-          { id: "vd_reforco", label: "Necessita reforço?", type: "boolean" },
-        ],
-      },
-      {
-        id: "viz_esq",
-        title: "Vizinho — Lateral esquerda",
-        fields: [
-          { id: "ve_material", label: "Material", type: "select", options: ["Madeira", "Alvenaria", "Misto", "Outro"] },
-          { id: "ve_estado", label: "Estado", type: "select", options: ["Bom", "Ruim"] },
-          { id: "ve_pavs", label: "Nº de pavimentos", type: "number" },
-          { id: "ve_habitado", label: "Habitado?", type: "boolean" },
-          { id: "ve_utilizacao", label: "Utilização", type: "select", options: ["Industrial", "Comercial", "Habitacional", "Misto"] },
-          { id: "ve_classe", label: "Classe social", type: "select", options: ["Alta", "Média", "Baixa"] },
-          { id: "ve_posicao", label: "Posição", type: "select", options: ["Afastada", "Próxima", "Encostada"] },
-          { id: "ve_reforco", label: "Necessita reforço?", type: "boolean" },
+          {
+            id: "vizinhos",
+            label: "Vizinhos por posição",
+            type: "repeater",
+            addItemLabel: "Adicionar vizinho",
+            itemFields: [
+              { id: "posicao", label: "Posição", type: "button-select", options: ["Fundos", "Lateral direita", "Lateral esquerda", "Frente"] },
+              { id: "material", label: "Material", type: "button-select", allowOther: true, options: ["Madeira", "Alvenaria", "Misto"] },
+              { id: "estado", label: "Estado", type: "button-select", options: ["Bom", "Ruim"] },
+              { id: "pavimentos", label: "Nº de pavimentos", type: "number", decimal: false },
+              { id: "habitado", label: "Habitado?", type: "button-select", options: ["Sim", "Não"] },
+              { id: "utilizacao", label: "Utilização", type: "button-select", options: ["Industrial", "Comercial", "Habitacional", "Misto"] },
+              { id: "classe", label: "Classe social", type: "button-select", options: ["Alta", "Média", "Baixa"] },
+              { id: "afastamento", label: "Posição relativa", type: "button-select", options: ["Afastada", "Próxima", "Encostada"] },
+              { id: "reforco", label: "Necessita reforço?", type: "button-select", options: ["Sim", "Não"] },
+            ],
+          },
         ],
       },
       {
         id: "laudo",
         title: "Laudo técnico",
         fields: [
-          { id: "necessita_laudo", label: "Há necessidade de laudo técnico dos prédios vizinhos?", type: "boolean" },
-          { id: "laudo_obs", label: "Observações", type: "textarea" },
+          { id: "necessita_laudo", label: "Há necessidade de laudo técnico?", type: "button-select", options: ["Sim", "Não", "Não se aplica"] },
         ],
       },
       {
         id: "mercado",
         title: "Mercado local",
         fields: [
-          { id: "mercado_local", label: "Itens disponíveis na região", type: "multiselect", options: ["Hospital", "Escola", "Universidade", "Shopping", "Farmácia", "Concretaria", "Supermercado", "Pedreira", "Casas para república", "Mão de obra administrativa", "Mão de obra operários"] },
-          { id: "mercado_obs", label: "Observações sobre o mercado local", type: "textarea" },
+          { id: "mercado_local", label: "Itens disponíveis na região", type: "button-select", multi: true, allowOther: true, options: ["Hospital", "Posto de saúde", "Escola", "Creche", "Universidade", "Shopping", "Farmácia", "Concretaria", "Supermercado", "Pedreira", "Casas para república", "Mão de obra administrativa", "Mão de obra operária", "Posto de combustível", "Praça", "Banco / lotérica", "Igreja", "Restaurante", "Hotel / Pousada", "Indústria próxima", "Centro comercial", "Ponto de ônibus / terminal", "Delegacia", "Corpo de bombeiros"] },
         ],
       },
       {
         id: "obras",
         title: "Obras próximas",
+        optional: true,
         fields: [
           { id: "tipo_obra", label: "Tipo de obra próxima", type: "text" },
-          { id: "obras_proximas", label: "Observações", type: "textarea" },
         ],
       },
     ],
@@ -976,47 +945,33 @@ export const MODULES: ModuleDef[] = [
     purposes: ["projeto"],
     subgroups: [
       {
-        id: "acesso_frente",
-        title: "Acesso — Frente",
+        id: "acessos",
+        title: "Acessos",
         fields: [
-          { id: "af_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "af_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "af_rua", label: "Nome da rua", type: "text" },
-        ],
-      },
-      {
-        id: "acesso_fundos",
-        title: "Acesso — Fundos",
-        fields: [
-          { id: "afu_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "afu_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "afu_rua", label: "Nome da rua", type: "text" },
-        ],
-      },
-      {
-        id: "acesso_dir",
-        title: "Acesso — Lado direito",
-        fields: [
-          { id: "ad_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "ad_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "ad_rua", label: "Nome da rua", type: "text" },
-        ],
-      },
-      {
-        id: "acesso_esq",
-        title: "Acesso — Lado esquerdo",
-        fields: [
-          { id: "ae_descricao", label: "Descrição do acesso", type: "text" },
-          { id: "ae_pavimentacao", label: "Tipo de pavimentação", type: "select", options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Inexistente"] },
-          { id: "ae_rua", label: "Nome da rua", type: "text" },
+          {
+            id: "pavimentacao_lados",
+            label: "Tipo de pavimentação por lado",
+            type: "apply-to-sides",
+            sides: ["Frente", "Fundos", "Lado direito", "Lado esquerdo"],
+            options: ["Asfalto", "Paralelepípedo", "Terra", "Concreto", "Bloquete", "Inexistente", "Outro"],
+          },
+          {
+            id: "ruas",
+            label: "Nome das ruas (por lado)",
+            type: "repeater",
+            addItemLabel: "Adicionar lado",
+            itemFields: [
+              { id: "lado", label: "Lado", type: "button-select", options: ["Frente", "Fundos", "Lado direito", "Lado esquerdo"] },
+              { id: "rua", label: "Nome da rua", type: "text" },
+            ],
+          },
         ],
       },
       {
         id: "publica",
         title: "Infraestrutura pública",
         fields: [
-          { id: "infra_servicos", label: "Serviços disponíveis", type: "multiselect", options: ["Abastecimento de água", "Energia elétrica", "Coleta de lixo", "Iluminação pública", "Rede de esgoto", "Telefone", "Rede de drenagem pluvial", "Alta tensão"] },
-          { id: "infra_obs", label: "Observações sobre a infraestrutura", type: "textarea" },
+          { id: "infra_servicos", label: "Serviços disponíveis", type: "button-select", multi: true, allowOther: true, options: ["Abastecimento de água", "Energia elétrica", "Coleta de lixo", "Iluminação pública", "Iluminação LED", "Rede de esgoto", "Telefone", "Internet / Fibra", "Rede de drenagem pluvial", "Alta tensão", "Asfalto / Pavimentação", "Coleta seletiva", "Posto de saúde", "Hospital", "Gás encanado", "Transporte público", "Ponto de ônibus"] },
         ],
       },
     ],
@@ -1027,29 +982,6 @@ export const MODULES: ModuleDef[] = [
     description: "Anexe as fotos no painel lateral do módulo.",
     fields: [
       { id: "descricao_fotos", label: "Descrição do conjunto fotográfico", type: "textarea" },
-    ],
-  },
-  {
-    id: "croqui",
-    title: "Croqui / Desenho Técnico",
-    description: "Croqui do local com legenda e elementos representados.",
-    fields: [],
-    subgroups: [
-      {
-        id: "desenho",
-        title: "Desenho",
-        fields: [
-          { id: "legenda", label: "Legenda do croqui", type: "textarea" },
-          { id: "escala", label: "Escala / referência", type: "text" },
-        ],
-      },
-      {
-        id: "elementos",
-        title: "Elementos representados",
-        fields: [
-          { id: "elementos", label: "Elementos representados (árvores, edificações, poços, acessos, etc.)", type: "textarea" },
-        ],
-      },
     ],
   },
   {
@@ -1085,36 +1017,6 @@ export const MODULES: ModuleDef[] = [
     ],
   },
   {
-    id: "observacoes",
-    title: "Observações Técnicas",
-    description: "Registros complementares e pendências observadas.",
-    fields: [],
-    subgroups: [
-      {
-        id: "gerais",
-        title: "Observações gerais",
-        fields: [
-          { id: "obs_gerais", label: "Observações gerais", type: "textarea" },
-        ],
-      },
-      {
-        id: "pendencias",
-        title: "Pendências observadas",
-        fields: [
-          { id: "pendencias_observadas", label: "Pendências observadas em campo", type: "textarea" },
-          { id: "responsavel_pendencias", label: "Responsável pelas pendências", type: "text" },
-        ],
-      },
-      {
-        id: "complementares",
-        title: "Informações complementares",
-        fields: [
-          { id: "info_complementares", label: "Informações complementares (escritório, retorno, etc.)", type: "textarea" },
-        ],
-      },
-    ],
-  },
-  {
     id: "validacao",
     title: "Validação e Encerramento",
     fields: [
@@ -1130,24 +1032,24 @@ export const MODULES_BY_TYPE: Record<SurveyType, string[]> = {
   geral: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "operacionais",
     "areas", "agua", "pocos", "processo", "emissoes", "residuos", "ete",
-    "politica", "rotinas", "infraestrutura", "vizinhanca", "croqui", "fotos",
-    "documentos", "observacoes", "validacao",
+    "politica", "rotinas", "infraestrutura", "vizinhanca", "fotos",
+    "documentos", "validacao",
   ],
   ambiental: [
     "identificacao", "empreendimento", "pessoas", "politica", "residuos",
-    "ete", "rotinas", "operacionais", "documentos", "fotos", "observacoes", "validacao",
+    "ete", "rotinas", "operacionais", "documentos", "fotos", "validacao",
   ],
   vazao: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "vazao",
-    "croqui", "fotos", "observacoes", "validacao",
+    "fotos", "validacao",
   ],
   outorga: [
     "identificacao", "empreendimento", "pessoas", "localizacao", "agua",
-    "pocos", "outorga", "operacionais", "documentos", "observacoes", "fotos", "validacao",
+    "pocos", "outorga", "operacionais", "documentos", "fotos", "validacao",
   ],
   terreno: [
     "identificacao", "empreendimento", "localizacao", "areas", "infraestrutura",
-    "vizinhanca", "croqui", "fotos", "observacoes", "validacao",
+    "vizinhanca", "fotos", "validacao",
   ],
 };
 
@@ -1212,6 +1114,7 @@ export function visibleFieldsOfModule(
   for (const f of m.fields) if (shouldShowField(f, values)) out.push(f);
   for (const sg of m.subgroups ?? []) {
     if (naSubgroups?.[sg.id]) continue;
+    if (sg.optional) continue;
     for (const f of sg.fields) if (shouldShowField(f, values)) out.push(f);
   }
   return out;
@@ -1250,7 +1153,7 @@ export function computeModuleStatus(m: ModuleDef, state: ModuleState): FieldStat
 export function computeSubgroupStatus(sg: SubgroupDef, state: ModuleState): FieldStatus {
   if (state.naSubgroups?.[sg.id]) return "nao_se_aplica";
   const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
-  if (!visible.length) return "nao_iniciado";
+  if (!visible.length) return sg.optional ? "concluido" : "nao_iniciado";
 
   for (const f of visible) {
     const fs = state.fieldStatus[f.id];
@@ -1265,7 +1168,7 @@ export function computeSubgroupStatus(sg: SubgroupDef, state: ModuleState): Fiel
 
   if (filled === visible.length) return "concluido";
   if (filled > 0) return "em_andamento";
-  return "nao_iniciado";
+  return sg.optional ? "concluido" : "nao_iniciado";
 }
 
 /** Conta de campos preenchidos / total visível em um subgrupo. */
@@ -1310,7 +1213,7 @@ export interface FactoryTemplate { id: string; name: string; type: SurveyType; m
 export const FACTORY_TEMPLATES: FactoryTemplate[] = [
   { id: "factory-geral-completo", name: "Completo (todos os módulos)", type: "geral", moduleIds: MODULES_BY_TYPE.geral },
   { id: "factory-geral-essencial", name: "Essencial", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","operacionais","fotos","documentos","validacao"] },
-  { id: "factory-geral-projeto", name: "Foco em Projeto", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","localizacao","operacionais","areas","agua","processo","emissoes","residuos","croqui","fotos","documentos","validacao"] },
+  { id: "factory-geral-projeto", name: "Foco em Projeto", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","localizacao","operacionais","areas","agua","processo","emissoes","residuos","fotos","documentos","validacao"] },
   { id: "factory-ambiental-padrao", name: "Acompanhamento padrão", type: "ambiental", moduleIds: MODULES_BY_TYPE.ambiental },
   { id: "factory-ambiental-curto", name: "Visita curta", type: "ambiental", moduleIds: ["identificacao","ete","residuos","rotinas","fotos","documentos","validacao"] },
   { id: "factory-vazao-padrao", name: "Medição padrão", type: "vazao", moduleIds: MODULES_BY_TYPE.vazao },

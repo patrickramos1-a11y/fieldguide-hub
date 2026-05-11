@@ -30,8 +30,6 @@ export const Route = createFileRoute("/levantamentos/$id/")({
   component: SurveyEditor,
 });
 
-const STATUSES: FieldStatus[] = ["nao_iniciado", "em_andamento", "concluido", "pendente", "nao_se_aplica", "aguardando_documento", "aguardando_empresa", "requer_retorno"];
-
 type VirtualTab = "__documentos" | "__pendencias" | "__encerramento";
 
 function SurveyEditor() {

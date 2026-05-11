@@ -1,20 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useCallback, useMemo, useState } from "react";
-import { useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment, removeAttachment, addPendencia, removePendencia } from "@/lib/store";
+import { useCallback, useMemo, useState, type ChangeEvent } from "react";
+import {
+  useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment,
+  removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
+  setEnabledModules,
+} from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Paperclip, Plus, Trash2, AlertTriangle, CheckCircle2, FileDown } from "lucide-react";
-import { getModulesForType } from "@/lib/modules";
+import {
+  ArrowLeft, FileText, Paperclip, Plus, Trash2, AlertTriangle, CheckCircle2,
+  FileDown, Settings2, Files, ClipboardList, Signature, ChevronRight,
+} from "lucide-react";
+import { getModulesForType, shouldShowField, CENTRAL_TAB_MODULES } from "@/lib/modules";
 import { FieldRenderer } from "@/components/FieldRenderer";
 import { StatusBadge } from "@/components/StatusBadge";
-import { STATUS_LABELS, SURVEY_TYPES, type FieldStatus } from "@/lib/types";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import type { ChangeEvent } from "react";
+import { ModuleConfigStep } from "@/components/ModuleConfigStep";
+import { STATUS_LABELS, SURVEY_TYPES, type FieldStatus, type FieldDef, type SubgroupDef } from "@/lib/types";
 
 export const Route = createFileRoute("/levantamentos/$id/")({
   component: SurveyEditor,
@@ -22,62 +28,281 @@ export const Route = createFileRoute("/levantamentos/$id/")({
 
 const STATUSES: FieldStatus[] = ["nao_iniciado", "em_andamento", "concluido", "pendente", "nao_se_aplica", "aguardando_documento", "aguardando_empresa", "requer_retorno"];
 
+type VirtualTab = "__documentos" | "__pendencias" | "__encerramento";
+
 function SurveyEditor() {
   const { id } = Route.useParams();
-  const { survey, project, client } = useDBSelector(
+  const data = useDBSelector(
     (state) => {
-      const currentSurvey = state.surveys.find((s) => s.id === id);
-      const currentProject = currentSurvey ? state.projects.find((p) => p.id === currentSurvey.projectId) ?? null : null;
-      const currentClient = currentProject ? state.clients.find((c) => c.id === currentProject.clientId) ?? null : null;
-      return { survey: currentSurvey, project: currentProject, client: currentClient };
+      const survey = state.surveys.find((s) => s.id === id);
+      const project = survey ? state.projects.find((p) => p.id === survey.projectId) ?? null : null;
+      const client = project ? state.clients.find((c) => c.id === project.clientId) ?? null : null;
+      return { survey, project, client };
     },
-    (prev, next) => prev.survey === next.survey && prev.project === next.project && prev.client === next.client,
+    (a, b) => a.survey === b.survey && a.project === b.project && a.client === b.client,
   );
-  const [activeMod, setActiveMod] = useState<string>("identificacao");
-  const [pendOpen, setPendOpen] = useState(false);
-  const [pendForm, setPendForm] = useState({ description: "", responsible: "" });
+  const { survey, project, client } = data;
+
+  const [activeTab, setActiveTab] = useState<string>("identificacao");
 
   if (!survey) return <AppShell><p>Levantamento não encontrado.</p></AppShell>;
 
-  const modules = getModulesForType(survey.type);
-  const current = modules.find((m) => m.id === activeMod) || modules[0];
-  const state = survey.modules[current.id];
-  const validacaoState = survey.modules.validacao;
+  // ---- Etapa de configuração inicial ----
+  if (!survey.enabledModules) {
+    return (
+      <AppShell>
+        <Link to="/levantamentos" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3">
+          <ArrowLeft className="h-4 w-4" /> Levantamentos
+        </Link>
+        <div className="mb-4">
+          <div className="text-xs text-muted-foreground">{client?.name} / {project?.name}</div>
+          <h1 className="text-2xl font-semibold">{survey.title}</h1>
+        </div>
+        <ModuleConfigStep
+          surveyType={survey.type}
+          onConfirm={(ids) => setEnabledModules(survey.id, ids)}
+        />
+      </AppShell>
+    );
+  }
+
+  return (
+    <SurveyEditorReady
+      survey={survey}
+      projectName={project?.name ?? ""}
+      clientName={client?.name ?? ""}
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+    />
+  );
+}
+
+interface ReadyProps {
+  survey: NonNullable<ReturnType<typeof useDBSelector<{ survey: any }>>["survey"]>;
+  projectName: string;
+  clientName: string;
+  activeTab: string;
+  setActiveTab: (t: string) => void;
+}
+
+function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActiveTab }: any) {
+  const allModules = getModulesForType(survey.type);
+  const enabled: string[] = survey.enabledModules ?? allModules.map((m: any) => m.id);
+  const enabledSet = useMemo(() => new Set(enabled), [enabled]);
+  // Tabs comuns (módulos habilitados que não são centralizados)
+  const regularTabs = allModules.filter((m) => enabledSet.has(m.id) && !CENTRAL_TAB_MODULES.has(m.id));
+  const hasDocs = enabledSet.has("documentos");
+  const hasValidacao = enabledSet.has("validacao");
+
   const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
-  const currentValues = state.values;
-  const currentFieldStatus = state.fieldStatus;
+
+  // Resolve aba ativa
+  const isVirtual = (activeTab as VirtualTab) === "__documentos" || (activeTab as VirtualTab) === "__pendencias" || (activeTab as VirtualTab) === "__encerramento";
+  const activeModule = !isVirtual ? regularTabs.find((m) => m.id === activeTab) ?? regularTabs[0] : null;
+
+  return (
+    <AppShell>
+      <Link to="/levantamentos" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3">
+        <ArrowLeft className="h-4 w-4" /> Levantamentos
+      </Link>
+
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-xs text-muted-foreground">{clientName} / {projectName}</div>
+          <h1 className="text-2xl font-semibold">{survey.title}</h1>
+          <div className="text-sm text-muted-foreground">{typeLabel}</div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setEnabledModules(survey.id, [])}>
+            <Settings2 className="h-4 w-4 mr-1" /> Reconfigurar módulos
+          </Button>
+          <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
+            <Button variant="outline" size="sm"><FileDown className="h-4 w-4 mr-1" /> Ver resumo</Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Tabs no topo, scrollable */}
+      <div className="mb-4 overflow-x-auto -mx-1 px-1">
+        <div className="flex gap-1.5 min-w-max pb-2">
+          {regularTabs.map((m) => {
+            const st = survey.modules[m.id];
+            const active = activeTab === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setActiveTab(m.id)}
+                className={`rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap flex items-center gap-2 ${active ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-secondary"}`}
+              >
+                <span>{m.title}</span>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(st.status)})` }} />
+              </button>
+            );
+          })}
+          <span className="self-center text-muted-foreground"><ChevronRight className="h-4 w-4" /></span>
+          {hasDocs && (
+            <TabPill icon={<Files className="h-3.5 w-3.5" />} active={activeTab === "__documentos"} onClick={() => setActiveTab("__documentos")}>Documentos</TabPill>
+          )}
+          <TabPill icon={<ClipboardList className="h-3.5 w-3.5" />} active={activeTab === "__pendencias"} onClick={() => setActiveTab("__pendencias")}>
+            Pendências{survey.pendencias.length > 0 && <span className="ml-1 inline-flex items-center justify-center rounded-full bg-[var(--status-pending)] text-white text-[10px] h-4 min-w-4 px-1">{survey.pendencias.length}</span>}
+          </TabPill>
+          {hasValidacao && (
+            <TabPill icon={<Signature className="h-3.5 w-3.5" />} active={activeTab === "__encerramento"} onClick={() => setActiveTab("__encerramento")}>Encerramento</TabPill>
+          )}
+        </div>
+      </div>
+
+      {/* Conteúdo */}
+      {activeModule && <ModulePanel survey={survey} module={activeModule} />}
+      {activeTab === "__documentos" && <DocumentsPanel survey={survey} />}
+      {activeTab === "__pendencias" && <PendenciasPanel survey={survey} />}
+      {activeTab === "__encerramento" && <EncerramentoPanel survey={survey} />}
+    </AppShell>
+  );
+}
+
+function statusVarSuffix(s: FieldStatus): string {
+  switch (s) {
+    case "nao_iniciado": return "todo";
+    case "em_andamento": return "progress";
+    case "concluido": return "done";
+    case "pendente": return "pending";
+    case "nao_se_aplica": return "na";
+    case "aguardando_documento": return "doc";
+    case "aguardando_empresa": return "company";
+    case "requer_retorno": return "return";
+  }
+}
+
+function TabPill({ children, active, onClick, icon }: { children: React.ReactNode; active: boolean; onClick: () => void; icon?: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-secondary"}`}
+    >
+      {icon} {children}
+    </button>
+  );
+}
+
+// =========================== ModulePanel ============================
+
+function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
+  const state = survey.modules[m.id];
+  const values = state.values;
+  const fieldStatusMap = state.fieldStatus;
+  const fieldNotes = state.fieldNotes ?? {};
+  const naMap = state.nonApplicable ?? {};
 
   const handleFieldChange = useCallback((fieldId: string, value: unknown) => {
-    setFieldValue(survey.id, current.id, fieldId, value);
-  }, [survey.id, current.id]);
+    setFieldValue(survey.id, m.id, fieldId, value);
+  }, [survey.id, m.id]);
+  const handleFieldStatus = useCallback((fieldId: string, s: FieldStatus) => setFieldStatus(survey.id, m.id, fieldId, s), [survey.id, m.id]);
+  const handleNote = useCallback((fieldId: string, note: string) => setFieldNote(survey.id, m.id, fieldId, note), [survey.id, m.id]);
+  const handleNA = useCallback((fieldId: string, na: boolean) => setFieldNA(survey.id, m.id, fieldId, na), [survey.id, m.id]);
 
-  const handleFieldStatus = useCallback((fieldId: string, status: FieldStatus) => {
-    setFieldStatus(survey.id, current.id, fieldId, status);
-  }, [survey.id, current.id]);
+  function renderField(f: FieldDef) {
+    if (!shouldShowField(f, values)) return null;
+    return (
+      <FieldRenderer
+        key={f.id}
+        field={f}
+        value={values[f.id]}
+        status={fieldStatusMap[f.id] || "nao_iniciado"}
+        note={fieldNotes[f.id]}
+        na={!!naMap[f.id]}
+        onChange={(v) => handleFieldChange(f.id, v)}
+        onStatus={(s) => handleFieldStatus(f.id, s)}
+        onNote={(n) => handleNote(f.id, n)}
+        onNA={(na) => handleNA(f.id, na)}
+      />
+    );
+  }
 
-  const renderedFields = useMemo(() => current.fields.map((f) => (
-    <FieldRenderer
-      key={f.id}
-      field={f}
-      value={currentValues[f.id]}
-      status={currentFieldStatus[f.id] || "nao_iniciado"}
-      onChange={(v) => handleFieldChange(f.id, v)}
-      onStatus={(s) => handleFieldStatus(f.id, s)}
-    />
-  )), [current.fields, currentFieldStatus, currentValues, handleFieldChange, handleFieldStatus]);
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-semibold">{m.title}</h2>
+            {m.description && <p className="text-sm text-muted-foreground">{m.description}</p>}
+          </div>
+          <Select value={state.status} onValueChange={(v) => updateModule(survey.id, m.id, { status: v as FieldStatus })}>
+            <SelectTrigger className="w-auto h-8"><StatusBadge status={state.status} /></SelectTrigger>
+            <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+
+        {m.fields.length > 0 && <div className="grid gap-2.5">{m.fields.map(renderField)}</div>}
+
+        {m.subgroups && m.subgroups.length > 0 && (
+          <div className="mt-2 grid gap-3">
+            {m.subgroups.map((sg: SubgroupDef) => (
+              <SubgroupBlock key={sg.id} subgroup={sg} renderField={renderField} values={values} naMap={naMap} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SubgroupBlock({ subgroup, renderField, values, naMap }: { subgroup: SubgroupDef; renderField: (f: FieldDef) => React.ReactNode; values: Record<string, any>; naMap: Record<string, boolean> }) {
+  const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, values));
+  const filled = visibleFields.filter((f) => {
+    const v = values[f.id];
+    return v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
+  }).length;
+  const naCount = visibleFields.filter((f) => naMap[f.id]).length;
+  const [open, setOpen] = useState(() => filled === 0);
+
+  return (
+    <div className="rounded-md border border-border">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 p-3 hover:bg-secondary/40 text-left"
+      >
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">{subgroup.title}</div>
+          {subgroup.description && <div className="text-xs text-muted-foreground line-clamp-1">{subgroup.description}</div>}
+        </div>
+        <div className="text-xs text-muted-foreground shrink-0">
+          {filled}/{visibleFields.length} preenchidos{naCount ? ` • ${naCount} N/A` : ""}
+        </div>
+      </button>
+      {open && (
+        <div className="border-t border-border p-3 grid gap-2.5">
+          {visibleFields.map(renderField)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =========================== Documentos ============================
+
+function DocumentsPanel({ survey }: { survey: any }) {
+  const docState = survey.modules.documentos;
+  const allAttachments: Array<{ moduleId: string; moduleTitle: string; att: any }> = [];
+  const allModules = getModulesForType(survey.type);
+  for (const m of allModules) {
+    const st = survey.modules[m.id];
+    if (!st) continue;
+    for (const att of st.attachments) {
+      allAttachments.push({ moduleId: m.id, moduleTitle: m.title, att });
+    }
+  }
 
   function handleFile(e: ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files) return;
+    const files = e.target.files; if (!files) return;
     Array.from(files).forEach((f) => {
       const reader = new FileReader();
       reader.onload = () => {
-        addAttachment(survey!.id, current.id, {
+        addAttachment(survey.id, "documentos", {
           id: Math.random().toString(36).slice(2, 11),
-          name: f.name,
-          type: f.type,
-          dataUrl: reader.result as string,
-          createdAt: new Date().toISOString(),
+          name: f.name, type: f.type, dataUrl: reader.result as string,
+          createdAt: new Date().toISOString(), moduleTag: "documentos",
         });
       };
       reader.readAsDataURL(f);
@@ -86,173 +311,170 @@ function SurveyEditor() {
   }
 
   return (
-    <AppShell>
-      <Link to="/levantamentos" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3">
-        <ArrowLeft className="h-4 w-4" /> Levantamentos
-      </Link>
-
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-xs text-muted-foreground">{client?.name} / {project?.name}</div>
-          <h1 className="text-2xl font-semibold">{survey.title}</h1>
-          <div className="text-sm text-muted-foreground">{typeLabel}</div>
-        </div>
-        <div className="flex gap-2">
-          <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
-            <Button variant="outline"><FileDown className="h-4 w-4 mr-1" /> Ver resumo</Button>
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-[260px_1fr] gap-4">
-        <Card>
-          <CardContent className="p-2">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground px-2 py-2">Módulos</div>
-            <div className="grid">
-              {modules.map((m) => {
-                const st = survey.modules[m.id];
-                const active = m.id === current.id;
-                return (
-                  <button key={m.id} onClick={() => setActiveMod(m.id)}
-                    className={`text-left rounded-md px-2 py-2 text-sm transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>
-                    <div className="font-medium truncate">{m.title}</div>
-                    <div className={`text-xs mt-0.5 ${active ? "opacity-90" : "text-muted-foreground"}`}>{STATUS_LABELS[st.status]}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">{current.title}</h2>
-                  {current.description && <p className="text-sm text-muted-foreground">{current.description}</p>}
-                </div>
-                <Select value={state.status} onValueChange={(v) => updateModule(survey.id, current.id, { status: v as FieldStatus })}>
-                  <SelectTrigger className="w-auto h-8"><StatusBadge status={state.status} /></SelectTrigger>
-                  <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-
-              {current.fields.length > 0 && (
-                <div className="grid gap-3">{renderedFields}</div>
-              )}
-
-              {current.subgroups && current.subgroups.length > 0 && (
-                <Accordion type="multiple" defaultValue={current.subgroups.map((s) => s.id)} className="mt-2">
-                  {current.subgroups.map((sg) => (
-                    <AccordionItem key={sg.id} value={sg.id}>
-                      <AccordionTrigger className="text-sm font-medium">{sg.title}</AccordionTrigger>
-                      <AccordionContent>
-                        {sg.description && <p className="text-xs text-muted-foreground mb-2">{sg.description}</p>}
-                        <div className="grid gap-3">
-                          {sg.fields.map((f) => (
-                            <FieldRenderer
-                              key={f.id}
-                              field={f}
-                              value={currentValues[f.id]}
-                              status={currentFieldStatus[f.id] || "nao_iniciado"}
-                              onChange={(v) => handleFieldChange(f.id, v)}
-                              onStatus={(s) => handleFieldStatus(f.id, s)}
-                            />
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              )}
-
-              <div className="mt-5 grid gap-3">
-                <div>
-                  <Label className="text-xs uppercase text-muted-foreground">Observações do módulo</Label>
-                  <Textarea rows={2} value={state.notes ?? ""} onChange={(e) => updateModule(survey.id, current.id, { notes: e.target.value })} />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-xs uppercase text-muted-foreground flex items-center gap-1"><Paperclip className="h-3 w-3" /> Anexos do módulo</Label>
-                    <label className="cursor-pointer">
-                      <input type="file" multiple className="hidden" onChange={handleFile} accept="image/*,application/pdf,audio/*" />
-                      <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-secondary"><Plus className="h-3 w-3" /> Adicionar</span>
-                    </label>
-                  </div>
-                  {state.attachments.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Sem anexos.</p>
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold flex items-center gap-2"><Files className="h-5 w-5" /> Documentos e Anexos</h2>
+            <label className="cursor-pointer">
+              <input type="file" multiple className="hidden" onChange={handleFile} accept="image/*,application/pdf,audio/*" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary"><Plus className="h-4 w-4" /> Adicionar arquivo</span>
+            </label>
+          </div>
+          {allAttachments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum documento anexado neste levantamento.</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {allAttachments.map(({ moduleId, moduleTitle, att }) => (
+                <div key={att.id} className="flex items-center gap-2 rounded-md border border-border p-2">
+                  {att.type.startsWith("image/") ? (
+                    <img src={att.dataUrl} alt={att.name} className="h-12 w-12 rounded object-cover" />
                   ) : (
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      {state.attachments.map((a) => (
-                        <div key={a.id} className="flex items-center gap-2 rounded-md border border-border p-2">
-                          {a.type.startsWith("image/") ? (
-                            <img src={a.dataUrl} alt={a.name} className="h-12 w-12 rounded object-cover" />
-                          ) : (
-                            <div className="grid h-12 w-12 place-items-center rounded bg-secondary"><FileText className="h-5 w-5 text-muted-foreground" /></div>
-                          )}
-                          <div className="min-w-0 flex-1"><div className="text-xs truncate">{a.name}</div><a href={a.dataUrl} download={a.name} className="text-xs text-primary">Baixar</a></div>
-                          <Button variant="ghost" size="sm" onClick={() => removeAttachment(survey.id, current.id, a.id)}><Trash2 className="h-3 w-3" /></Button>
-                        </div>
-                      ))}
-                    </div>
+                    <div className="grid h-12 w-12 place-items-center rounded bg-secondary"><FileText className="h-5 w-5 text-muted-foreground" /></div>
                   )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium truncate">{att.name}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">{moduleTitle}</div>
+                    <a href={att.dataUrl} download={att.name} className="text-xs text-primary">Baixar</a>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => removeAttachment(survey.id, moduleId, att.id)}><Trash2 className="h-3 w-3" /></Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-[var(--status-pending)]" /> Pendências do levantamento</h3>
-                <Button size="sm" variant="outline" onClick={() => setPendOpen((v) => !v)}><Plus className="h-4 w-4 mr-1" /> Pendência</Button>
-              </div>
-              {pendOpen && (
-                <div className="grid gap-2 mb-3 rounded-md border border-border p-3">
-                  <Input placeholder="Descrição" value={pendForm.description} onChange={(e) => setPendForm({ ...pendForm, description: e.target.value })} />
-                  <Input placeholder="Responsável" value={pendForm.responsible} onChange={(e) => setPendForm({ ...pendForm, responsible: e.target.value })} />
-                  <Button size="sm" onClick={() => {
-                    if (!pendForm.description.trim()) return;
-                    addPendencia(survey.id, { module: current.title, description: pendForm.description, responsible: pendForm.responsible, status: "pendente" });
-                    setPendForm({ description: "", responsible: "" }); setPendOpen(false);
-                  }}>Adicionar</Button>
-                </div>
-              )}
-              {survey.pendencias.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sem pendências.</p>
-              ) : (
-                <div className="grid gap-2">
-                  {survey.pendencias.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border border-border p-2">
-                      <div className="min-w-0">
-                        <div className="text-sm truncate">{p.description}</div>
-                        <div className="text-xs text-muted-foreground">{p.module} {p.responsible && `• ${p.responsible}`}</div>
-                      </div>
-                      <StatusBadge status={p.status} />
-                      <Button variant="ghost" size="sm" onClick={() => removePendencia(survey.id, p.id)}><Trash2 className="h-3 w-3" /></Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Subgrupos e campos próprios do módulo documentos */}
+      <ModulePanel survey={survey} module={getModulesForType(survey.type).find((m) => m.id === "documentos")!} />
+    </div>
+  );
+}
 
-          <Card>
-            <CardContent className="p-5 grid sm:grid-cols-3 gap-3">
-              <div><Label>Assinatura cliente</Label><Input value={validacaoState?.values.assinatura_cliente ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_cliente", e.target.value)} placeholder="Nome de quem assinou" /></div>
-              <div><Label>Assinatura técnico</Label><Input value={validacaoState?.values.assinatura_tecnico ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_tecnico", e.target.value)} /></div>
-              <div><Label>Data</Label><Input type="date" value={validacaoState?.values.data_validacao ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "data_validacao", e.target.value)} /></div>
-              <div className="sm:col-span-3 flex justify-end">
-                <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
-                  <Button><CheckCircle2 className="h-4 w-4 mr-1" /> Ver resumo final</Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+// =========================== Pendências ============================
+
+function PendenciasPanel({ survey }: { survey: any }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ module: "", description: "", responsible: "" });
+  const allModules = getModulesForType(survey.type);
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-[var(--status-pending)]" /> Pendências do levantamento
+          </h2>
+          <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)}><Plus className="h-4 w-4 mr-1" /> Nova pendência</Button>
         </div>
-      </div>
-    </AppShell>
+        {open && (
+          <div className="grid gap-2 mb-3 rounded-md border border-border p-3">
+            <Select value={form.module} onValueChange={(v) => setForm({ ...form, module: v })}>
+              <SelectTrigger><SelectValue placeholder="Módulo de origem" /></SelectTrigger>
+              <SelectContent>
+                {allModules.map((m) => <SelectItem key={m.id} value={m.title}>{m.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Textarea rows={2} placeholder="Descrição da pendência" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <Input placeholder="Responsável" value={form.responsible} onChange={(e) => setForm({ ...form, responsible: e.target.value })} />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setOpen(false); setForm({ module: "", description: "", responsible: "" }); }}>Cancelar</Button>
+              <Button size="sm" onClick={() => {
+                if (!form.description.trim()) return;
+                addPendencia(survey.id, { module: form.module || "Geral", description: form.description, responsible: form.responsible, status: "pendente" });
+                setForm({ module: "", description: "", responsible: "" }); setOpen(false);
+              }}>Adicionar</Button>
+            </div>
+          </div>
+        )}
+        {survey.pendencias.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sem pendências.</p>
+        ) : (
+          <div className="grid gap-2">
+            {survey.pendencias.map((p: any) => (
+              <div key={p.id} className="flex items-center justify-between gap-2 rounded-md border border-border p-2">
+                <div className="min-w-0">
+                  <div className="text-sm truncate">{p.description}</div>
+                  <div className="text-xs text-muted-foreground">{p.module}{p.responsible && ` • ${p.responsible}`}</div>
+                </div>
+                <StatusBadge status={p.status} />
+                <Button variant="ghost" size="sm" onClick={() => removePendencia(survey.id, p.id)}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// =========================== Encerramento ============================
+
+function EncerramentoPanel({ survey }: { survey: any }) {
+  const validacao = survey.modules.validacao;
+  const allModules = getModulesForType(survey.type);
+  const enabledIds: string[] = survey.enabledModules ?? allModules.map((m) => m.id);
+  const enabledModules = allModules.filter((m) => enabledIds.includes(m.id));
+
+  const concluidos = enabledModules.filter((m) => survey.modules[m.id]?.status === "concluido");
+  const naMods = enabledModules.filter((m) => survey.modules[m.id]?.status === "nao_se_aplica");
+  const emAndamento = enabledModules.filter((m) => !["concluido", "nao_se_aplica"].includes(survey.modules[m.id]?.status));
+  const pendAbertas = survey.pendencias.filter((p: any) => p.status !== "concluido");
+  const pendResolvidas = survey.pendencias.filter((p: any) => p.status === "concluido");
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-5">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Signature className="h-5 w-5" /> Validação e Encerramento</h2>
+          <div className="grid sm:grid-cols-3 gap-4 mb-4">
+            <div><Label>Assinatura cliente</Label><Input value={validacao?.values.assinatura_cliente ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_cliente", e.target.value)} placeholder="Nome de quem assinou" /></div>
+            <div><Label>Assinatura técnico</Label><Input value={validacao?.values.assinatura_tecnico ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_tecnico", e.target.value)} /></div>
+            <div><Label>Data</Label><Input type="date" value={validacao?.values.data_validacao ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "data_validacao", e.target.value)} /></div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => updateModule(survey.id, "validacao", { status: "concluido" })}>
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Marcar como concluído
+            </Button>
+            <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
+              <Button><FileDown className="h-4 w-4 mr-1" /> Ver resumo final</Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="font-semibold mb-3">Resumo dos módulos</h3>
+          <div className="grid sm:grid-cols-2 gap-2 text-sm">
+            <SummaryRow label="Concluídos" items={concluidos.map((m) => m.title)} tone="done" />
+            <SummaryRow label="Em andamento" items={emAndamento.map((m) => m.title)} tone="progress" />
+            <SummaryRow label="Não se aplica" items={naMods.map((m) => m.title)} tone="na" />
+            <SummaryRow label="Pendências abertas" items={pendAbertas.map((p: any) => `${p.module}: ${p.description}`)} tone="pending" />
+          </div>
+          {pendResolvidas.length > 0 && (
+            <div className="mt-3 text-sm">
+              <SummaryRow label="Pendências resolvidas" items={pendResolvidas.map((p: any) => `${p.module}: ${p.description}`)} tone="done" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SummaryRow({ label, items, tone }: { label: string; items: string[]; tone: string }) {
+  return (
+    <div className="rounded-md border border-border p-3">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{label} ({items.length})</div>
+      {items.length === 0 ? (
+        <div className="text-xs text-muted-foreground">—</div>
+      ) : (
+        <ul className="text-xs space-y-0.5 list-disc list-inside">
+          {items.slice(0, 8).map((s, i) => <li key={i} className="truncate">{s}</li>)}
+          {items.length > 8 && <li className="text-muted-foreground">+ {items.length - 8} mais…</li>}
+        </ul>
+      )}
+    </div>
   );
 }

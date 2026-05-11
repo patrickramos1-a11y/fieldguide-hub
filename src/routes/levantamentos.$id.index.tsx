@@ -130,83 +130,56 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
         <ArrowLeft className="h-4 w-4" /> Levantamentos
       </Link>
 
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-xs text-muted-foreground">{clientName} / {projectName}</div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            {survey.title}
+      {/* Cabeçalho compacto */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] text-muted-foreground truncate">
+            {clientName} / {projectName} · {typeLabel}
+          </div>
+          <h1 className="text-base font-semibold flex items-center gap-2 truncate">
+            <span className="truncate">{survey.title}</span>
             {survey.closedAt && (
-              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-normal" style={{ borderColor: "var(--status-done)", color: "var(--status-done)" }}>
-                <Lock className="h-3 w-3" /> Encerrado
+              <span className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0 text-[10px] font-normal shrink-0" style={{ borderColor: "var(--status-done)", color: "var(--status-done)" }}>
+                <Lock className="h-2.5 w-2.5" /> Encerrado
               </span>
             )}
           </h1>
-          <div className="text-sm text-muted-foreground">{typeLabel}</div>
-          <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-            <CounterChip tone="done" icon={<Check className="h-3 w-3" />} value={counters.concluido} label="concluídos" />
-            <CounterChip tone="progress" value={counters.em_andamento} label="em andamento" />
-            <CounterChip tone="todo" value={counters.nao_iniciado} label="não iniciados" />
-            {counters.nao_se_aplica > 0 && <CounterChip tone="na" value={counters.nao_se_aplica} label="N/A" />}
-            {counters.pendente > 0 && <CounterChip tone="pending" value={counters.pendente} label="pendência" />}
-          </div>
-          {(persistPending || persistenceError) && <div className="text-xs text-muted-foreground mt-1">{persistenceError ?? "Salvando alterações..."}</div>}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setEnabledModules(survey.id, [])}>
-            <Settings2 className="h-4 w-4 mr-1" /> Reconfigurar módulos
+        <div className="flex items-center gap-1 shrink-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Reconfigurar módulos" onClick={() => setEnabledModules(survey.id, [])}>
+            <Settings2 className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => {
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Salvar como template" onClick={() => {
             const name = window.prompt("Nome do template (módulos selecionados serão salvos):");
             if (!name?.trim()) return;
             addTemplate({ name: name.trim(), type: survey.type, moduleIds: enabled });
           }}>
-            <Save className="h-4 w-4 mr-1" /> Salvar como template
+            <Save className="h-4 w-4" />
           </Button>
           <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
-            <Button variant="outline" size="sm"><FileDown className="h-4 w-4 mr-1" /> Ver resumo</Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" title="Ver resumo"><FileDown className="h-4 w-4" /></Button>
           </Link>
         </div>
       </div>
-
-      {/* Tabs no topo, scrollable */}
-      <div className="mb-4 overflow-x-auto -mx-1 px-1">
-        <div className="flex gap-1.5 min-w-max pb-2">
-          {regularTabs.map((m) => {
-            const st = survey.modules[m.id] as ModuleState;
-            const eff = computeModuleStatus(m, st);
-            const active = activeTab === m.id;
-            const done = eff === "concluido";
-            return (
-              <button
-                key={m.id}
-                onClick={() => setActiveTab(m.id)}
-                className={`rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap flex items-center gap-2 border ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
-                style={!active && done ? { borderColor: `var(--status-done)` } : undefined}
-              >
-                {done ? (
-                  <Check className="h-3.5 w-3.5" style={{ color: active ? undefined : "var(--status-done)" }} />
-                ) : (
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(eff)})` }} />
-                )}
-                <span>{m.title}</span>
-              </button>
-            );
-          })}
-          {hiddenModules.length > 0 && (
-            <HiddenModulesPill survey={survey} hidden={hiddenModules} />
-          )}
-          <span className="self-center text-muted-foreground"><ChevronRight className="h-4 w-4" /></span>
-          {hasDocs && (
-            <TabPill icon={<Files className="h-3.5 w-3.5" />} active={activeTab === "__documentos"} onClick={() => setActiveTab("__documentos")}>Documentos</TabPill>
-          )}
-          <TabPill icon={<ClipboardList className="h-3.5 w-3.5" />} active={activeTab === "__pendencias"} onClick={() => setActiveTab("__pendencias")}>
-            Pendências{survey.pendencias.length > 0 && <span className="ml-1 inline-flex items-center justify-center rounded-full bg-[var(--status-pending)] text-white text-[10px] h-4 min-w-4 px-1">{survey.pendencias.length}</span>}
-          </TabPill>
-          {hasValidacao && (
-            <TabPill icon={<Signature className="h-3.5 w-3.5" />} active={activeTab === "__encerramento"} onClick={() => setActiveTab("__encerramento")}>Encerramento</TabPill>
-          )}
-        </div>
+      <div className="mb-3 flex flex-wrap items-center gap-1 text-[11px]">
+        <CounterChip tone="done" icon={<Check className="h-3 w-3" />} value={counters.concluido} label="ok" />
+        <CounterChip tone="progress" value={counters.em_andamento} label="andamento" />
+        <CounterChip tone="todo" value={counters.nao_iniciado} label="a fazer" />
+        {counters.nao_se_aplica > 0 && <CounterChip tone="na" value={counters.nao_se_aplica} label="N/A" />}
+        {counters.pendente > 0 && <CounterChip tone="pending" value={counters.pendente} label="pend." />}
+        {(persistPending || persistenceError) && <span className="text-muted-foreground ml-1 truncate">{persistenceError ?? "Salvando..."}</span>}
       </div>
+
+      {/* Tabs com botão N/A inline, recolhidas quando N/A */}
+      <ModuleTabsBar
+        survey={survey}
+        regularTabs={regularTabs}
+        hiddenModules={hiddenModules}
+        hasDocs={hasDocs}
+        hasValidacao={hasValidacao}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
       {/* Conteúdo */}
       {activeModule && <ModulePanel survey={survey} module={activeModule} />}
@@ -230,11 +203,105 @@ function statusVarSuffix(s: FieldStatus): string {
   }
 }
 
+function ModuleTabsBar({ survey, regularTabs, hiddenModules, hasDocs, hasValidacao, activeTab, setActiveTab }: {
+  survey: any; regularTabs: any[]; hiddenModules: any[]; hasDocs: boolean; hasValidacao: boolean;
+  activeTab: string; setActiveTab: (t: string) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const visibleTabs = regularTabs.filter((m) => {
+    const st = survey.modules[m.id] as ModuleState;
+    return !st?.naModule;
+  });
+  const naTabs = regularTabs.filter((m) => {
+    const st = survey.modules[m.id] as ModuleState;
+    return st?.naModule;
+  });
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center gap-1 mb-1.5">
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          title={collapsed ? "Expandir abas" : "Recolher abas"}
+        >
+          <ChevronRight className={`h-3 w-3 transition-transform ${collapsed ? "" : "rotate-90"}`} />
+          {visibleTabs.length} módulos
+          {naTabs.length > 0 && <span className="ml-1 opacity-70">· {naTabs.length} N/A</span>}
+        </button>
+      </div>
+      {!collapsed && (
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex flex-wrap gap-1.5 pb-1">
+            {visibleTabs.map((m) => {
+              const st = survey.modules[m.id] as ModuleState;
+              const eff = computeModuleStatus(m, st);
+              const active = activeTab === m.id;
+              const done = eff === "concluido";
+              return (
+                <div key={m.id} className="inline-flex items-stretch rounded-md border overflow-hidden"
+                  style={{ borderColor: active ? "var(--primary)" : (done ? "var(--status-done)" : "var(--border)") }}
+                >
+                  <button
+                    onClick={() => setActiveTab(m.id)}
+                    className={`px-2.5 py-1 text-xs whitespace-nowrap flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground" : "bg-card hover:bg-secondary"}`}
+                  >
+                    {done ? (
+                      <Check className="h-3 w-3" style={{ color: active ? undefined : "var(--status-done)" }} />
+                    ) : (
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `var(--status-${statusVarSuffix(eff)})` }} />
+                    )}
+                    <span>{m.title}</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setModuleNA(survey.id, m.id, true); }}
+                    title="Marcar como não se aplica"
+                    className={`px-1.5 border-l flex items-center ${active ? "bg-primary/90 text-primary-foreground border-primary-foreground/30 hover:bg-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+                  >
+                    <Ban className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+            {naTabs.map((m) => {
+              const active = activeTab === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => setActiveTab(m.id)}
+                  title={`${m.title} (N/A)`}
+                  className={`rounded-full h-6 min-w-6 px-1.5 text-[10px] inline-flex items-center gap-1 border border-dashed ${active ? "bg-secondary" : "bg-card hover:bg-secondary"} text-muted-foreground`}
+                >
+                  <Ban className="h-2.5 w-2.5" />
+                  <span className="max-w-[80px] truncate">{m.title}</span>
+                </button>
+              );
+            })}
+            {hiddenModules.length > 0 && (
+              <HiddenModulesPill survey={survey} hidden={hiddenModules} />
+            )}
+            <span className="self-center text-muted-foreground mx-1">·</span>
+            {hasDocs && (
+              <TabPill icon={<Files className="h-3 w-3" />} active={activeTab === "__documentos"} onClick={() => setActiveTab("__documentos")}>Docs</TabPill>
+            )}
+            <TabPill icon={<ClipboardList className="h-3 w-3" />} active={activeTab === "__pendencias"} onClick={() => setActiveTab("__pendencias")}>
+              Pend.{survey.pendencias.length > 0 && <span className="ml-1 inline-flex items-center justify-center rounded-full bg-[var(--status-pending)] text-white text-[10px] h-4 min-w-4 px-1">{survey.pendencias.length}</span>}
+            </TabPill>
+            {hasValidacao && (
+              <TabPill icon={<Signature className="h-3 w-3" />} active={activeTab === "__encerramento"} onClick={() => setActiveTab("__encerramento")}>Encerrar</TabPill>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TabPill({ children, active, onClick, icon }: { children: React.ReactNode; active: boolean; onClick: () => void; icon?: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-secondary"}`}
+      className={`rounded-md px-2.5 py-1 text-xs transition-colors whitespace-nowrap flex items-center gap-1.5 border ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
     >
       {icon} {children}
     </button>
@@ -435,7 +502,7 @@ function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOp
   const effective = computeSubgroupStatus(subgroup, state);
   const { filled, total } = subgroupProgress(subgroup, state);
   const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, state.values));
-  const [openInternal, setOpen] = useState(() => filled === 0);
+  const [openInternal, setOpen] = useState(false);
   const open = forceOpen ? true : openInternal;
 
   if (isNA) {

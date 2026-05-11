@@ -1114,6 +1114,7 @@ export function visibleFieldsOfModule(
   for (const f of m.fields) if (shouldShowField(f, values)) out.push(f);
   for (const sg of m.subgroups ?? []) {
     if (naSubgroups?.[sg.id]) continue;
+    if (sg.optional) continue;
     for (const f of sg.fields) if (shouldShowField(f, values)) out.push(f);
   }
   return out;
@@ -1152,7 +1153,7 @@ export function computeModuleStatus(m: ModuleDef, state: ModuleState): FieldStat
 export function computeSubgroupStatus(sg: SubgroupDef, state: ModuleState): FieldStatus {
   if (state.naSubgroups?.[sg.id]) return "nao_se_aplica";
   const visible = sg.fields.filter((f) => shouldShowField(f, state.values));
-  if (!visible.length) return "nao_iniciado";
+  if (!visible.length) return sg.optional ? "concluido" : "nao_iniciado";
 
   for (const f of visible) {
     const fs = state.fieldStatus[f.id];
@@ -1167,7 +1168,7 @@ export function computeSubgroupStatus(sg: SubgroupDef, state: ModuleState): Fiel
 
   if (filled === visible.length) return "concluido";
   if (filled > 0) return "em_andamento";
-  return "nao_iniciado";
+  return sg.optional ? "concluido" : "nao_iniciado";
 }
 
 /** Conta de campos preenchidos / total visível em um subgrupo. */

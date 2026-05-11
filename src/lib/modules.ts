@@ -1220,6 +1220,7 @@ export function visibleFieldsOfModule(
 /** Status efetivo do módulo (ignora `state.status` armazenado, exceto para módulos centrais sem campos). */
 export function computeModuleStatus(m: ModuleDef, state: ModuleState): FieldStatus {
   if (state.naModule) return "nao_se_aplica";
+  if (state.moduleDone) return "concluido";
 
   const visible = visibleFieldsOfModule(m, state.values, state.naSubgroups);
 

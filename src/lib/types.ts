@@ -238,6 +238,8 @@ export interface ModuleState {
   naModule?: boolean;
   /** Marcações "Não se aplica" por subgrupo. */
   naSubgroups?: Record<string, boolean>;
+  /** Marcação manual de módulo concluído. */
+  moduleDone?: boolean;
 }
 
 export interface Pendencia {

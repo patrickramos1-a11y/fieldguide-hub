@@ -56,6 +56,7 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
     nonApplicable: module?.nonApplicable ?? {},
     naModule: module?.naModule ?? false,
     naSubgroups: module?.naSubgroups ?? {},
+    moduleDone: module?.moduleDone ?? false,
   };
 }
 
@@ -561,6 +562,10 @@ export function setEnabledModules(sid: string, ids: string[]) {
 
 export function setModuleNA(sid: string, modId: string, na: boolean) {
   updateModule(sid, modId, { naModule: na });
+}
+
+export function setModuleDone(sid: string, modId: string, done: boolean) {
+  updateModule(sid, modId, { moduleDone: done });
 }
 
 export function setSubgroupNA(sid: string, modId: string, subId: string, na: boolean) {

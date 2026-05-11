@@ -5,7 +5,7 @@ import {
   useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment,
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
   setEnabledModules, useDBStatus, setModuleNA, setSubgroupNA, enableModule,
-  closeSurvey, reopenSurvey, addTemplate,
+  closeSurvey, reopenSurvey, addTemplate, setSubgroupNote,
 } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   ArrowLeft, FileText, Paperclip, Plus, Trash2, AlertTriangle, CheckCircle2,
   FileDown, Settings2, Files, ClipboardList, Signature, ChevronRight, Ban, Check, EyeOff,
-  Lock, Unlock, Clock, Save,
+  Lock, Unlock, Clock, Save, MessageSquarePlus,
 } from "lucide-react";
 import {
   getModulesForType, shouldShowField, CENTRAL_TAB_MODULES,
@@ -424,6 +424,8 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
                 state={state}
                 isNA={!!naSubMap[sg.id]}
                 onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
+                note={state.subgroupNotes?.[sg.id]}
+                onNote={(n) => setSubgroupNote(survey.id, m.id, sg.id, n)}
               />
             ))}
           </div>
@@ -433,19 +435,23 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
   );
 }
 
-function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOpen }: {
+function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOpen, note, onNote }: {
   subgroup: SubgroupDef;
   renderField: (f: FieldDef) => React.ReactNode;
   state: ModuleState;
   isNA: boolean;
   onToggleNA: (na: boolean) => void;
   forceOpen?: boolean;
+  note?: string;
+  onNote?: (n: string) => void;
 }) {
   const effective = computeSubgroupStatus(subgroup, state);
   const { filled, total } = subgroupProgress(subgroup, state);
   const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, state.values));
   const [openInternal, setOpen] = useState(false);
-  const open = forceOpen ? true : openInternal;
+  const [noteOpen, setNoteOpen] = useState(false);
+  // Auto-collapse: se está concluído e usuário não forçou abertura, fica fechado
+  const open = forceOpen ? true : (effective === "concluido" ? false : openInternal);
 
   if (isNA) {
     return (
@@ -499,6 +505,20 @@ function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, forceOp
       {open && (
         <div className="border-t border-border p-3 grid gap-2.5">
           {visibleFields.map(renderField)}
+          {onNote && (
+            <div className="pt-1">
+              {!noteOpen && !note && (
+                <button type="button" onClick={() => setNoteOpen(true)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                  <MessageSquarePlus className="h-3 w-3" /> Adicionar observação
+                </button>
+              )}
+              {(noteOpen || note) && (
+                <Textarea rows={2} className="text-xs" placeholder="Observação deste subgrupo…"
+                  value={note ?? ""} onChange={(e) => onNote(e.target.value)} onBlur={() => !note && setNoteOpen(false)} />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

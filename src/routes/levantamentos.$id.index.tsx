@@ -5,7 +5,7 @@ import {
   useDBSelector, updateModule, setFieldValue, setFieldStatus, addAttachment,
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
   setEnabledModules, useDBStatus, setModuleNA, setSubgroupNA, enableModule,
-  closeSurvey, reopenSurvey,
+  closeSurvey, reopenSurvey, addTemplate,
 } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   ArrowLeft, FileText, Paperclip, Plus, Trash2, AlertTriangle, CheckCircle2,
   FileDown, Settings2, Files, ClipboardList, Signature, ChevronRight, Ban, Check, EyeOff,
-  Lock, Unlock, Clock,
+  Lock, Unlock, Clock, Save,
 } from "lucide-react";
 import {
   getModulesForType, shouldShowField, CENTRAL_TAB_MODULES,
@@ -154,6 +154,13 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEnabledModules(survey.id, [])}>
             <Settings2 className="h-4 w-4 mr-1" /> Reconfigurar módulos
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => {
+            const name = window.prompt("Nome do template (módulos selecionados serão salvos):");
+            if (!name?.trim()) return;
+            addTemplate({ name: name.trim(), type: survey.type, moduleIds: enabled });
+          }}>
+            <Save className="h-4 w-4 mr-1" /> Salvar como template
           </Button>
           <Link to="/levantamentos/$id/resumo" params={{ id: survey.id }}>
             <Button variant="outline" size="sm"><FileDown className="h-4 w-4 mr-1" /> Ver resumo</Button>

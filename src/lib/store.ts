@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment, SurveyTemplate } from "./types";
-import { getModulesForType } from "./modules";
+import { getModulesForType, ensureLegacyAdapters } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
 const INDEXED_DB_NAME = "ramos-eng-db";
@@ -68,7 +68,7 @@ function normalizeSurvey(survey: Survey): Survey {
 
   return {
     ...survey,
-    modules: nextModules,
+    modules: ensureLegacyAdapters(nextModules),
     pendencias: Array.isArray(survey.pendencias) ? survey.pendencias : [],
     signatures: survey.signatures ?? {},
   };
@@ -450,6 +450,11 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
     signatures: {},
     createdAt: now.toISOString(),
   };
+  // Aplica template padrão do tipo, se houver.
+  const def = (store.db.templates ?? []).find((t) => t.type === data.type && t.isDefault);
+  if (def && def.moduleIds.length) {
+    survey.enabledModules = Array.from(new Set([...def.moduleIds, "identificacao", "validacao"]));
+  }
 
   store.db = { ...store.db, surveys: [survey, ...store.db.surveys] };
   persist();
@@ -620,5 +625,20 @@ export function addTemplate(data: Omit<SurveyTemplate, "id" | "createdAt">) {
 
 export function removeTemplate(tid: string) {
   store.db = { ...store.db, templates: (store.db.templates ?? []).filter((t) => t.id !== tid) };
+  persist();
+}
+
+export function setTemplateDefault(tid: string, isDefault: boolean) {
+  const list = store.db.templates ?? [];
+  const target = list.find((x) => x.id === tid);
+  if (!target) return;
+  store.db = {
+    ...store.db,
+    templates: list.map((t) => {
+      if (t.id === tid) return { ...t, isDefault };
+      if (isDefault && t.type === target.type) return { ...t, isDefault: false };
+      return t;
+    }),
+  };
   persist();
 }

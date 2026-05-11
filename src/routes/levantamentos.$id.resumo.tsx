@@ -14,9 +14,25 @@ export const Route = createFileRoute("/levantamentos/$id/resumo")({
 
 function fmtVal(v: any): string {
   if (v == null || v === "") return "—";
-  if (Array.isArray(v)) return v.join(", ") || "—";
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "—";
+    if (typeof v[0] === "object" && v[0] && "nome" in v[0]) {
+      return v.map((p: any) => [p.nome, p.cargo].filter(Boolean).join(" — ")).join("; ");
+    }
+    return v.join(", ");
+  }
   if (typeof v === "object") {
     if ("lat" in v) return `lat ${v.lat}, lng ${v.lng}${v.accuracy ? ` (~${Math.round(v.accuracy)}m)` : ""}`;
+    if ("preset" in v || "turnos" in v) {
+      const parts: string[] = [];
+      if (v.preset) parts.push(String(v.preset));
+      if (Array.isArray(v.turnos) && v.turnos.length) {
+        parts.push(v.turnos.map((t: any) => `${t.label ? t.label + " " : ""}${t.inicio}–${t.fim}`).join(", "));
+      }
+      if (Array.isArray(v.dias) && v.dias.length) parts.push(v.dias.join("/"));
+      if (v.observacao) parts.push(v.observacao);
+      return parts.join(" · ") || "—";
+    }
     return JSON.stringify(v);
   }
   if (typeof v === "boolean") return v ? "Sim" : "Não";

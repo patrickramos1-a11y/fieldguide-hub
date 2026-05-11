@@ -1,5 +1,5 @@
-import type { FieldDef, ModuleDef, SurveyType } from "./types";
-import type { FieldStatus, ModuleState, SubgroupDef } from "./types";
+import type { FieldDef, ModuleDef, SurveyType, ModulePurpose } from "./types";
+import type { FieldStatus, ModuleState, SubgroupDef, Person, HoursValue } from "./types";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -9,6 +9,7 @@ export const MODULES: ModuleDef[] = [
     title: "Identificação do Levantamento",
     description: "Contexto da visita: data, horários, motivo e objetivo.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento", "outorga", "vazao"],
     subgroups: [
       {
         id: "visita",
@@ -47,6 +48,7 @@ export const MODULES: ModuleDef[] = [
     title: "Dados Cadastrais do Empreendimento",
     description: "Confirme/complete os dados cadastrais utilizados neste levantamento.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "outorga"],
     subgroups: [
       {
         id: "identificacao_empresa",
@@ -107,33 +109,27 @@ export const MODULES: ModuleDef[] = [
     title: "Pessoas Envolvidas",
     description: "Pessoas que participaram desta visita.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento", "outorga", "vazao"],
     subgroups: [
       {
         id: "colaborador",
         title: "Colaborador que acompanhou o levantamento",
         fields: [
-          { id: "colab_nome", label: "Nome do colaborador", type: "text" },
-          { id: "colab_cargo", label: "Cargo do colaborador", type: "text" },
-          { id: "colab_telefone", label: "Telefone", type: "text" },
-          { id: "colab_email", label: "E-mail", type: "text" },
+          { id: "colaboradores", label: "Colaboradores que acompanharam", type: "people" },
         ],
       },
       {
         id: "tecnico",
         title: "Técnico responsável pelo levantamento",
         fields: [
-          { id: "tec_nome", label: "Nome do técnico responsável", type: "text" },
-          { id: "tec_cargo", label: "Cargo do técnico", type: "text" },
-          { id: "tec_registro", label: "Registro profissional (CREA/CRQ/etc.)", type: "text" },
-          { id: "tec_telefone", label: "Telefone", type: "text" },
-          { id: "tec_email", label: "E-mail", type: "text" },
+          { id: "tecnicos", label: "Técnico(s) responsável(eis)", type: "people" },
         ],
       },
       {
         id: "outros",
         title: "Outras pessoas presentes",
         fields: [
-          { id: "outros_presentes", label: "Outras pessoas presentes (nome / cargo / vínculo)", type: "textarea" },
+          { id: "outros_pessoas", label: "Outras pessoas presentes", type: "people" },
         ],
       },
     ],
@@ -150,15 +146,13 @@ export const MODULES: ModuleDef[] = [
     title: "Dados Operacionais",
     description: "Funcionamento, equipe e alterações operacionais.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento", "outorga"],
     subgroups: [
       {
         id: "funcionamento",
         title: "Funcionamento",
         fields: [
-          { id: "horario_inicio", label: "Horário de início", type: "time" },
-          { id: "horario_fim", label: "Horário de término", type: "time" },
-          { id: "horario_func", label: "Observações sobre o horário (turnos, escalas)", type: "textarea" },
-          { id: "dias_semana", label: "Dias de funcionamento", type: "multiselect", options: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"] },
+          { id: "funcionamento", label: "Regime de funcionamento", type: "hours-presets" },
         ],
       },
       {
@@ -189,6 +183,7 @@ export const MODULES: ModuleDef[] = [
     title: "Áreas, Dimensões e Terreno",
     description: "Áreas do empreendimento e características físicas do terreno.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "areas_empreendimento",
@@ -287,6 +282,7 @@ export const MODULES: ModuleDef[] = [
     title: "Água, Captação, Reservatório e Uso",
     description: "Fontes, consumo, reservatório, uso da água e situação de outorga.",
     fields: [],
+    purposes: ["projeto", "outorga", "monitoramento"],
     subgroups: [
       {
         id: "corpo_hidrico",
@@ -342,6 +338,7 @@ export const MODULES: ModuleDef[] = [
     title: "Poços",
     description: "Dados técnicos do poço, bomba, captação e uso.",
     fields: [],
+    purposes: ["outorga", "vazao", "monitoramento"],
     subgroups: [
       {
         id: "coords_poco",
@@ -386,6 +383,7 @@ export const MODULES: ModuleDef[] = [
     title: "Medição de Vazão",
     description: "Registro técnico da seção: largura, comprimento, profundidades e tempos.",
     fields: [],
+    purposes: ["vazao"],
     subgroups: [
       {
         id: "descricao_tecnica",
@@ -463,6 +461,7 @@ export const MODULES: ModuleDef[] = [
     title: "Outorga (dados específicos)",
     description: "Dados complementares para o processo de outorga.",
     fields: [],
+    purposes: ["outorga"],
     subgroups: [
       {
         id: "situacao",
@@ -507,6 +506,7 @@ export const MODULES: ModuleDef[] = [
     title: "ETE e Efluentes",
     description: "Estação de Tratamento de Efluentes: existência, operação, produtos e treinamento.",
     fields: [],
+    purposes: ["acompanhamento", "monitoramento", "projeto"],
     subgroups: [
       {
         id: "existencia",
@@ -557,6 +557,7 @@ export const MODULES: ModuleDef[] = [
     title: "Emissões",
     description: "Ruídos, emissões líquidas, sólidas e gasosas.",
     fields: [],
+    purposes: ["projeto", "acompanhamento"],
     subgroups: [
       {
         id: "ruidos",
@@ -604,6 +605,7 @@ export const MODULES: ModuleDef[] = [
     title: "Processo Produtivo",
     description: "Levantamento técnico: matéria-prima, equipamentos, etapas e entorno produtivo.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "geral",
@@ -658,6 +660,7 @@ export const MODULES: ModuleDef[] = [
     title: "Resíduos Sólidos",
     description: "Tipos de resíduos gerados, gerenciamento e coleta.",
     fields: [],
+    purposes: ["projeto", "acompanhamento", "monitoramento"],
     subgroups: [
       {
         id: "tipos",
@@ -772,6 +775,7 @@ export const MODULES: ModuleDef[] = [
     title: "Política e Gestão Ambiental",
     description: "Atendimento à política ambiental, educação ambiental e demandas de projeto.",
     fields: [],
+    purposes: ["acompanhamento", "monitoramento"],
     subgroups: [
       {
         id: "respeito",
@@ -819,6 +823,7 @@ export const MODULES: ModuleDef[] = [
     title: "Rotinas de Monitoramento",
     description: "Hidrômetro, coletas de água, coletas de efluente e acompanhamento operacional.",
     fields: [],
+    purposes: ["monitoramento", "acompanhamento"],
     subgroups: [
       {
         id: "hidrometro",
@@ -860,6 +865,7 @@ export const MODULES: ModuleDef[] = [
     title: "Vizinhança e Entorno",
     description: "Terrenos vizinhos por posição, mercado local e obras próximas.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "viz_fundos",
@@ -934,6 +940,7 @@ export const MODULES: ModuleDef[] = [
     title: "Acesso e Infraestrutura Pública",
     description: "Acesso por posição do terreno e infraestrutura pública disponível.",
     fields: [],
+    purposes: ["projeto"],
     subgroups: [
       {
         id: "acesso_frente",
@@ -1146,6 +1153,10 @@ function fieldHasValue(v: unknown): boolean {
   if (v == null || v === "") return false;
   if (Array.isArray(v)) return v.length > 0;
   if (typeof v === "object") {
+    // hours-presets: tem preset ou turnos preenchidos
+    const o = v as Record<string, unknown>;
+    if (typeof o.preset === "string" && o.preset) return true;
+    if (Array.isArray(o.turnos) && (o.turnos as unknown[]).length > 0) return true;
     return Object.values(v as Record<string, unknown>).some((x) => x !== "" && x != null);
   }
   return true;
@@ -1258,3 +1269,65 @@ export const MODULE_PRESETS: Record<SurveyType, { all: string[]; minimal: string
     minimal: ["identificacao", "localizacao", "areas", "fotos", "validacao"],
   },
 };
+
+/** Templates de fábrica embutidos por tipo (não removíveis). */
+export interface FactoryTemplate { id: string; name: string; type: SurveyType; moduleIds: string[] }
+
+export const FACTORY_TEMPLATES: FactoryTemplate[] = [
+  { id: "factory-geral-completo", name: "Completo (todos os módulos)", type: "geral", moduleIds: MODULES_BY_TYPE.geral },
+  { id: "factory-geral-essencial", name: "Essencial", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","operacionais","fotos","documentos","validacao"] },
+  { id: "factory-geral-projeto", name: "Foco em Projeto", type: "geral", moduleIds: ["identificacao","empreendimento","pessoas","localizacao","operacionais","areas","agua","processo","emissoes","residuos","croqui","fotos","documentos","validacao"] },
+  { id: "factory-ambiental-padrao", name: "Acompanhamento padrão", type: "ambiental", moduleIds: MODULES_BY_TYPE.ambiental },
+  { id: "factory-ambiental-curto", name: "Visita curta", type: "ambiental", moduleIds: ["identificacao","ete","residuos","rotinas","fotos","documentos","validacao"] },
+  { id: "factory-vazao-padrao", name: "Medição padrão", type: "vazao", moduleIds: MODULES_BY_TYPE.vazao },
+  { id: "factory-outorga-padrao", name: "Processo de outorga", type: "outorga", moduleIds: MODULES_BY_TYPE.outorga },
+  { id: "factory-outorga-renovacao", name: "Renovação de outorga", type: "outorga", moduleIds: ["identificacao","empreendimento","agua","pocos","outorga","documentos","fotos","validacao"] },
+  { id: "factory-terreno-padrao", name: "Visita ao terreno", type: "terreno", moduleIds: MODULES_BY_TYPE.terreno },
+];
+
+/** Adapter retrocompatível: gera valores novos a partir dos campos antigos. */
+export function ensureLegacyAdapters(modules: Record<string, ModuleState>): Record<string, ModuleState> {
+  const out = { ...modules };
+  // Pessoas — colaborador
+  const pessoas = out.pessoas;
+  if (pessoas) {
+    const v = { ...pessoas.values };
+    let changed = false;
+    if (!Array.isArray(v.colaboradores) && (v.colab_nome || v.colab_cargo || v.colab_telefone || v.colab_email)) {
+      const p: Person = { id: "legacy-colab", nome: String(v.colab_nome ?? ""), cargo: v.colab_cargo, telefone: v.colab_telefone, email: v.colab_email };
+      v.colaboradores = [p];
+      changed = true;
+    }
+    if (!Array.isArray(v.tecnicos) && (v.tec_nome || v.tec_cargo || v.tec_registro || v.tec_telefone || v.tec_email)) {
+      const p: Person = { id: "legacy-tec", nome: String(v.tec_nome ?? ""), cargo: v.tec_cargo, registro: v.tec_registro, telefone: v.tec_telefone, email: v.tec_email };
+      v.tecnicos = [p];
+      changed = true;
+    }
+    if (!Array.isArray(v.outros_pessoas) && typeof v.outros_presentes === "string" && v.outros_presentes.trim()) {
+      v.outros_pessoas = [{ id: "legacy-outros", nome: v.outros_presentes }];
+      changed = true;
+    }
+    if (changed) out.pessoas = { ...pessoas, values: v };
+  }
+  // Operação — funcionamento
+  const oper = out.operacionais;
+  if (oper) {
+    const v = { ...oper.values };
+    if (!v.funcionamento || typeof v.funcionamento !== "object") {
+      const hasLegacy = v.horario_inicio || v.horario_fim || v.horario_func || (Array.isArray(v.dias_semana) && v.dias_semana.length);
+      if (hasLegacy) {
+        const hv: HoursValue = {
+          preset: "outro",
+          dias: Array.isArray(v.dias_semana) ? (v.dias_semana as string[]) : undefined,
+          turnos: v.horario_inicio || v.horario_fim
+            ? [{ id: "t1", inicio: String(v.horario_inicio ?? ""), fim: String(v.horario_fim ?? "") }]
+            : [],
+          observacao: typeof v.horario_func === "string" ? v.horario_func : undefined,
+        };
+        v.funcionamento = hv;
+        out.operacionais = { ...oper, values: v };
+      }
+    }
+  }
+  return out;
+}

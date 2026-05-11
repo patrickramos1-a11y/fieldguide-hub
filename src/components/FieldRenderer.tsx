@@ -19,6 +19,7 @@ interface Props {
   onStatus: (s: FieldStatus) => void;
   onNote?: (note: string) => void;
   onNA?: (na: boolean) => void;
+  moduleValues?: Record<string, any>;
 }
 
 const STATUS_OPTIONS: FieldStatus[] = [
@@ -93,7 +94,7 @@ const HOURS_PRESET_DEFAULTS: Record<HoursPreset, HoursTurno[]> = {
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 // ============================ NumberField (estrito) ===========================
-function NumberField({ field, value, onChange, onBlur }: { field: FieldDef; value: any; onChange: (v: any) => void; onBlur: () => void }) {
+function NumberField({ field, value, onChange, onBlur, moduleValues }: { field: FieldDef; value: any; onChange: (v: any) => void; onBlur: () => void; moduleValues?: Record<string, any> }) {
   const allowDecimal = field.decimal !== false;
   const useUnit = !!field.unitOptions?.length;
   const v = useUnit && typeof value === "object" && value !== null ? value : { value: value ?? "", unit: useUnit ? field.unitOptions![0] : undefined };
@@ -116,7 +117,22 @@ function NumberField({ field, value, onChange, onBlur }: { field: FieldDef; valu
   function setUnit(u: string) {
     onChange({ value: cur, unit: u });
   }
+  // Sugestão de área a partir das dimensões do terreno
+  let suggestion: number | null = null;
+  if (field.suggestFrom?.kind === "areaFromDims" && moduleValues) {
+    const num = (k: string) => {
+      const r = moduleValues[k];
+      const x = typeof r === "object" && r ? r.value : r;
+      const n = parseFloat(String(x ?? "").replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const f = num("dim_frente"), fu = num("dim_fundos"), ld = num("dim_lado_dir"), le = num("dim_lado_esq");
+    const larg = (f && fu) ? (f + fu) / 2 : (f || fu);
+    const comp = (ld && le) ? (ld + le) / 2 : (ld || le);
+    if (larg > 0 && comp > 0) suggestion = Math.round(larg * comp);
+  }
   return (
+    <div className="flex flex-col gap-1.5">
     <div className="flex items-center gap-2">
       <Input
         inputMode={allowDecimal ? "decimal" : "numeric"}
@@ -141,6 +157,31 @@ function NumberField({ field, value, onChange, onBlur }: { field: FieldDef; valu
           <SelectContent>{field.unitOptions!.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
         </Select>
       )}
+    </div>
+      {suggestion !== null && Number(cur) !== suggestion && (
+        <button type="button" onClick={() => setVal(String(suggestion))}
+          className="self-start text-[11px] rounded-full px-2 py-0.5 border border-dashed border-primary/60 text-primary hover:bg-primary/10">
+          Calcular ≈ {suggestion} m² (frente × lateral)
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================ QuantityField (stepper) ========================
+function QuantityField({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+  const n = (() => {
+    const x = typeof value === "object" && value ? value.value : value;
+    const p = parseInt(String(x ?? "0"), 10);
+    return Number.isFinite(p) ? p : 0;
+  })();
+  function set(next: number) { onChange(Math.max(0, next)); }
+  return (
+    <div className="inline-flex items-center gap-1">
+      <Button type="button" variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => set(n - 1)}>−</Button>
+      <Input className="h-8 w-16 text-center" inputMode="numeric" value={String(n)}
+        onChange={(e) => set(parseInt(e.target.value.replace(/\D/g, ""), 10) || 0)} />
+      <Button type="button" variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => set(n + 1)}>+</Button>
     </div>
   );
 }

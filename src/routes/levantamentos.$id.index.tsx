@@ -225,14 +225,56 @@ function TabPill({ children, active, onClick, icon }: { children: React.ReactNod
   );
 }
 
+function CounterChip({ value, label, tone, icon }: { value: number; label: string; tone: "done" | "progress" | "todo" | "na" | "pending"; icon?: React.ReactNode }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5"
+      style={{ borderColor: `color-mix(in oklab, var(--status-${tone}) 40%, transparent)`, color: `var(--status-${tone})`, backgroundColor: `color-mix(in oklab, var(--status-${tone}) 12%, transparent)` }}
+    >
+      {icon}
+      <strong className="font-semibold">{value}</strong>
+      <span className="opacity-80">{label}</span>
+    </span>
+  );
+}
+
+function HiddenModulesPill({ survey, hidden }: { survey: any; hidden: any[] }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="rounded-md px-3 py-1.5 text-sm whitespace-nowrap flex items-center gap-1.5 border border-dashed border-border bg-card hover:bg-secondary text-muted-foreground">
+          <EyeOff className="h-3.5 w-3.5" /> +{hidden.length} não selecionados
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-2">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground px-2 py-1">Módulos disponíveis</div>
+        <div className="grid gap-1 max-h-72 overflow-auto">
+          {hidden.map((m) => (
+            <button
+              key={m.id}
+              className="text-left text-sm rounded-md px-2 py-1.5 hover:bg-secondary flex items-center justify-between gap-2"
+              onClick={() => enableModule(survey.id, m.id)}
+            >
+              <span className="truncate">{m.title}</span>
+              <span className="text-xs text-primary shrink-0">Ativar</span>
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // =========================== ModulePanel ============================
 
 function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
-  const state = survey.modules[m.id];
+  const state = survey.modules[m.id] as ModuleState;
   const values = state.values;
   const fieldStatusMap = state.fieldStatus;
   const fieldNotes = state.fieldNotes ?? {};
   const naMap = state.nonApplicable ?? {};
+  const naSubMap = state.naSubgroups ?? {};
+  const effective = computeModuleStatus(m, state);
 
   const handleFieldChange = useCallback((fieldId: string, value: unknown) => {
     setFieldValue(survey.id, m.id, fieldId, value);
@@ -259,18 +301,38 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
     );
   }
 
+  // Módulo inteiro marcado como N/A → render compacto
+  if (state.naModule) {
+    return (
+      <Card style={{ borderLeft: `4px solid var(--status-na)` }}>
+        <CardContent className="p-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">{m.title}</div>
+            <div className="text-xs text-muted-foreground">Marcado como não se aplica neste levantamento.</div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setModuleNA(survey.id, m.id, false)}>Reabrir módulo</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
+    <Card style={{ borderLeft: `4px solid var(--status-${statusVarSuffix(effective)})` }}>
       <CardContent className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-lg font-semibold">{m.title}</h2>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              {m.title}
+              {effective === "concluido" && <Check className="h-5 w-5" style={{ color: "var(--status-done)" }} />}
+            </h2>
             {m.description && <p className="text-sm text-muted-foreground">{m.description}</p>}
           </div>
-          <Select value={state.status} onValueChange={(v) => updateModule(survey.id, m.id, { status: v as FieldStatus })}>
-            <SelectTrigger className="w-auto h-8"><StatusBadge status={state.status} /></SelectTrigger>
-            <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>)}</SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <StatusBadge status={effective} />
+            <Button variant="outline" size="sm" onClick={() => setModuleNA(survey.id, m.id, true)} title="Marcar módulo como não se aplica">
+              <Ban className="h-3.5 w-3.5 mr-1" /> N/A
+            </Button>
+          </div>
         </div>
 
         {m.fields.length > 0 && <div className="grid gap-2.5">{m.fields.map(renderField)}</div>}
@@ -278,7 +340,14 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
         {m.subgroups && m.subgroups.length > 0 && (
           <div className="mt-2 grid gap-3">
             {m.subgroups.map((sg: SubgroupDef) => (
-              <SubgroupBlock key={sg.id} subgroup={sg} renderField={renderField} values={values} naMap={naMap} />
+              <SubgroupBlock
+                key={sg.id}
+                subgroup={sg}
+                renderField={renderField}
+                state={state}
+                isNA={!!naSubMap[sg.id]}
+                onToggleNA={(na) => setSubgroupNA(survey.id, m.id, sg.id, na)}
+              />
             ))}
           </div>
         )}
@@ -287,30 +356,67 @@ function ModulePanel({ survey, module: m }: { survey: any; module: any }) {
   );
 }
 
-function SubgroupBlock({ subgroup, renderField, values, naMap }: { subgroup: SubgroupDef; renderField: (f: FieldDef) => React.ReactNode; values: Record<string, any>; naMap: Record<string, boolean> }) {
-  const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, values));
-  const filled = visibleFields.filter((f) => {
-    const v = values[f.id];
-    return v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
-  }).length;
-  const naCount = visibleFields.filter((f) => naMap[f.id]).length;
+function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA }: {
+  subgroup: SubgroupDef;
+  renderField: (f: FieldDef) => React.ReactNode;
+  state: ModuleState;
+  isNA: boolean;
+  onToggleNA: (na: boolean) => void;
+}) {
+  const effective = computeSubgroupStatus(subgroup, state);
+  const { filled, total } = subgroupProgress(subgroup, state);
+  const visibleFields = subgroup.fields.filter((f) => shouldShowField(f, state.values));
   const [open, setOpen] = useState(() => filled === 0);
 
-  return (
-    <div className="rounded-md border border-border">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 p-3 hover:bg-secondary/40 text-left"
-      >
-        <div className="min-w-0">
+  if (isNA) {
+    return (
+      <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 flex items-center justify-between gap-2">
+        <div>
           <div className="text-sm font-semibold">{subgroup.title}</div>
-          {subgroup.description && <div className="text-xs text-muted-foreground line-clamp-1">{subgroup.description}</div>}
+          <div className="text-xs text-muted-foreground">Não se aplica</div>
         </div>
-        <div className="text-xs text-muted-foreground shrink-0">
-          {filled}/{visibleFields.length} preenchidos{naCount ? ` • ${naCount} N/A` : ""}
-        </div>
-      </button>
+        <Button variant="ghost" size="sm" onClick={() => onToggleNA(false)}>Reabrir</Button>
+      </div>
+    );
+  }
+
+  const done = effective === "concluido";
+
+  return (
+    <div
+      className="rounded-md border"
+      style={{ borderColor: done ? `color-mix(in oklab, var(--status-done) 50%, var(--border))` : `var(--border)` }}
+    >
+      <div className="flex items-stretch">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex-1 flex items-center justify-between gap-2 p-3 hover:bg-secondary/40 text-left"
+        >
+          <div className="min-w-0 flex items-center gap-2">
+            {done ? (
+              <Check className="h-4 w-4 shrink-0" style={{ color: "var(--status-done)" }} />
+            ) : (
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: `var(--status-${statusVarSuffix(effective)})` }} />
+            )}
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">{subgroup.title}</div>
+              {subgroup.description && <div className="text-xs text-muted-foreground line-clamp-1">{subgroup.description}</div>}
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground shrink-0">
+            {filled}/{total}
+          </div>
+        </button>
+        <button
+          type="button"
+          className="px-2 text-muted-foreground hover:text-foreground hover:bg-secondary/40 border-l border-border"
+          title="Marcar subgrupo como não se aplica"
+          onClick={() => onToggleNA(true)}
+        >
+          <Ban className="h-4 w-4" />
+        </button>
+      </div>
       {open && (
         <div className="border-t border-border p-3 grid gap-2.5">
           {visibleFields.map(renderField)}

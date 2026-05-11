@@ -77,15 +77,9 @@ function SurveyEditor() {
   );
 }
 
-interface ReadyProps {
-  survey: NonNullable<ReturnType<typeof useDBSelector<{ survey: any }>>["survey"]>;
-  projectName: string;
-  clientName: string;
-  activeTab: string;
-  setActiveTab: (t: string) => void;
-}
-
-function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActiveTab }: any) {
+function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActiveTab }: {
+  survey: any; projectName: string; clientName: string; activeTab: string; setActiveTab: (t: string) => void;
+}) {
   const allModules = getModulesForType(survey.type);
   const enabled: string[] = survey.enabledModules ?? allModules.map((m: any) => m.id);
   const enabledSet = useMemo(() => new Set(enabled), [enabled]);

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment, SurveyTemplate } from "./types";
-import { getModulesForType, ensureLegacyAdapters } from "./modules";
+import type {
+  Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia,
+  SurveyType, Attachment, SurveyTemplate,
+  FormStructureOverrides, FieldPatch, SubgroupPatch, ModulePatch, SubgroupDef, FieldDef,
+} from "./types";
+import { getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType } from "./modules";
 
 const KEY = "ramos_eng_db_v1";
 const INDEXED_DB_NAME = "ramos-eng-db";
@@ -13,6 +17,7 @@ interface DB {
   projects: Project[];
   surveys: Survey[];
   templates: SurveyTemplate[];
+  formOverrides: FormStructureOverrides;
 }
 
 interface DBStatus {
@@ -31,7 +36,7 @@ interface StoreRuntime {
   persistChain: Promise<void>;
 }
 
-const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [], templates: [] };
+const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [], templates: [], formOverrides: {} };
 
 function createModuleState(): ModuleState {
   return {
@@ -84,6 +89,7 @@ function normalizeDB(raw: Partial<DB> | null | undefined): DB {
     projects: Array.isArray(raw?.projects) ? raw.projects : [],
     surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
     templates: Array.isArray(raw?.templates) ? raw.templates : [],
+    formOverrides: (raw?.formOverrides && typeof raw.formOverrides === "object") ? raw.formOverrides as FormStructureOverrides : {},
   };
 
   // Recupera clientes "órfãos": se um projeto/empreendimento/levantamento referencia

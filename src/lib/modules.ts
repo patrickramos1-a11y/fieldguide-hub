@@ -1089,8 +1089,35 @@ const MODULES_BY_TYPE_CACHE: Record<SurveyType, typeof MODULES> = {
   terreno: MODULES_BY_TYPE.terreno.map((id) => MODULES_INDEX.get(id)!).filter(Boolean),
 };
 
-export function getModulesForType(type: SurveyType) {
-  return MODULES_BY_TYPE_CACHE[type];
+let _globalOverrides: FormStructureOverrides | undefined;
+let _globalOverridesRef: FormStructureOverrides | undefined;
+const _overriddenCache: Partial<Record<SurveyType, ModuleDef[]>> = {};
+
+/** Setado pelo store para que getModulesForType reflita overrides automaticamente. */
+export function setGlobalFormOverrides(overrides: FormStructureOverrides | undefined) {
+  if (overrides === _globalOverridesRef) return;
+  _globalOverridesRef = overrides;
+  _globalOverrides = overrides;
+  for (const k of Object.keys(_overriddenCache)) delete _overriddenCache[k as SurveyType];
+}
+
+export function getModulesForType(type: SurveyType): ModuleDef[] {
+  const base = MODULES_BY_TYPE_CACHE[type];
+  if (!_globalOverrides || !hasAnyOverride(_globalOverrides)) return base;
+  if (_overriddenCache[type]) return _overriddenCache[type]!;
+  const computed = applyFormOverrides(base, _globalOverrides);
+  _overriddenCache[type] = computed;
+  return computed;
+}
+
+function hasAnyOverride(o: FormStructureOverrides): boolean {
+  return !!(
+    (o.modules && Object.keys(o.modules).length) ||
+    (o.subgroups && Object.keys(o.subgroups).length) ||
+    (o.fields && Object.keys(o.fields).length) ||
+    (o.customSubgroups && Object.keys(o.customSubgroups).length) ||
+    (o.customFields && Object.keys(o.customFields).length)
+  );
 }
 
 /** Avaliador de regra `showIf` para campos condicionais. */

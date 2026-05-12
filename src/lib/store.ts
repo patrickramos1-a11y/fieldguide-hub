@@ -316,6 +316,7 @@ function ensureInitialized() {
   store.initPromise = loadPersistedDB()
     .then((loaded) => {
       store.db = loaded;
+      setGlobalFormOverrides(store.db.formOverrides);
     })
     .catch((error) => {
       console.error("Falha ao carregar dados locais", error);

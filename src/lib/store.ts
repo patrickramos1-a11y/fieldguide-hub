@@ -4,7 +4,10 @@ import type {
   SurveyType, Attachment, SurveyTemplate,
   FormStructureOverrides, FieldPatch, SubgroupPatch, ModulePatch, SubgroupDef, FieldDef,
 } from "./types";
-import { getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType } from "./modules";
+import {
+  getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType,
+  setGlobalFormOverrides,
+} from "./modules";
 
 const KEY = "ramos_eng_db_v1";
 const INDEXED_DB_NAME = "ramos-eng-db";
@@ -159,6 +162,10 @@ const store = runtimeGlobal.__ramosStoreRuntime ??= {
 
 function emit() {
   store.listeners.forEach((listener) => listener());
+}
+
+function syncGlobalOverrides() {
+  setGlobalFormOverrides(store.db.formOverrides);
 }
 
 function openIndexedDB() {
@@ -773,6 +780,7 @@ export function duplicateTemplate(tid: string) {
 function mutateOverrides(fn: (o: FormStructureOverrides) => FormStructureOverrides) {
   const current = store.db.formOverrides ?? {};
   store.db = { ...store.db, formOverrides: fn(current) };
+  syncGlobalOverrides();
   persist();
 }
 

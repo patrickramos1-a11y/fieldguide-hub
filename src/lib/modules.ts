@@ -419,6 +419,16 @@ export const MODULES: ModuleDef[] = [
     purposes: ["vazao"],
     subgroups: [
       {
+        id: "dados_medicao",
+        title: "Dados da medição",
+        fields: [
+          { id: "data_medicao", label: "Data da visita", type: "date" },
+          { id: "hora_chegada_med", label: "Horário de chegada", type: "time" },
+          { id: "hora_saida_med", label: "Horário de saída", type: "time" },
+          { id: "objetivo_medicao", label: "Objetivo da visita", type: "textarea" },
+        ],
+      },
+      {
         id: "descricao_tecnica",
         title: "Descrição técnica",
         fields: [
@@ -481,10 +491,26 @@ export const MODULES: ModuleDef[] = [
         ],
       },
       {
+        id: "croqui",
+        title: "Croqui / Desenho",
+        fields: [
+          { id: "croqui_descricao", label: "Descrição do desenho da seção", type: "textarea" },
+          { id: "croqui_obs", label: "Observações sobre o croqui", type: "textarea" },
+        ],
+      },
+      {
         id: "obs",
         title: "Observações",
         fields: [
           { id: "obs_vazao", label: "Observações técnicas da medição", type: "textarea" },
+        ],
+      },
+      {
+        id: "validacao_vazao",
+        title: "Validação",
+        fields: [
+          { id: "assinatura_resp_tecnico", label: "Responsável técnico (assinatura)", type: "text" },
+          { id: "assinatura_rep_empresa", label: "Representante da empresa (assinatura)", type: "text" },
         ],
       },
     ],

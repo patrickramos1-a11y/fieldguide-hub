@@ -300,3 +300,54 @@ export interface SurveyTemplate {
   /** Descrição livre exibida na listagem. */
   description?: string;
 }
+
+/* ============ Estrutura dos formulários (overrides) ============ */
+
+/** Patch parcial aplicado sobre um campo de fábrica. */
+export type FieldPatch = Partial<
+  Pick<
+    FieldDef,
+    | "label"
+    | "type"
+    | "options"
+    | "unit"
+    | "placeholder"
+    | "multi"
+    | "allowOther"
+    | "decimal"
+    | "presets"
+    | "unitOptions"
+    | "learn"
+  >
+> & { hidden?: boolean; required?: boolean };
+
+/** Patch parcial aplicado sobre um subgrupo de fábrica. */
+export interface SubgroupPatch {
+  title?: string;
+  description?: string;
+  hidden?: boolean;
+  /** Reordenação dos campos existentes (ids). */
+  fieldOrder?: string[];
+}
+
+/** Patch aplicado sobre um módulo (visualização/ordenação). */
+export interface ModulePatch {
+  title?: string;
+  description?: string;
+  /** Ordem desejada dos subgrupos (ids, incluindo customizados). */
+  subgroupOrder?: string[];
+}
+
+/** Customizações persistidas pelo usuário sobre o catálogo de módulos. */
+export interface FormStructureOverrides {
+  /** chaves: `${moduleId}` */
+  modules?: Record<string, ModulePatch>;
+  /** chaves: `${moduleId}.${subgroupId}` */
+  subgroups?: Record<string, SubgroupPatch>;
+  /** chaves: `${moduleId}.${subgroupId | "_"}.${fieldId}` */
+  fields?: Record<string, FieldPatch>;
+  /** Subgrupos novos adicionados pelo usuário, por moduleId. */
+  customSubgroups?: Record<string, SubgroupDef[]>;
+  /** Campos novos adicionados, por `${moduleId}.${subgroupId}`. */
+  customFields?: Record<string, FieldDef[]>;
+}

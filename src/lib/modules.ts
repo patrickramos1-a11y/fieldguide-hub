@@ -1,5 +1,8 @@
 import type { FieldDef, ModuleDef, SurveyType, ModulePurpose } from "./types";
-import type { FieldStatus, ModuleState, SubgroupDef, Person, HoursValue } from "./types";
+import type {
+  FieldStatus, ModuleState, SubgroupDef, Person, HoursValue,
+  FormStructureOverrides,
+} from "./types";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -416,6 +419,16 @@ export const MODULES: ModuleDef[] = [
     purposes: ["vazao"],
     subgroups: [
       {
+        id: "dados_medicao",
+        title: "Dados da medição",
+        fields: [
+          { id: "data_medicao", label: "Data da visita", type: "date" },
+          { id: "hora_chegada_med", label: "Horário de chegada", type: "time" },
+          { id: "hora_saida_med", label: "Horário de saída", type: "time" },
+          { id: "objetivo_medicao", label: "Objetivo da visita", type: "textarea" },
+        ],
+      },
+      {
         id: "descricao_tecnica",
         title: "Descrição técnica",
         fields: [
@@ -478,10 +491,26 @@ export const MODULES: ModuleDef[] = [
         ],
       },
       {
+        id: "croqui",
+        title: "Croqui / Desenho",
+        fields: [
+          { id: "croqui_descricao", label: "Descrição do desenho da seção", type: "textarea" },
+          { id: "croqui_obs", label: "Observações sobre o croqui", type: "textarea" },
+        ],
+      },
+      {
         id: "obs",
         title: "Observações",
         fields: [
           { id: "obs_vazao", label: "Observações técnicas da medição", type: "textarea" },
+        ],
+      },
+      {
+        id: "validacao_vazao",
+        title: "Validação",
+        fields: [
+          { id: "assinatura_resp_tecnico", label: "Responsável técnico (assinatura)", type: "text" },
+          { id: "assinatura_rep_empresa", label: "Representante da empresa (assinatura)", type: "text" },
         ],
       },
     ],
@@ -1060,8 +1089,35 @@ const MODULES_BY_TYPE_CACHE: Record<SurveyType, typeof MODULES> = {
   terreno: MODULES_BY_TYPE.terreno.map((id) => MODULES_INDEX.get(id)!).filter(Boolean),
 };
 
-export function getModulesForType(type: SurveyType) {
-  return MODULES_BY_TYPE_CACHE[type];
+let _globalOverrides: FormStructureOverrides | undefined;
+let _globalOverridesRef: FormStructureOverrides | undefined;
+const _overriddenCache: Partial<Record<SurveyType, ModuleDef[]>> = {};
+
+/** Setado pelo store para que getModulesForType reflita overrides automaticamente. */
+export function setGlobalFormOverrides(overrides: FormStructureOverrides | undefined) {
+  if (overrides === _globalOverridesRef) return;
+  _globalOverridesRef = overrides;
+  _globalOverrides = overrides;
+  for (const k of Object.keys(_overriddenCache)) delete _overriddenCache[k as SurveyType];
+}
+
+export function getModulesForType(type: SurveyType): ModuleDef[] {
+  const base = MODULES_BY_TYPE_CACHE[type];
+  if (!_globalOverrides || !hasAnyOverride(_globalOverrides)) return base;
+  if (_overriddenCache[type]) return _overriddenCache[type]!;
+  const computed = applyFormOverrides(base, _globalOverrides);
+  _overriddenCache[type] = computed;
+  return computed;
+}
+
+function hasAnyOverride(o: FormStructureOverrides): boolean {
+  return !!(
+    (o.modules && Object.keys(o.modules).length) ||
+    (o.subgroups && Object.keys(o.subgroups).length) ||
+    (o.fields && Object.keys(o.fields).length) ||
+    (o.customSubgroups && Object.keys(o.customSubgroups).length) ||
+    (o.customFields && Object.keys(o.customFields).length)
+  );
 }
 
 /** Avaliador de regra `showIf` para campos condicionais. */
@@ -1234,6 +1290,91 @@ export const FACTORY_TEMPLATES: FactoryTemplate[] = [
   { id: "factory-outorga-renovacao", name: "Renovação de outorga", type: "outorga", moduleIds: ["identificacao","empreendimento","agua","pocos","outorga","documentos","fotos","validacao"] },
   { id: "factory-terreno-padrao", name: "Visita ao terreno", type: "terreno", moduleIds: MODULES_BY_TYPE.terreno },
 ];
+
+/* =================== Overrides de estrutura =================== */
+
+function reorder<T extends { id: string }>(arr: T[], order?: string[]): T[] {
+  if (!order || !order.length) return arr;
+  const map = new Map(arr.map((x) => [x.id, x]));
+  const out: T[] = [];
+  const seen = new Set<string>();
+  for (const id of order) {
+    const item = map.get(id);
+    if (item) { out.push(item); seen.add(id); }
+  }
+  for (const item of arr) if (!seen.has(item.id)) out.push(item);
+  return out;
+}
+
+function applyFieldPatch(field: FieldDef, patch?: import("./types").FieldPatch): FieldDef | null {
+  if (!patch) return field;
+  if (patch.hidden) return null;
+  const { hidden: _h, required: _r, ...rest } = patch;
+  return { ...field, ...rest };
+}
+
+/** Aplica overrides do usuário sobre uma lista de módulos (catálogo de fábrica). */
+export function applyFormOverrides(
+  list: ModuleDef[],
+  overrides?: FormStructureOverrides,
+): ModuleDef[] {
+  if (!overrides) return list;
+  const out: ModuleDef[] = [];
+  for (const m of list) {
+    const mp = overrides.modules?.[m.id];
+    // Subgrupos: fábrica + customizados
+    const baseSubs = (m.subgroups ?? []).slice();
+    const custom = overrides.customSubgroups?.[m.id] ?? [];
+    let subs: SubgroupDef[] = [...baseSubs, ...custom];
+    // Aplica patches em subgrupo (título, hidden, ordem de campos)
+    subs = subs
+      .map((sg) => {
+        const sp = overrides.subgroups?.[`${m.id}.${sg.id}`];
+        if (sp?.hidden) return null;
+        // patches dos campos + customFields
+        const patchedFields = sg.fields
+          .map((f) => applyFieldPatch(f, overrides.fields?.[`${m.id}.${sg.id}.${f.id}`]))
+          .filter(Boolean) as FieldDef[];
+        const customF = overrides.customFields?.[`${m.id}.${sg.id}`] ?? [];
+        const allFields = reorder([...patchedFields, ...customF], sp?.fieldOrder);
+        return {
+          ...sg,
+          title: sp?.title ?? sg.title,
+          description: sp?.description ?? sg.description,
+          fields: allFields,
+        } as SubgroupDef;
+      })
+      .filter(Boolean) as SubgroupDef[];
+    subs = reorder(subs, mp?.subgroupOrder);
+
+    // Campos de nível do módulo (sem subgrupo)
+    const moduleFields = m.fields
+      .map((f) => applyFieldPatch(f, overrides.fields?.[`${m.id}._.${f.id}`]))
+      .filter(Boolean) as FieldDef[];
+
+    out.push({
+      ...m,
+      title: mp?.title ?? m.title,
+      description: mp?.description ?? m.description,
+      fields: moduleFields,
+      subgroups: subs.length ? subs : m.subgroups,
+    });
+  }
+  return out;
+}
+
+/** Versão "efetiva": catálogo de tipo + overrides do usuário aplicados. */
+export function getEffectiveModulesForType(
+  type: SurveyType,
+  overrides?: FormStructureOverrides,
+) {
+  return applyFormOverrides(getModulesForType(type), overrides);
+}
+
+/** Catálogo completo (todos os módulos do sistema, com overrides). */
+export function getEffectiveAllModules(overrides?: FormStructureOverrides) {
+  return applyFormOverrides(MODULES, overrides);
+}
 
 /** Adapter retrocompatível: gera valores novos a partir dos campos antigos. */
 export function ensureLegacyAdapters(modules: Record<string, ModuleState>): Record<string, ModuleState> {

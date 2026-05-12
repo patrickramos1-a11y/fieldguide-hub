@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia, SurveyType, Attachment, SurveyTemplate } from "./types";
-import { getModulesForType, ensureLegacyAdapters } from "./modules";
+import type {
+  Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia,
+  SurveyType, Attachment, SurveyTemplate,
+  FormStructureOverrides, FieldPatch, SubgroupPatch, ModulePatch, SubgroupDef, FieldDef,
+} from "./types";
+import {
+  getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType,
+  setGlobalFormOverrides,
+} from "./modules";
 
 const KEY = "ramos_eng_db_v1";
 const INDEXED_DB_NAME = "ramos-eng-db";
@@ -13,6 +20,7 @@ interface DB {
   projects: Project[];
   surveys: Survey[];
   templates: SurveyTemplate[];
+  formOverrides: FormStructureOverrides;
 }
 
 interface DBStatus {
@@ -31,7 +39,7 @@ interface StoreRuntime {
   persistChain: Promise<void>;
 }
 
-const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [], templates: [] };
+const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [], templates: [], formOverrides: {} };
 
 function createModuleState(): ModuleState {
   return {
@@ -84,6 +92,7 @@ function normalizeDB(raw: Partial<DB> | null | undefined): DB {
     projects: Array.isArray(raw?.projects) ? raw.projects : [],
     surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
     templates: Array.isArray(raw?.templates) ? raw.templates : [],
+    formOverrides: (raw?.formOverrides && typeof raw.formOverrides === "object") ? raw.formOverrides as FormStructureOverrides : {},
   };
 
   // Recupera clientes "órfãos": se um projeto/empreendimento/levantamento referencia
@@ -153,6 +162,10 @@ const store = runtimeGlobal.__ramosStoreRuntime ??= {
 
 function emit() {
   store.listeners.forEach((listener) => listener());
+}
+
+function syncGlobalOverrides() {
+  setGlobalFormOverrides(store.db.formOverrides);
 }
 
 function openIndexedDB() {
@@ -303,6 +316,7 @@ function ensureInitialized() {
   store.initPromise = loadPersistedDB()
     .then((loaded) => {
       store.db = loaded;
+      setGlobalFormOverrides(store.db.formOverrides);
     })
     .catch((error) => {
       console.error("Falha ao carregar dados locais", error);
@@ -760,4 +774,95 @@ export function duplicateTemplate(tid: string) {
   store.db = { ...store.db, templates: [copy, ...list] };
   persist();
   return copy;
+}
+
+/* =================== Estrutura dos Formulários =================== */
+
+function mutateOverrides(fn: (o: FormStructureOverrides) => FormStructureOverrides) {
+  const current = store.db.formOverrides ?? {};
+  store.db = { ...store.db, formOverrides: fn(current) };
+  syncGlobalOverrides();
+  persist();
+}
+
+export function setModulePatch(moduleId: string, patch: ModulePatch | null) {
+  mutateOverrides((o) => {
+    const next = { ...(o.modules ?? {}) };
+    if (!patch) delete next[moduleId]; else next[moduleId] = { ...(next[moduleId] ?? {}), ...patch };
+    return { ...o, modules: next };
+  });
+}
+
+export function setSubgroupPatch(moduleId: string, subgroupId: string, patch: SubgroupPatch | null) {
+  const key = `${moduleId}.${subgroupId}`;
+  mutateOverrides((o) => {
+    const next = { ...(o.subgroups ?? {}) };
+    if (!patch) delete next[key]; else next[key] = { ...(next[key] ?? {}), ...patch };
+    return { ...o, subgroups: next };
+  });
+}
+
+export function setFieldPatch(
+  moduleId: string, subgroupId: string | null, fieldId: string, patch: FieldPatch | null,
+) {
+  const key = `${moduleId}.${subgroupId ?? "_"}.${fieldId}`;
+  mutateOverrides((o) => {
+    const next = { ...(o.fields ?? {}) };
+    if (!patch) delete next[key]; else next[key] = { ...(next[key] ?? {}), ...patch };
+    return { ...o, fields: next };
+  });
+}
+
+export function addCustomSubgroup(moduleId: string, subgroup: SubgroupDef) {
+  mutateOverrides((o) => {
+    const next = { ...(o.customSubgroups ?? {}) };
+    next[moduleId] = [...(next[moduleId] ?? []), subgroup];
+    return { ...o, customSubgroups: next };
+  });
+}
+
+export function removeCustomSubgroup(moduleId: string, subgroupId: string) {
+  mutateOverrides((o) => {
+    const next = { ...(o.customSubgroups ?? {}) };
+    if (next[moduleId]) {
+      next[moduleId] = next[moduleId].filter((s) => s.id !== subgroupId);
+      if (!next[moduleId].length) delete next[moduleId];
+    }
+    return { ...o, customSubgroups: next };
+  });
+}
+
+export function addCustomField(moduleId: string, subgroupId: string, field: FieldDef) {
+  const key = `${moduleId}.${subgroupId}`;
+  mutateOverrides((o) => {
+    const next = { ...(o.customFields ?? {}) };
+    next[key] = [...(next[key] ?? []), field];
+    return { ...o, customFields: next };
+  });
+}
+
+export function removeCustomField(moduleId: string, subgroupId: string, fieldId: string) {
+  const key = `${moduleId}.${subgroupId}`;
+  mutateOverrides((o) => {
+    const next = { ...(o.customFields ?? {}) };
+    if (next[key]) {
+      next[key] = next[key].filter((f) => f.id !== fieldId);
+      if (!next[key].length) delete next[key];
+    }
+    return { ...o, customFields: next };
+  });
+}
+
+export function resetAllFormOverrides() {
+  store.db = { ...store.db, formOverrides: {} };
+  persist();
+}
+
+/** Hook: retorna módulos do tipo já com overrides aplicados. */
+export function useEffectiveModulesForType(type: SurveyType) {
+  const overrides = useDBSelector(
+    (s) => s.formOverrides ?? {},
+    (a, b) => a === b,
+  );
+  return getEffectiveModulesForType(type, overrides);
 }

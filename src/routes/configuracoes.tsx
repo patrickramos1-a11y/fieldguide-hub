@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -56,9 +57,13 @@ import { FACTORY_TEMPLATES, MODULE_PRESETS, getModulesForType } from "@/lib/modu
 import {
   Star, Pencil, Trash2, Copy, Plus, ChevronDown, ChevronRight,
   Check, Search, Sparkles, FileStack, Eraser, RotateCcw, MoreVertical,
-  LayoutTemplate, Filter,
+  LayoutTemplate, Filter, Layers, ListTree, Library, Compass,
 } from "lucide-react";
 import { toast } from "sonner";
+import { TiposLevantamentoTab } from "@/components/configuracoes/TiposLevantamentoTab";
+import { BibliotecaModulosTab } from "@/components/configuracoes/BibliotecaModulosTab";
+import { EstruturaFormulariosTab } from "@/components/configuracoes/EstruturaFormulariosTab";
+import { BuscaGlobalTab } from "@/components/configuracoes/BuscaGlobalTab";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -77,6 +82,60 @@ type EditorState = {
 };
 
 function ConfiguracoesPage() {
+  const [tab, setTab] = useState<string>("estrutura");
+  const [structureFocus, setStructureFocus] = useState<string | undefined>(undefined);
+
+  function openStructure(moduleId: string) {
+    setStructureFocus(moduleId);
+    setTab("estrutura");
+  }
+
+  return (
+    <AppShell>
+      <header className="mb-5 space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Administre tipos de levantamento, módulos, subgrupos, campos/perguntas e templates.
+        </p>
+      </header>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="mb-4 flex flex-wrap h-auto">
+          <TabsTrigger value="estrutura"><Layers className="h-3.5 w-3.5 mr-1.5" /> Estrutura dos formulários</TabsTrigger>
+          <TabsTrigger value="tipos"><ListTree className="h-3.5 w-3.5 mr-1.5" /> Tipos de levantamento</TabsTrigger>
+          <TabsTrigger value="biblioteca"><Library className="h-3.5 w-3.5 mr-1.5" /> Biblioteca de módulos</TabsTrigger>
+          <TabsTrigger value="templates"><LayoutTemplate className="h-3.5 w-3.5 mr-1.5" /> Templates</TabsTrigger>
+          <TabsTrigger value="busca"><Compass className="h-3.5 w-3.5 mr-1.5" /> Busca global</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="estrutura" className="mt-0">
+          <EstruturaFormulariosTab
+            initialModuleId={structureFocus}
+            onConsumed={() => setStructureFocus(undefined)}
+          />
+        </TabsContent>
+
+        <TabsContent value="tipos" className="mt-0">
+          <TiposLevantamentoTab onOpenStructure={openStructure} />
+        </TabsContent>
+
+        <TabsContent value="biblioteca" className="mt-0">
+          <BibliotecaModulosTab onOpenStructure={openStructure} />
+        </TabsContent>
+
+        <TabsContent value="templates" className="mt-0">
+          <TemplatesTab />
+        </TabsContent>
+
+        <TabsContent value="busca" className="mt-0">
+          <BuscaGlobalTab onOpen={openStructure} />
+        </TabsContent>
+      </Tabs>
+    </AppShell>
+  );
+}
+
+function TemplatesTab() {
   const templates = useDBSelector((s) => s.templates ?? [], (a, b) => a === b);
   const [activeType, setActiveType] = useState<SurveyType>("geral");
   const [editor, setEditor] = useState<EditorState>({ open: false, type: "geral" });
@@ -128,15 +187,11 @@ function ConfiguracoesPage() {
   }
 
   return (
-    <AppShell>
-      <header className="mb-6 space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          Organize quais módulos e subgrupos aparecem em cada tipo de levantamento.
-          O template marcado como <span className="font-medium text-foreground">padrão</span>{" "}
-          é aplicado automaticamente em novos levantamentos.
-        </p>
-      </header>
+    <>
+      <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
+        Templates são combinações prontas de módulos e subgrupos. A criação e edição estrutural
+        de campos acontece em <span className="font-medium text-foreground">Estrutura dos formulários</span>.
+      </p>
 
       {/* Type chips */}
       <div className="mb-5 flex flex-wrap gap-2">
@@ -342,7 +397,7 @@ function ConfiguracoesPage() {
         state={editor}
         onClose={() => setEditor((s) => ({ ...s, open: false }))}
       />
-    </AppShell>
+    </>
   );
 }
 

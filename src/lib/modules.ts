@@ -1264,6 +1264,91 @@ export const FACTORY_TEMPLATES: FactoryTemplate[] = [
   { id: "factory-terreno-padrao", name: "Visita ao terreno", type: "terreno", moduleIds: MODULES_BY_TYPE.terreno },
 ];
 
+/* =================== Overrides de estrutura =================== */
+
+function reorder<T extends { id: string }>(arr: T[], order?: string[]): T[] {
+  if (!order || !order.length) return arr;
+  const map = new Map(arr.map((x) => [x.id, x]));
+  const out: T[] = [];
+  const seen = new Set<string>();
+  for (const id of order) {
+    const item = map.get(id);
+    if (item) { out.push(item); seen.add(id); }
+  }
+  for (const item of arr) if (!seen.has(item.id)) out.push(item);
+  return out;
+}
+
+function applyFieldPatch(field: FieldDef, patch?: import("./types").FieldPatch): FieldDef | null {
+  if (!patch) return field;
+  if (patch.hidden) return null;
+  const { hidden: _h, required: _r, ...rest } = patch;
+  return { ...field, ...rest };
+}
+
+/** Aplica overrides do usuário sobre uma lista de módulos (catálogo de fábrica). */
+export function applyFormOverrides(
+  list: ModuleDef[],
+  overrides?: FormStructureOverrides,
+): ModuleDef[] {
+  if (!overrides) return list;
+  const out: ModuleDef[] = [];
+  for (const m of list) {
+    const mp = overrides.modules?.[m.id];
+    // Subgrupos: fábrica + customizados
+    const baseSubs = (m.subgroups ?? []).slice();
+    const custom = overrides.customSubgroups?.[m.id] ?? [];
+    let subs: SubgroupDef[] = [...baseSubs, ...custom];
+    // Aplica patches em subgrupo (título, hidden, ordem de campos)
+    subs = subs
+      .map((sg) => {
+        const sp = overrides.subgroups?.[`${m.id}.${sg.id}`];
+        if (sp?.hidden) return null;
+        // patches dos campos + customFields
+        const patchedFields = sg.fields
+          .map((f) => applyFieldPatch(f, overrides.fields?.[`${m.id}.${sg.id}.${f.id}`]))
+          .filter(Boolean) as FieldDef[];
+        const customF = overrides.customFields?.[`${m.id}.${sg.id}`] ?? [];
+        const allFields = reorder([...patchedFields, ...customF], sp?.fieldOrder);
+        return {
+          ...sg,
+          title: sp?.title ?? sg.title,
+          description: sp?.description ?? sg.description,
+          fields: allFields,
+        } as SubgroupDef;
+      })
+      .filter(Boolean) as SubgroupDef[];
+    subs = reorder(subs, mp?.subgroupOrder);
+
+    // Campos de nível do módulo (sem subgrupo)
+    const moduleFields = m.fields
+      .map((f) => applyFieldPatch(f, overrides.fields?.[`${m.id}._.${f.id}`]))
+      .filter(Boolean) as FieldDef[];
+
+    out.push({
+      ...m,
+      title: mp?.title ?? m.title,
+      description: mp?.description ?? m.description,
+      fields: moduleFields,
+      subgroups: subs.length ? subs : m.subgroups,
+    });
+  }
+  return out;
+}
+
+/** Versão "efetiva": catálogo de tipo + overrides do usuário aplicados. */
+export function getEffectiveModulesForType(
+  type: SurveyType,
+  overrides?: FormStructureOverrides,
+) {
+  return applyFormOverrides(getModulesForType(type), overrides);
+}
+
+/** Catálogo completo (todos os módulos do sistema, com overrides). */
+export function getEffectiveAllModules(overrides?: FormStructureOverrides) {
+  return applyFormOverrides(MODULES, overrides);
+}
+
 /** Adapter retrocompatível: gera valores novos a partir dos campos antigos. */
 export function ensureLegacyAdapters(modules: Record<string, ModuleState>): Record<string, ModuleState> {
   const out = { ...modules };

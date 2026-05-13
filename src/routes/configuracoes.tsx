@@ -116,7 +116,7 @@ function ConfiguracoesPage() {
         </TabsContent>
 
         <TabsContent value="tipos" className="mt-0">
-          <TiposLevantamentoTab onOpenStructure={openStructure} />
+          <TiposLevantamentoTab />
         </TabsContent>
 
         <TabsContent value="biblioteca" className="mt-0">

@@ -8,6 +8,7 @@ import type {
 import {
   getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType,
   getEffectiveModulesForCustomType,
+  MODULE_PRESETS,
   setGlobalFormOverrides,
 } from "./modules";
 

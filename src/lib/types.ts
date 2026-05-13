@@ -1,11 +1,17 @@
-export type SurveyType =
+/** Tipos de levantamento embutidos (de fábrica). Tipos personalizados usam ids livres `custom_*`. */
+export type BuiltInSurveyType =
   | "geral"
   | "ambiental"
   | "vazao"
   | "outorga"
   | "terreno";
 
-export const SURVEY_TYPES: { id: SurveyType; label: string; description: string }[] = [
+/** Identificador de tipo de levantamento — pode ser embutido ou um id de tipo personalizado. */
+export type SurveyType = string;
+
+export const BUILTIN_SURVEY_TYPE_IDS: BuiltInSurveyType[] = ["geral", "ambiental", "vazao", "outorga", "terreno"];
+
+export const SURVEY_TYPES: { id: BuiltInSurveyType; label: string; description: string }[] = [
   { id: "geral", label: "Levantamento Geral de Projetos", description: "Coleta ampla de dados de empresa, atividade, água, resíduos, efluentes e processo." },
   { id: "ambiental", label: "Acompanhamento Ambiental", description: "Controle periódico de conformidade, ETE, resíduos, documentos e pendências." },
   { id: "vazao", label: "Medição de Vazão", description: "Registro técnico de seção, profundidades, tempos e desenho." },
@@ -60,7 +66,13 @@ export type FieldType =
   | "hours-presets"
   | "button-select"
   | "repeater"
-  | "apply-to-sides";
+  | "apply-to-sides"
+  | "photo"
+  | "document"
+  | "audio"
+  | "drawing"
+  | "signature"
+  | "status";
 
 /** Pessoa em listas dinâmicas (Pessoas Envolvidas etc.). */
 export interface Person {
@@ -319,7 +331,22 @@ export type FieldPatch = Partial<
     | "unitOptions"
     | "learn"
   >
-> & { hidden?: boolean; required?: boolean };
+> & {
+  hidden?: boolean;
+  required?: boolean;
+  description?: string;
+  defaultStatus?: FieldStatus;
+  acceptsNote?: boolean;
+  acceptsPhoto?: boolean;
+  acceptsDoc?: boolean;
+  acceptsAudio?: boolean;
+  acceptsCoords?: boolean;
+  canBePending?: boolean;
+  canBeNA?: boolean;
+  inExport?: boolean;
+  inReport?: boolean;
+  active?: boolean;
+};
 
 /** Patch parcial aplicado sobre um subgrupo de fábrica. */
 export interface SubgroupPatch {
@@ -328,6 +355,7 @@ export interface SubgroupPatch {
   hidden?: boolean;
   /** Reordenação dos campos existentes (ids). */
   fieldOrder?: string[];
+  defaultNA?: boolean;
 }
 
 /** Patch aplicado sobre um módulo (visualização/ordenação). */
@@ -350,4 +378,29 @@ export interface FormStructureOverrides {
   customSubgroups?: Record<string, SubgroupDef[]>;
   /** Campos novos adicionados, por `${moduleId}.${subgroupId}`. */
   customFields?: Record<string, FieldDef[]>;
+  /** Cores por entidade (chaves: `mod`, `mod.sub`, `mod.sub.field`). */
+  colors?: Record<string, string>;
+}
+
+/* ============ Tipos de levantamento personalizados ============ */
+
+export type ModuleRequirement = "obrigatorio" | "recomendado" | "opcional";
+
+export interface CustomTypeModuleBinding {
+  moduleId: string;
+  requirement: ModuleRequirement;
+  color?: string;
+}
+
+export interface CustomSurveyType {
+  id: string;            // ex.: custom_xxx
+  label: string;
+  description?: string;
+  color?: string;        // cor base do tipo
+  icon?: string;         // nome de ícone lucide (ex.: "Droplet")
+  moduleBindings: CustomTypeModuleBinding[];
+  /** Overrides escopados ao tipo. Mesma forma de FormStructureOverrides. */
+  scopedOverrides?: FormStructureOverrides;
+  createdAt: string;
+  archivedAt?: string;
 }

@@ -19,7 +19,7 @@ import { Route as LevantamentosNovoRouteImport } from './routes/levantamentos.no
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 import { Route as LevantamentosIdIndexRouteImport } from './routes/levantamentos.$id.index'
 import { Route as LevantamentosIdResumoRouteImport } from './routes/levantamentos.$id.resumo'
-import { Route as ConfiguracoesTiposRouteImport } from './routes/configuracoes.tipos.'
+import { Route as ConfiguracoesTiposTypeIdRouteImport } from './routes/configuracoes.tipos.$typeId'
 
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
@@ -71,11 +71,12 @@ const LevantamentosIdResumoRoute = LevantamentosIdResumoRouteImport.update({
   path: '/levantamentos/$id/resumo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConfiguracoesTiposRoute = ConfiguracoesTiposRouteImport.update({
-  id: '/tipos/',
-  path: '/tipos/',
-  getParentRoute: () => ConfiguracoesRoute,
-} as any)
+const ConfiguracoesTiposTypeIdRoute =
+  ConfiguracoesTiposTypeIdRouteImport.update({
+    id: '/tipos/$typeId',
+    path: '/tipos/$typeId',
+    getParentRoute: () => ConfiguracoesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -86,7 +87,7 @@ export interface FileRoutesByFullPath {
   '/clientes/': typeof ClientesIndexRoute
   '/levantamentos/': typeof LevantamentosIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
-  '/configuracoes/tipos/': typeof ConfiguracoesTiposRoute
+  '/configuracoes/tipos/$typeId': typeof ConfiguracoesTiposTypeIdRoute
   '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
   '/levantamentos/$id/': typeof LevantamentosIdIndexRoute
 }
@@ -99,7 +100,7 @@ export interface FileRoutesByTo {
   '/clientes': typeof ClientesIndexRoute
   '/levantamentos': typeof LevantamentosIndexRoute
   '/projetos': typeof ProjetosIndexRoute
-  '/configuracoes/tipos': typeof ConfiguracoesTiposRoute
+  '/configuracoes/tipos/$typeId': typeof ConfiguracoesTiposTypeIdRoute
   '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
   '/levantamentos/$id': typeof LevantamentosIdIndexRoute
 }
@@ -113,7 +114,7 @@ export interface FileRoutesById {
   '/clientes/': typeof ClientesIndexRoute
   '/levantamentos/': typeof LevantamentosIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
-  '/configuracoes/tipos/': typeof ConfiguracoesTiposRoute
+  '/configuracoes/tipos/$typeId': typeof ConfiguracoesTiposTypeIdRoute
   '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
   '/levantamentos/$id/': typeof LevantamentosIdIndexRoute
 }
@@ -128,7 +129,7 @@ export interface FileRouteTypes {
     | '/clientes/'
     | '/levantamentos/'
     | '/projetos/'
-    | '/configuracoes/tipos/'
+    | '/configuracoes/tipos/$typeId'
     | '/levantamentos/$id/resumo'
     | '/levantamentos/$id/'
   fileRoutesByTo: FileRoutesByTo
@@ -141,7 +142,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/levantamentos'
     | '/projetos'
-    | '/configuracoes/tipos'
+    | '/configuracoes/tipos/$typeId'
     | '/levantamentos/$id/resumo'
     | '/levantamentos/$id'
   id:
@@ -154,7 +155,7 @@ export interface FileRouteTypes {
     | '/clientes/'
     | '/levantamentos/'
     | '/projetos/'
-    | '/configuracoes/tipos/'
+    | '/configuracoes/tipos/$typeId'
     | '/levantamentos/$id/resumo'
     | '/levantamentos/$id/'
   fileRoutesById: FileRoutesById
@@ -244,22 +245,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LevantamentosIdResumoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/configuracoes/tipos/': {
-      id: '/configuracoes/tipos/'
-      path: '/tipos'
-      fullPath: '/configuracoes/tipos/'
-      preLoaderRoute: typeof ConfiguracoesTiposRouteImport
+    '/configuracoes/tipos/$typeId': {
+      id: '/configuracoes/tipos/$typeId'
+      path: '/tipos/$typeId'
+      fullPath: '/configuracoes/tipos/$typeId'
+      preLoaderRoute: typeof ConfiguracoesTiposTypeIdRouteImport
       parentRoute: typeof ConfiguracoesRoute
     }
   }
 }
 
 interface ConfiguracoesRouteChildren {
-  ConfiguracoesTiposRoute: typeof ConfiguracoesTiposRoute
+  ConfiguracoesTiposTypeIdRoute: typeof ConfiguracoesTiposTypeIdRoute
 }
 
 const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
-  ConfiguracoesTiposRoute: ConfiguracoesTiposRoute,
+  ConfiguracoesTiposTypeIdRoute: ConfiguracoesTiposTypeIdRoute,
 }
 
 const ConfiguracoesRouteWithChildren = ConfiguracoesRoute._addFileChildren(

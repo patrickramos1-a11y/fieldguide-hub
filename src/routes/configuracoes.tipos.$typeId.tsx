@@ -37,7 +37,7 @@ import {
 } from "@/lib/store";
 import type { FieldDef, FieldType, FieldPatch, SubgroupDef, ModuleRequirement } from "@/lib/types";
 
-export const Route = createFileRoute("/configuracoes/tipos/")({
+export const Route = createFileRoute("/configuracoes/tipos/$typeId")({
   head: () => ({
     meta: [
       { title: "Editar tipo de levantamento" },

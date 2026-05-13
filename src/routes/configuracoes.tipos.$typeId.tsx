@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +35,7 @@ import {
   addTypeCustomField,
   removeTypeCustomField,
 } from "@/lib/store";
-import type { FieldDef, FieldType, FieldPatch, SubgroupDef, ModuleRequirement } from "@/lib/types";
+import type { FieldDef, FieldType, FieldPatch, ModuleRequirement } from "@/lib/types";
 
 export const Route = createFileRoute("/configuracoes/tipos/$typeId")({
   head: () => ({
@@ -82,7 +82,6 @@ const REQUIREMENT_LABEL: Record<ModuleRequirement, string> = {
 
 function TipoBuilderPage() {
   const { typeId } = Route.useParams();
-  const navigate = useNavigate();
   const customs = useCustomSurveyTypes();
   const ct = customs.find((c) => c.id === typeId);
   const globalOverrides = useDBSelector((s) => s.formOverrides ?? {}, (a, b) => a === b);

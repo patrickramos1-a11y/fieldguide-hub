@@ -194,6 +194,7 @@ function BuiltinDetail({ typeId }: { typeId: SurveyType }) {
 function CustomDetail({ typeId }: { typeId: string }) {
   const customs = useCustomSurveyTypes();
   const ct = customs.find((c) => c.id === typeId);
+  const navigate = useNavigate();
   if (!ct) {
     return <div className="text-sm text-muted-foreground">Tipo não encontrado.</div>;
   }
@@ -271,7 +272,7 @@ function CustomDetail({ typeId }: { typeId: string }) {
         <ModuleListReadonly
           modules={linkedModules}
           minimal={new Set(ct.moduleBindings.filter((b) => b.requirement !== "opcional").map((b) => b.moduleId))}
-          onOpenStructure={() => window.location.assign(`/configuracoes/tipos/${ct.id}`)}
+          onOpenStructure={() => navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } })}
         />
       )}
     </>

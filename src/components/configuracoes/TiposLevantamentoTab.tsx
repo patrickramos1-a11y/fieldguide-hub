@@ -165,12 +165,10 @@ function BuiltinDetail({ typeId, onOpenStructure }: { typeId: SurveyType; onOpen
               label: `${t.label} (personalizado)`,
               description: t.description,
             });
-            // Adiciona todos os módulos do tipo padrão
-            // (CRUD direto via store happens after create)
-            // Importa lazy:
             import("@/lib/store").then(({ addTypeModule }) => {
               for (const m of modules) addTypeModule(ct.id, m.id, minimal.has(m.id) ? "recomendado" : "opcional");
               toast.success("Tipo personalizado criado a partir do padrão.");
+              navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } });
             });
           }}
         >

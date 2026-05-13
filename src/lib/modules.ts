@@ -1,7 +1,7 @@
 import type { FieldDef, ModuleDef, SurveyType, ModulePurpose } from "./types";
 import type {
   FieldStatus, ModuleState, SubgroupDef, Person, HoursValue,
-  FormStructureOverrides,
+  FormStructureOverrides, CustomSurveyType,
 } from "./types";
 
 const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -1374,6 +1374,26 @@ export function getEffectiveModulesForType(
 /** Catálogo completo (todos os módulos do sistema, com overrides). */
 export function getEffectiveAllModules(overrides?: FormStructureOverrides) {
   return applyFormOverrides(MODULES, overrides);
+}
+
+/**
+ * Resolve módulos efetivos para um tipo personalizado.
+ * Pipeline: catálogo base (somente módulos vinculados) → overrides globais → scopedOverrides do tipo.
+ */
+export function getEffectiveModulesForCustomType(
+  customType: CustomSurveyType,
+  globalOverrides?: FormStructureOverrides,
+): ModuleDef[] {
+  const orderedIds = customType.moduleBindings.map((b) => b.moduleId);
+  const base: ModuleDef[] = [];
+  for (const id of orderedIds) {
+    const m = MODULES_INDEX.get(id);
+    if (m) base.push(m);
+  }
+  // Aplica overrides globais primeiro, depois os do tipo (scoped tem precedência).
+  const afterGlobal = globalOverrides ? applyFormOverrides(base, globalOverrides) : base;
+  const afterScoped = customType.scopedOverrides ? applyFormOverrides(afterGlobal, customType.scopedOverrides) : afterGlobal;
+  return afterScoped;
 }
 
 /** Adapter retrocompatível: gera valores novos a partir dos campos antigos. */

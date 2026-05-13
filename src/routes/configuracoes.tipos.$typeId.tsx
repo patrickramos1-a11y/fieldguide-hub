@@ -310,14 +310,16 @@ function TipoBuilderPage() {
               return (
                 <li key={b.moduleId}>
                   <div className={`flex items-stretch ${active ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-secondary/50"}`}>
-                    <button onClick={() => { setModuleId(m.id); setSubgroupId(null); }} className="flex-1 text-left px-3 py-2 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-muted-foreground w-5">{String(idx + 1).padStart(2, "0")}</span>
-                        <span className="text-sm font-medium truncate flex-1">{m.title}</span>
-                      </div>
+                    <div className="flex-1 min-w-0 px-3 py-2">
+                      <button onClick={() => { setModuleId(m.id); setSubgroupId(null); }} className="w-full text-left min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-muted-foreground w-5">{String(idx + 1).padStart(2, "0")}</span>
+                          <span className="text-sm font-medium truncate flex-1">{m.title}</span>
+                        </div>
+                      </button>
                       <div className="flex items-center gap-1.5 mt-1 ml-7">
                         <Select value={b.requirement} onValueChange={(v) => changeRequirement(m.id, v as ModuleRequirement)}>
-                          <SelectTrigger className="h-6 text-[10px] w-[110px]" onClick={(e) => e.stopPropagation()}><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-6 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             {(["obrigatorio","recomendado","opcional"] as ModuleRequirement[]).map((r) => (
                               <SelectItem key={r} value={r} className="text-xs">{REQUIREMENT_LABEL[r]}</SelectItem>
@@ -325,7 +327,7 @@ function TipoBuilderPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </button>
+                    </div>
                     <div className="flex flex-col items-center justify-center gap-0.5 px-1.5 border-l">
                       <button onClick={() => moveTypeModule(ct.id, m.id, -1)} className="p-0.5 text-muted-foreground hover:text-foreground" title="Subir">
                         <ChevronUp className="h-3 w-3" />

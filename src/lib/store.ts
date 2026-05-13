@@ -922,18 +922,43 @@ export function useCustomSurveyTypes(): CustomSurveyType[] {
 }
 
 export function ensureEditableSurveyType(typeId: SurveyType): CustomSurveyType {
-  const existing = getCustomSurveyType(typeId);
+  const existing = getCustomSurveyType(typeId)
+    ?? (store.db.customSurveyTypes ?? []).find((c) => c.sourceTypeId === typeId);
   if (existing) return existing;
 
-  const builtInLabel = typeId;
+  const builtInMeta = {
+    geral: {
+      label: "Levantamento Geral de Projetos",
+      description: "Coleta ampla de dados de empresa, atividade, água, resíduos, efluentes e processo.",
+    },
+    ambiental: {
+      label: "Acompanhamento Ambiental",
+      description: "Controle periódico de conformidade, ETE, resíduos, documentos e pendências.",
+    },
+    vazao: {
+      label: "Medição de Vazão",
+      description: "Registro técnico de seção, profundidades, tempos e desenho.",
+    },
+    outorga: {
+      label: "Outorga",
+      description: "Coleta para processo de outorga: poço, bomba, reservatório e representante legal.",
+    },
+    terreno: {
+      label: "Visita ao Local / Terreno",
+      description: "Caracterização física: limites, topografia, vegetação, solo, acesso e vizinhança.",
+    },
+  }[typeId] ?? { label: typeId, description: undefined };
+
   const modules = getModulesForType(typeId);
   const minimal = new Set((MODULE_PRESETS[typeId] ?? { minimal: [] }).minimal);
   return createSurveyTypeFromBase({
-    label: builtInLabel,
+    label: builtInMeta.label,
+    description: builtInMeta.description,
     moduleBindings: modules.map((m) => ({
       moduleId: m.id,
       requirement: minimal.has(m.id) ? "recomendado" : "opcional",
     })),
+    scopedOverrides: {},
   });
 }
 

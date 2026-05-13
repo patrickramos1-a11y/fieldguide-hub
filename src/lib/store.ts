@@ -11,6 +11,8 @@ import {
   MODULE_PRESETS,
   setGlobalFormOverrides,
 } from "./modules";
+import { BUILTIN_SURVEY_TYPE_IDS, SURVEY_TYPES } from "./types";
+import { DEFAULT_BUILTIN_ICONS } from "./typeIcons";
 
 const KEY = "ramos_eng_db_v1";
 const INDEXED_DB_NAME = "ramos-eng-db";
@@ -352,6 +354,50 @@ function ensureInitialized() {
 }
 
 ensureInitialized();
+
+/** Garante que cada tipo embutido exista como CustomSurveyType editável. */
+function seedBuiltInSurveyTypes() {
+  const list = store.db.customSurveyTypes ?? [];
+  const byId = new Map(list.map((c) => [c.id, c]));
+  const bySource = new Map(
+    list.filter((c) => c.sourceTypeId).map((c) => [c.sourceTypeId as string, c]),
+  );
+  const additions: CustomSurveyType[] = [];
+  for (const tid of BUILTIN_SURVEY_TYPE_IDS) {
+    if (byId.has(tid) || bySource.has(tid)) continue;
+    const meta = SURVEY_TYPES.find((t) => t.id === tid);
+    const modules = getModulesForType(tid);
+    const minimal = new Set((MODULE_PRESETS[tid] ?? { minimal: [] }).minimal);
+    additions.push({
+      id: tid,
+      label: meta?.label ?? tid,
+      description: meta?.description,
+      sourceTypeId: tid,
+      icon: DEFAULT_BUILTIN_ICONS[tid],
+      moduleBindings: modules.map((m) => ({
+        moduleId: m.id,
+        requirement: minimal.has(m.id) ? "recomendado" : "opcional",
+      })),
+      scopedOverrides: {},
+      createdAt: new Date().toISOString(),
+    });
+  }
+  if (additions.length) {
+    store.db = {
+      ...store.db,
+      customSurveyTypes: [...additions, ...list],
+    };
+    persist();
+  }
+}
+
+if (typeof window !== "undefined") {
+  if (store.status.hydrated) {
+    seedBuiltInSurveyTypes();
+  } else if (store.initPromise) {
+    store.initPromise.then(() => seedBuiltInSurveyTypes());
+  }
+}
 
 if (typeof window !== "undefined" && !runtimeGlobal.__ramosPersistLifecycleBound) {
   const flushBeforeExit = () => {

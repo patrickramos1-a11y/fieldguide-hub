@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { SURVEY_TYPES, type SurveyType } from "@/lib/types";
+import { type SurveyType } from "@/lib/types";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { autoColor } from "@/lib/colors";
+import { getTypeIcon } from "@/lib/typeIcons";
 
 export const Route = createFileRoute("/levantamentos/novo")({
   component: NovoPage,
@@ -19,44 +19,48 @@ export const Route = createFileRoute("/levantamentos/novo")({
 
 function NovoPage() {
   const db = useDB();
-  const customTypes = useCustomSurveyTypes().filter((c) => !c.archivedAt);
+  const allTypes = useCustomSurveyTypes().filter((c) => !c.archivedAt);
   const nav = useNavigate();
   const [projectId, setProjectId] = useState("");
-  const [type, setType] = useState<SurveyType>("geral");
-  const [customTypeId, setCustomTypeId] = useState<string | undefined>(undefined);
+  const [customTypeId, setCustomTypeId] = useState<string | undefined>(allTypes[0]?.id);
   const [title, setTitle] = useState("");
   const [quickClientName, setQuickClientName] = useState("");
   const [quickProjectName, setQuickProjectName] = useState("");
 
-  function selectBuiltin(id: SurveyType) {
-    setType(id);
-    setCustomTypeId(undefined);
-  }
-  function selectCustom(id: string, label: string) {
+  const selected = allTypes.find((c) => c.id === customTypeId) ?? allTypes[0];
+  const effectiveType: SurveyType = (selected?.sourceTypeId as SurveyType | undefined) ?? selected?.id ?? "geral";
+
+  function selectType(id: string, label: string) {
     setCustomTypeId(id);
-    setType(id);
     if (!title) setTitle(label);
   }
   function defaultTitle() {
-    if (customTypeId) {
-      return customTypes.find((c) => c.id === customTypeId)?.label ?? "Levantamento";
-    }
-    return SURVEY_TYPES.find((t) => t.id === type)?.label ?? "Levantamento";
+    return selected?.label ?? "Levantamento";
   }
 
   function submit() {
-    if (!projectId) return;
-    const s = addSurveyExt({ projectId, type, title: title || defaultTitle(), customTypeId });
+    if (!projectId || !selected) return;
+    const s = addSurveyExt({
+      projectId,
+      type: effectiveType,
+      title: title || defaultTitle(),
+      customTypeId: selected.id,
+    });
     nav({ to: "/levantamentos/$id", params: { id: s.id } });
   }
 
   function quickCreateAndStart() {
     const cn = quickClientName.trim();
     const pn = quickProjectName.trim() || "Projeto inicial";
-    if (!cn) return;
+    if (!cn || !selected) return;
     const c = addClient({ name: cn, personType: "PJ" });
     const p = addProject({ clientId: c.id, name: pn });
-    const s = addSurveyExt({ projectId: p.id, type, title: title || defaultTitle(), customTypeId });
+    const s = addSurveyExt({
+      projectId: p.id,
+      type: effectiveType,
+      title: title || defaultTitle(),
+      customTypeId: selected.id,
+    });
     nav({ to: "/levantamentos/$id", params: { id: s.id } });
   }
 
@@ -91,38 +95,42 @@ function NovoPage() {
           <div>
             <Label className="mb-2 block">Tipo de levantamento</Label>
             <div className="grid gap-2">
-              {SURVEY_TYPES.map((t) => (
-                <label key={t.id} className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer ${!customTypeId && type === t.id ? "border-primary bg-primary/5" : "border-border"}`}>
-                  <input type="radio" className="mt-1" checked={!customTypeId && type === t.id} onChange={() => selectBuiltin(t.id)} />
-                  <div>
-                    <div className="text-sm font-medium">{t.label}</div>
-                    <div className="text-xs text-muted-foreground">{t.description}</div>
-                  </div>
-                </label>
-              ))}
-              {customTypes.length > 0 && (
-                <div className="pt-2">
-                  <div className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                    Tipos personalizados
-                  </div>
-                  <div className="grid gap-2">
-                    {customTypes.map((c) => (
-                      <label key={c.id} className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer ${customTypeId === c.id ? "border-primary bg-primary/5" : "border-border"}`}>
-                        <input type="radio" className="mt-1" checked={customTypeId === c.id} onChange={() => selectCustom(c.id, c.label)} />
-                        <span className="mt-1 inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: c.color ?? autoColor(c.id) }} />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium flex items-center gap-2">
-                            {c.label}
-                            <Badge variant="outline" className="text-[10px]">Personalizado</Badge>
-                          </div>
-                          {c.description && <div className="text-xs text-muted-foreground">{c.description}</div>}
-                          <div className="text-[11px] text-muted-foreground mt-0.5">
-                            {c.moduleBindings.length} módulo(s) vinculado(s)
-                          </div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
+              {allTypes.map((c) => {
+                const Icon = getTypeIcon(c.icon);
+                const isActive = customTypeId === c.id;
+                const color = c.color ?? autoColor(c.id);
+                return (
+                  <label
+                    key={c.id}
+                    className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${isActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                  >
+                    <input
+                      type="radio"
+                      className="mt-1"
+                      checked={isActive}
+                      onChange={() => selectType(c.id, c.label)}
+                    />
+                    <span
+                      className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md shrink-0"
+                      style={{ backgroundColor: color, color: "white" }}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{c.label}</div>
+                      {c.description && (
+                        <div className="text-xs text-muted-foreground">{c.description}</div>
+                      )}
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {c.moduleBindings.length} módulo(s) vinculado(s)
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+              {allTypes.length === 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Nenhum tipo cadastrado. Crie um em Configurações → Tipos de levantamento.
                 </div>
               )}
             </div>

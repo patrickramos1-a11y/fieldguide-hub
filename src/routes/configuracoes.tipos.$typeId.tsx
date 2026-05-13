@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/sheet";
 import {
   ArrowLeft, ChevronRight, Layers, ListTree, Pencil, Plus, EyeOff, Eye,
-  Trash2, ChevronUp, ChevronDown, RotateCcw, Sparkles, Search,
+  Trash2, ChevronUp, ChevronDown, RotateCcw, Search, Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, getEffectiveModulesForCustomType } from "@/lib/modules";
 import { autoColor } from "@/lib/colors";
+import { TYPE_ICON_OPTIONS, getTypeIcon } from "@/lib/typeIcons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   useDBSelector,
   useCustomSurveyTypes,
@@ -228,23 +230,27 @@ function TipoBuilderPage() {
               </div>
             </div>
           ) : (
-            <button onClick={() => setRenamingHeader(true)} className="text-left group">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-block h-3 w-3 rounded-full" style={{ background: ct.color || autoColor(ct.id) }} />
-                <h1 className="text-2xl font-semibold tracking-tight group-hover:underline decoration-dotted underline-offset-4">{ct.label}</h1>
-                <Badge className="text-[10px]"><Sparkles className="h-3 w-3 mr-1" /> Personalizado</Badge>
-                <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
-              </div>
-              {ct.description && <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{ct.description}</p>}
-            </button>
+            <div className="flex items-start gap-3">
+              <IconColorPicker
+                color={ct.color || autoColor(ct.id)}
+                iconName={ct.icon}
+                onChange={(next) => updateCustomSurveyType(ct.id, next)}
+              />
+              <button onClick={() => setRenamingHeader(true)} className="text-left group flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl font-semibold tracking-tight group-hover:underline decoration-dotted underline-offset-4">
+                    {ct.label}
+                  </h1>
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                </div>
+                {ct.description && (
+                  <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{ct.description}</p>
+                )}
+              </button>
+            </div>
           )}
         </div>
       </header>
-
-      <div className="rounded-md border p-3 text-xs bg-amber-500/10 border-amber-500/30 mb-4">
-        Você está no <span className="font-medium">modo escopado</span>. Alterações aqui afetam apenas
-        este tipo de levantamento e <span className="font-medium">não modificam</span> os módulos originais.
-      </div>
 
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1.4fr] min-h-[64vh]">
         {/* Coluna 1 — Módulos disponíveis */}
@@ -726,5 +732,73 @@ function ScopedFieldEditorSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  );
+}
+
+const COLOR_PRESETS = [
+  "oklch(0.72 0.15 30)", "oklch(0.72 0.14 60)", "oklch(0.74 0.14 110)",
+  "oklch(0.70 0.14 150)", "oklch(0.70 0.13 195)", "oklch(0.66 0.14 235)",
+  "oklch(0.62 0.16 270)", "oklch(0.66 0.18 305)", "oklch(0.70 0.17 340)",
+  "oklch(0.66 0.10 20)",
+];
+
+function IconColorPicker({
+  color, iconName, onChange,
+}: {
+  color: string;
+  iconName?: string;
+  onChange: (patch: { color?: string; icon?: string }) => void;
+}) {
+  const Icon = getTypeIcon(iconName);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title="Mudar ícone e cor"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-md shadow-sm hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: color, color: "white" }}
+        >
+          <Icon className="h-6 w-6" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-3 space-y-3" align="start">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 inline-flex items-center gap-1">
+            <Palette className="h-3 w-3" /> Cor
+          </p>
+          <div className="grid grid-cols-10 gap-1">
+            {COLOR_PRESETS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => onChange({ color: c })}
+                className={`h-5 w-5 rounded-sm border ${color === c ? "ring-2 ring-primary" : "border-transparent"}`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Ícone</p>
+          <div className="grid grid-cols-8 gap-1">
+            {TYPE_ICON_OPTIONS.map(({ name, icon: I }) => {
+              const active = iconName === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => onChange({ icon: name })}
+                  className={`h-7 w-7 rounded-md flex items-center justify-center transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-secondary text-foreground"}`}
+                  title={name}
+                >
+                  <I className="h-3.5 w-3.5" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

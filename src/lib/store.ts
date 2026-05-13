@@ -3,9 +3,11 @@ import type {
   Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia,
   SurveyType, Attachment, SurveyTemplate,
   FormStructureOverrides, FieldPatch, SubgroupPatch, ModulePatch, SubgroupDef, FieldDef,
+  CustomSurveyType, CustomTypeModuleBinding, ModuleRequirement,
 } from "./types";
 import {
   getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType,
+  getEffectiveModulesForCustomType,
   setGlobalFormOverrides,
 } from "./modules";
 
@@ -21,6 +23,7 @@ interface DB {
   surveys: Survey[];
   templates: SurveyTemplate[];
   formOverrides: FormStructureOverrides;
+  customSurveyTypes: CustomSurveyType[];
 }
 
 interface DBStatus {
@@ -39,7 +42,10 @@ interface StoreRuntime {
   persistChain: Promise<void>;
 }
 
-const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [], templates: [], formOverrides: {} };
+const EMPTY_DB: DB = {
+  clients: [], empreendimentos: [], projects: [], surveys: [],
+  templates: [], formOverrides: {}, customSurveyTypes: [],
+};
 
 function createModuleState(): ModuleState {
   return {
@@ -93,6 +99,7 @@ function normalizeDB(raw: Partial<DB> | null | undefined): DB {
     surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
     templates: Array.isArray(raw?.templates) ? raw.templates : [],
     formOverrides: (raw?.formOverrides && typeof raw.formOverrides === "object") ? raw.formOverrides as FormStructureOverrides : {},
+    customSurveyTypes: Array.isArray(raw?.customSurveyTypes) ? raw.customSurveyTypes : [],
   };
 
   // Recupera clientes "órfãos": se um projeto/empreendimento/levantamento referencia

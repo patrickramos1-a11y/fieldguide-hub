@@ -11,6 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { autoColor } from "@/lib/colors";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -112,7 +113,7 @@ export function TiposLevantamentoTab({ onOpenStructure }: { onOpenStructure: (mo
                         <div className="flex items-center justify-between gap-2">
                           <span
                             className="inline-block h-2 w-2 rounded-full shrink-0"
-                            style={{ background: c.color || "var(--primary)" }}
+                            style={{ background: c.color || autoColor(c.id) }}
                           />
                           <span className="text-sm font-medium leading-tight truncate flex-1">{c.label}</span>
                           <Badge variant={isActive ? "secondary" : "outline"} className="text-[10px] shrink-0">
@@ -203,7 +204,7 @@ function CustomDetail({ typeId, onOpenStructure }: { typeId: string; onOpenStruc
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className="inline-block h-3 w-3 rounded-full"
-              style={{ background: ct.color || "var(--primary)" }}
+              style={{ background: ct.color || autoColor(ct.id) }}
             />
             <h3 className="text-base font-semibold truncate">{ct.label}</h3>
             <Badge className="text-[10px]"><Sparkles className="h-3 w-3 mr-1" /> Personalizado</Badge>

@@ -190,7 +190,7 @@ async function flushSync() {
       diffTable("custom_survey_types", before.customSurveyTypes, after.customSurveyTypes),
     ]);
     if (before.formOverrides !== after.formOverrides) {
-      const { error } = await supabase.from("form_overrides").upsert({ id: "singleton", data: after.formOverrides });
+      const { error } = await supabase.from("form_overrides").upsert({ id: "singleton", data: after.formOverrides as any });
       if (error) console.error("[sync] upsert form_overrides", error);
     }
     store.status = { ...store.status, persistPending: false, persistenceError: undefined };

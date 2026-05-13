@@ -1,5 +1,6 @@
-import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, Users, FolderKanban, ClipboardList, Settings } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { LayoutDashboard, Users, FolderKanban, ClipboardList, Settings, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -11,6 +12,11 @@ const nav = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
+  const navigate = useNavigate();
+  const onLogout = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/login" });
+  };
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
@@ -40,6 +46,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            <button
+              onClick={onLogout}
+              title="Sair"
+              className="ml-1 flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-secondary"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </nav>
         </div>
         <nav className="flex md:hidden border-t border-border">

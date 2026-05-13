@@ -8,6 +8,7 @@ import type {
 import {
   getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType,
   getEffectiveModulesForCustomType,
+  MODULE_PRESETS,
   setGlobalFormOverrides,
 } from "./modules";
 
@@ -920,6 +921,48 @@ export function useCustomSurveyTypes(): CustomSurveyType[] {
   return useDBSelector((s) => s.customSurveyTypes ?? [], (a, b) => a === b);
 }
 
+export function ensureEditableSurveyType(typeId: SurveyType): CustomSurveyType {
+  const existing = getCustomSurveyType(typeId)
+    ?? (store.db.customSurveyTypes ?? []).find((c) => c.sourceTypeId === typeId);
+  if (existing) return existing;
+
+  const builtInMeta = {
+    geral: {
+      label: "Levantamento Geral de Projetos",
+      description: "Coleta ampla de dados de empresa, atividade, água, resíduos, efluentes e processo.",
+    },
+    ambiental: {
+      label: "Acompanhamento Ambiental",
+      description: "Controle periódico de conformidade, ETE, resíduos, documentos e pendências.",
+    },
+    vazao: {
+      label: "Medição de Vazão",
+      description: "Registro técnico de seção, profundidades, tempos e desenho.",
+    },
+    outorga: {
+      label: "Outorga",
+      description: "Coleta para processo de outorga: poço, bomba, reservatório e representante legal.",
+    },
+    terreno: {
+      label: "Visita ao Local / Terreno",
+      description: "Caracterização física: limites, topografia, vegetação, solo, acesso e vizinhança.",
+    },
+  }[typeId] ?? { label: typeId, description: undefined };
+
+  const modules = getModulesForType(typeId);
+  const minimal = new Set((MODULE_PRESETS[typeId] ?? { minimal: [] }).minimal);
+  return createSurveyTypeFromBase({
+    label: builtInMeta.label,
+    description: builtInMeta.description,
+    sourceTypeId: typeId,
+    moduleBindings: modules.map((m) => ({
+      moduleId: m.id,
+      requirement: minimal.has(m.id) ? "recomendado" : "opcional",
+    })),
+    scopedOverrides: {},
+  });
+}
+
 export function getCustomSurveyType(id: string): CustomSurveyType | undefined {
   return (store.db.customSurveyTypes ?? []).find((c) => c.id === id);
 }
@@ -936,6 +979,31 @@ export function createCustomSurveyType(data: { label?: string; description?: str
       { moduleId: "validacao", requirement: "obrigatorio" },
     ],
     scopedOverrides: {},
+    createdAt: new Date().toISOString(),
+  };
+  store.db = { ...store.db, customSurveyTypes: [ct, ...(store.db.customSurveyTypes ?? [])] };
+  persist();
+  return ct;
+}
+
+export function createSurveyTypeFromBase(data: {
+  label: string;
+  description?: string;
+  sourceTypeId?: SurveyType;
+  color?: string;
+  icon?: string;
+  moduleBindings: CustomTypeModuleBinding[];
+  scopedOverrides?: FormStructureOverrides;
+}) {
+  const ct: CustomSurveyType = {
+    id: genTypeId(),
+    label: data.label.trim() || "Novo tipo de levantamento",
+    description: data.description,
+    sourceTypeId: data.sourceTypeId,
+    color: data.color,
+    icon: data.icon,
+    moduleBindings: data.moduleBindings.map((binding) => ({ ...binding })),
+    scopedOverrides: data.scopedOverrides ? JSON.parse(JSON.stringify(data.scopedOverrides)) : {},
     createdAt: new Date().toISOString(),
   };
   store.db = { ...store.db, customSurveyTypes: [ct, ...(store.db.customSurveyTypes ?? [])] };
@@ -972,6 +1040,7 @@ export function duplicateCustomSurveyType(id: string) {
     ...src,
     id: genTypeId(),
     label: `${src.label} (cópia)`,
+    sourceTypeId: undefined,
     moduleBindings: src.moduleBindings.map((b) => ({ ...b })),
     scopedOverrides: src.scopedOverrides ? JSON.parse(JSON.stringify(src.scopedOverrides)) : {},
     archivedAt: undefined,

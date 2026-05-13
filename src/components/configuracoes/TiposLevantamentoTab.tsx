@@ -5,6 +5,7 @@ import { getModulesForType, MODULE_PRESETS, MODULES } from "@/lib/modules";
 import {
   useCustomSurveyTypes,
   createCustomSurveyType,
+  ensureEditableSurveyType,
   deleteCustomSurveyType,
   duplicateCustomSurveyType,
 } from "@/lib/store";
@@ -26,9 +27,9 @@ type Selection =
   | { kind: "builtin"; id: SurveyType }
   | { kind: "custom"; id: string };
 
-export function TiposLevantamentoTab({ onOpenStructure }: { onOpenStructure: (moduleId: string) => void }) {
+export function TiposLevantamentoTab() {
   const customs = useCustomSurveyTypes();
-  const activeList = customs.filter((c) => !c.archivedAt);
+  const activeList = customs.filter((c) => !c.archivedAt && !c.sourceTypeId);
   const [sel, setSel] = useState<Selection>({ kind: "builtin", id: "geral" });
   const navigate = useNavigate();
 
@@ -134,19 +135,25 @@ export function TiposLevantamentoTab({ onOpenStructure }: { onOpenStructure: (mo
         {/* Coluna 2 — Detalhes */}
         <div className="space-y-3">
           {sel.kind === "builtin"
-            ? <BuiltinDetail typeId={sel.id} onOpenStructure={onOpenStructure} />
-            : <CustomDetail typeId={sel.id} onOpenStructure={onOpenStructure} />}
+            ? <BuiltinDetail typeId={sel.id} />
+            : <CustomDetail typeId={sel.id} />}
         </div>
       </div>
     </div>
   );
 }
 
-function BuiltinDetail({ typeId, onOpenStructure }: { typeId: SurveyType; onOpenStructure: (moduleId: string) => void }) {
+function BuiltinDetail({ typeId }: { typeId: SurveyType }) {
   const t = SURVEY_TYPES.find((x) => x.id === typeId)!;
   const modules = getModulesForType(typeId);
   const minimal = new Set(MODULE_PRESETS[typeId].minimal);
   const navigate = useNavigate();
+
+  function openBuilderFromBuiltin() {
+    const ct = ensureEditableSurveyType(typeId);
+    toast.success("Tipo aberto no construtor para edição completa.");
+    navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } });
+  }
 
   return (
     <>
@@ -161,36 +168,26 @@ function BuiltinDetail({ typeId, onOpenStructure }: { typeId: SurveyType; onOpen
         <Button
           size="sm"
           variant="outline"
-          onClick={() => {
-            const ct = createCustomSurveyType({
-              label: `${t.label} (personalizado)`,
-              description: t.description,
-            });
-            import("@/lib/store").then(({ addTypeModule }) => {
-              for (const m of modules) addTypeModule(ct.id, m.id, minimal.has(m.id) ? "recomendado" : "opcional");
-              toast.success("Tipo personalizado criado a partir do padrão.");
-              navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } });
-            });
-          }}
+          onClick={openBuilderFromBuiltin}
         >
-          <Copy className="h-3.5 w-3.5 mr-1" /> Duplicar como personalizado
+          <Pencil className="h-3.5 w-3.5 mr-1" /> Editar tipo
         </Button>
       </header>
 
       <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground bg-muted/30">
-        Tipos padrão usam a <span className="font-medium text-foreground">estrutura global</span>.
-        Para alterar campos, vá em <span className="font-medium text-foreground">Estrutura dos formulários</span>.
-        As mudanças refletirão em todos os tipos que usam o módulo.
+        Abra este tipo no construtor para gerenciar módulos, subgrupos e campos em uma tela dedicada.
+        O fluxo de edição usa a mesma experiência dos tipos personalizados.
       </div>
 
-      <ModuleListReadonly modules={modules} minimal={minimal} onOpenStructure={onOpenStructure} />
+      <ModuleListReadonly modules={modules} minimal={minimal} onOpenStructure={openBuilderFromBuiltin} />
     </>
   );
 }
 
-function CustomDetail({ typeId, onOpenStructure }: { typeId: string; onOpenStructure: (moduleId: string) => void }) {
+function CustomDetail({ typeId }: { typeId: string }) {
   const customs = useCustomSurveyTypes();
   const ct = customs.find((c) => c.id === typeId);
+  const navigate = useNavigate();
   if (!ct) {
     return <div className="text-sm text-muted-foreground">Tipo não encontrado.</div>;
   }
@@ -268,7 +265,7 @@ function CustomDetail({ typeId, onOpenStructure }: { typeId: string; onOpenStruc
         <ModuleListReadonly
           modules={linkedModules}
           minimal={new Set(ct.moduleBindings.filter((b) => b.requirement !== "opcional").map((b) => b.moduleId))}
-          onOpenStructure={onOpenStructure}
+          onOpenStructure={() => navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } })}
         />
       )}
     </>

@@ -398,6 +398,7 @@ export interface CustomSurveyType {
   id: string;            // ex.: custom_xxx
   label: string;
   description?: string;
+  sourceTypeId?: SurveyType;
   color?: string;        // cor base do tipo
   icon?: string;         // nome de ícone lucide (ex.: "Droplet")
   moduleBindings: CustomTypeModuleBinding[];

@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/sheet";
 import {
   ArrowLeft, ChevronRight, Layers, ListTree, Pencil, Plus, EyeOff, Eye,
-  Trash2, ChevronUp, ChevronDown, RotateCcw, Sparkles, Search,
+  Trash2, ChevronUp, ChevronDown, RotateCcw, Search, Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, getEffectiveModulesForCustomType } from "@/lib/modules";
 import { autoColor } from "@/lib/colors";
+import { TYPE_ICON_OPTIONS, getTypeIcon } from "@/lib/typeIcons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   useDBSelector,
   useCustomSurveyTypes,
@@ -228,23 +230,27 @@ function TipoBuilderPage() {
               </div>
             </div>
           ) : (
-            <button onClick={() => setRenamingHeader(true)} className="text-left group">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-block h-3 w-3 rounded-full" style={{ background: ct.color || autoColor(ct.id) }} />
-                <h1 className="text-2xl font-semibold tracking-tight group-hover:underline decoration-dotted underline-offset-4">{ct.label}</h1>
-                <Badge className="text-[10px]"><Sparkles className="h-3 w-3 mr-1" /> Personalizado</Badge>
-                <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
-              </div>
-              {ct.description && <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{ct.description}</p>}
-            </button>
+            <div className="flex items-start gap-3">
+              <IconColorPicker
+                color={ct.color || autoColor(ct.id)}
+                iconName={ct.icon}
+                onChange={(next) => updateCustomSurveyType(ct.id, next)}
+              />
+              <button onClick={() => setRenamingHeader(true)} className="text-left group flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl font-semibold tracking-tight group-hover:underline decoration-dotted underline-offset-4">
+                    {ct.label}
+                  </h1>
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                </div>
+                {ct.description && (
+                  <p className="text-sm text-muted-foreground mt-1 max-w-2xl">{ct.description}</p>
+                )}
+              </button>
+            </div>
           )}
         </div>
       </header>
-
-      <div className="rounded-md border p-3 text-xs bg-amber-500/10 border-amber-500/30 mb-4">
-        Você está no <span className="font-medium">modo escopado</span>. Alterações aqui afetam apenas
-        este tipo de levantamento e <span className="font-medium">não modificam</span> os módulos originais.
-      </div>
 
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1.4fr] min-h-[64vh]">
         {/* Coluna 1 — Módulos disponíveis */}

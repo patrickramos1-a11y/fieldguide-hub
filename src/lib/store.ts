@@ -1040,6 +1040,7 @@ export function duplicateCustomSurveyType(id: string) {
     ...src,
     id: genTypeId(),
     label: `${src.label} (cópia)`,
+    sourceTypeId: undefined,
     moduleBindings: src.moduleBindings.map((b) => ({ ...b })),
     scopedOverrides: src.scopedOverrides ? JSON.parse(JSON.stringify(src.scopedOverrides)) : {},
     archivedAt: undefined,

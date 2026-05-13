@@ -110,6 +110,16 @@ function TipoBuilderPage() {
     if (!moduleId && effectiveModules.length) setModuleId(effectiveModules[0].id);
   }, [effectiveModules.length]);
 
+  const selectedModule = effectiveModules.find((m) => m.id === moduleId);
+  const subgroups = selectedModule?.subgroups ?? [];
+
+  useEffect(() => {
+    if (selectedModule && !subgroupId && subgroups.length) setSubgroupId(subgroups[0].id);
+    if (selectedModule && subgroupId && !subgroups.find((s) => s.id === subgroupId)) {
+      setSubgroupId(subgroups[0]?.id ?? null);
+    }
+  }, [selectedModule?.id, subgroups.length]);
+
   if (!ct) {
     return (
       <AppShell>
@@ -127,16 +137,6 @@ function TipoBuilderPage() {
   const availableModules = MODULES
     .filter((m) => !linkedIds.has(m.id))
     .filter((m) => !moduleSearch.trim() || m.title.toLowerCase().includes(moduleSearch.toLowerCase()));
-
-  const selectedModule = effectiveModules.find((m) => m.id === moduleId);
-  const subgroups = selectedModule?.subgroups ?? [];
-
-  useEffect(() => {
-    if (selectedModule && !subgroupId && subgroups.length) setSubgroupId(subgroups[0].id);
-    if (selectedModule && subgroupId && !subgroups.find((s) => s.id === subgroupId)) {
-      setSubgroupId(subgroups[0]?.id ?? null);
-    }
-  }, [selectedModule?.id, subgroups.length]);
 
   const selectedSub = subgroups.find((s) => s.id === subgroupId) ?? null;
 

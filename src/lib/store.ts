@@ -503,10 +503,19 @@ export function deleteProject(pid: string) {
 }
 
 export function addSurvey(data: { projectId: string; type: SurveyType; title: string }) {
+  return addSurveyExt({ ...data });
+}
+
+/** Versão extendida de addSurvey que aceita customTypeId. */
+export function addSurveyExt(data: { projectId: string; type: SurveyType; title: string; customTypeId?: string }) {
   const modules: Record<string, ModuleState> = {};
-  getModulesForType(data.type).forEach((module) => {
-    modules[module.id] = createModuleState();
-  });
+  const moduleIds = new Set<string>();
+  getModulesForType(data.type).forEach((m) => moduleIds.add(m.id));
+  if (data.customTypeId) {
+    const ct = (store.db.customSurveyTypes ?? []).find((c) => c.id === data.customTypeId);
+    ct?.moduleBindings.forEach((b) => moduleIds.add(b.moduleId));
+  }
+  moduleIds.forEach((id) => { modules[id] = createModuleState(); });
 
   // Pré-preenche data e horário de chegada na Identificação.
   const now = new Date();
@@ -539,9 +548,24 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
     pendencias: [],
     signatures: {},
     createdAt: now.toISOString(),
+    customTypeId: data.customTypeId,
   };
+
+  // Para tipos personalizados, define enabledModules a partir dos vínculos.
+  if (data.customTypeId) {
+    const ct = (store.db.customSurveyTypes ?? []).find((c) => c.id === data.customTypeId);
+    if (ct) {
+      survey.enabledModules = Array.from(new Set([
+        ...ct.moduleBindings.map((b) => b.moduleId),
+        "identificacao", "validacao",
+      ]));
+    }
+  }
+
   // Aplica template padrão do tipo, se houver.
-  const def = (store.db.templates ?? []).find((t) => t.type === data.type && t.isDefault);
+  const def = !data.customTypeId
+    ? (store.db.templates ?? []).find((t) => t.type === data.type && t.isDefault)
+    : undefined;
   if (def && def.moduleIds.length) {
     survey.enabledModules = Array.from(new Set([...def.moduleIds, "identificacao", "validacao"]));
     // Aplica overrides de subgrupos: marca como N/A subgrupos desabilitados pelo template.

@@ -19,6 +19,7 @@ import { Route as LevantamentosNovoRouteImport } from './routes/levantamentos.no
 import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 import { Route as LevantamentosIdIndexRouteImport } from './routes/levantamentos.$id.index'
 import { Route as LevantamentosIdResumoRouteImport } from './routes/levantamentos.$id.resumo'
+import { Route as ConfiguracoesTiposRouteImport } from './routes/configuracoes.tipos.'
 
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
@@ -70,41 +71,49 @@ const LevantamentosIdResumoRoute = LevantamentosIdResumoRouteImport.update({
   path: '/levantamentos/$id/resumo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfiguracoesTiposRoute = ConfiguracoesTiposRouteImport.update({
+  id: '/tipos/',
+  path: '/tipos/',
+  getParentRoute: () => ConfiguracoesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRoute
+  '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/clientes/': typeof ClientesIndexRoute
   '/levantamentos/': typeof LevantamentosIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
+  '/configuracoes/tipos/': typeof ConfiguracoesTiposRoute
   '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
   '/levantamentos/$id/': typeof LevantamentosIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRoute
+  '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/clientes': typeof ClientesIndexRoute
   '/levantamentos': typeof LevantamentosIndexRoute
   '/projetos': typeof ProjetosIndexRoute
+  '/configuracoes/tipos': typeof ConfiguracoesTiposRoute
   '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
   '/levantamentos/$id': typeof LevantamentosIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRoute
+  '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/clientes/': typeof ClientesIndexRoute
   '/levantamentos/': typeof LevantamentosIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
+  '/configuracoes/tipos/': typeof ConfiguracoesTiposRoute
   '/levantamentos/$id/resumo': typeof LevantamentosIdResumoRoute
   '/levantamentos/$id/': typeof LevantamentosIdIndexRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/clientes/'
     | '/levantamentos/'
     | '/projetos/'
+    | '/configuracoes/tipos/'
     | '/levantamentos/$id/resumo'
     | '/levantamentos/$id/'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/levantamentos'
     | '/projetos'
+    | '/configuracoes/tipos'
     | '/levantamentos/$id/resumo'
     | '/levantamentos/$id'
   id:
@@ -143,13 +154,14 @@ export interface FileRouteTypes {
     | '/clientes/'
     | '/levantamentos/'
     | '/projetos/'
+    | '/configuracoes/tipos/'
     | '/levantamentos/$id/resumo'
     | '/levantamentos/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRouteWithChildren
   ClientesIdRoute: typeof ClientesIdRoute
   LevantamentosNovoRoute: typeof LevantamentosNovoRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
@@ -232,12 +244,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LevantamentosIdResumoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes/tipos/': {
+      id: '/configuracoes/tipos/'
+      path: '/tipos'
+      fullPath: '/configuracoes/tipos/'
+      preLoaderRoute: typeof ConfiguracoesTiposRouteImport
+      parentRoute: typeof ConfiguracoesRoute
+    }
   }
 }
 
+interface ConfiguracoesRouteChildren {
+  ConfiguracoesTiposRoute: typeof ConfiguracoesTiposRoute
+}
+
+const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
+  ConfiguracoesTiposRoute: ConfiguracoesTiposRoute,
+}
+
+const ConfiguracoesRouteWithChildren = ConfiguracoesRoute._addFileChildren(
+  ConfiguracoesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ConfiguracoesRoute: ConfiguracoesRoute,
+  ConfiguracoesRoute: ConfiguracoesRouteWithChildren,
   ClientesIdRoute: ClientesIdRoute,
   LevantamentosNovoRoute: LevantamentosNovoRoute,
   ProjetosIdRoute: ProjetosIdRoute,
@@ -250,3 +281,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

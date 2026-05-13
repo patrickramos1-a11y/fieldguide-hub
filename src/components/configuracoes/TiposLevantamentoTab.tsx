@@ -5,7 +5,7 @@ import { getModulesForType, MODULE_PRESETS, MODULES } from "@/lib/modules";
 import {
   useCustomSurveyTypes,
   createCustomSurveyType,
-  createSurveyTypeFromBase,
+  ensureEditableSurveyType,
   deleteCustomSurveyType,
   duplicateCustomSurveyType,
 } from "@/lib/store";
@@ -29,7 +29,7 @@ type Selection =
 
 export function TiposLevantamentoTab() {
   const customs = useCustomSurveyTypes();
-  const activeList = customs.filter((c) => !c.archivedAt);
+  const activeList = customs.filter((c) => !c.archivedAt && !c.sourceTypeId);
   const [sel, setSel] = useState<Selection>({ kind: "builtin", id: "geral" });
   const navigate = useNavigate();
 
@@ -150,14 +150,7 @@ function BuiltinDetail({ typeId }: { typeId: SurveyType }) {
   const navigate = useNavigate();
 
   function openBuilderFromBuiltin() {
-    const ct = createSurveyTypeFromBase({
-      label: t.label,
-      description: t.description,
-      moduleBindings: modules.map((m) => ({
-        moduleId: m.id,
-        requirement: minimal.has(m.id) ? "recomendado" : "opcional",
-      })),
-    });
+    const ct = ensureEditableSurveyType(typeId);
     toast.success("Tipo aberto no construtor para edição completa.");
     navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } });
   }

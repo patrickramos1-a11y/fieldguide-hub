@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { SURVEY_TYPES, MODULE_PURPOSE_LABELS, type SurveyType } from "@/lib/types";
 import { getModulesForType, MODULE_PRESETS, MODULES } from "@/lib/modules";
 import {
@@ -30,11 +30,13 @@ export function TiposLevantamentoTab({ onOpenStructure }: { onOpenStructure: (mo
   const customs = useCustomSurveyTypes();
   const activeList = customs.filter((c) => !c.archivedAt);
   const [sel, setSel] = useState<Selection>({ kind: "builtin", id: "geral" });
+  const navigate = useNavigate();
 
   function handleCreate() {
     const ct = createCustomSurveyType({ label: "Novo tipo de levantamento" });
     toast.success("Tipo criado. Configure os módulos no construtor.");
     setSel({ kind: "custom", id: ct.id });
+    navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } });
   }
 
   return (
@@ -144,6 +146,7 @@ function BuiltinDetail({ typeId, onOpenStructure }: { typeId: SurveyType; onOpen
   const t = SURVEY_TYPES.find((x) => x.id === typeId)!;
   const modules = getModulesForType(typeId);
   const minimal = new Set(MODULE_PRESETS[typeId].minimal);
+  const navigate = useNavigate();
 
   return (
     <>
@@ -163,12 +166,10 @@ function BuiltinDetail({ typeId, onOpenStructure }: { typeId: SurveyType; onOpen
               label: `${t.label} (personalizado)`,
               description: t.description,
             });
-            // Adiciona todos os módulos do tipo padrão
-            // (CRUD direto via store happens after create)
-            // Importa lazy:
             import("@/lib/store").then(({ addTypeModule }) => {
               for (const m of modules) addTypeModule(ct.id, m.id, minimal.has(m.id) ? "recomendado" : "opcional");
               toast.success("Tipo personalizado criado a partir do padrão.");
+              navigate({ to: "/configuracoes/tipos/$typeId", params: { typeId: ct.id } });
             });
           }}
         >

@@ -284,6 +284,7 @@ function mergeDBs(a: DB, b: DB): DB {
     projects: mergeById(a.projects, b.projects),
     surveys: mergeById(a.surveys, b.surveys),
     templates: mergeById(a.templates ?? [], b.templates ?? []),
+    customSurveyTypes: mergeById(a.customSurveyTypes ?? [], b.customSurveyTypes ?? []),
   });
 }
 

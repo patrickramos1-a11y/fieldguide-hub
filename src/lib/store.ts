@@ -3,9 +3,11 @@ import type {
   Client, Empreendimento, Project, Survey, ModuleState, FieldStatus, Pendencia,
   SurveyType, Attachment, SurveyTemplate,
   FormStructureOverrides, FieldPatch, SubgroupPatch, ModulePatch, SubgroupDef, FieldDef,
+  CustomSurveyType, CustomTypeModuleBinding, ModuleRequirement,
 } from "./types";
 import {
   getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType,
+  getEffectiveModulesForCustomType,
   setGlobalFormOverrides,
 } from "./modules";
 
@@ -21,6 +23,7 @@ interface DB {
   surveys: Survey[];
   templates: SurveyTemplate[];
   formOverrides: FormStructureOverrides;
+  customSurveyTypes: CustomSurveyType[];
 }
 
 interface DBStatus {
@@ -39,7 +42,10 @@ interface StoreRuntime {
   persistChain: Promise<void>;
 }
 
-const EMPTY_DB: DB = { clients: [], empreendimentos: [], projects: [], surveys: [], templates: [], formOverrides: {} };
+const EMPTY_DB: DB = {
+  clients: [], empreendimentos: [], projects: [], surveys: [],
+  templates: [], formOverrides: {}, customSurveyTypes: [],
+};
 
 function createModuleState(): ModuleState {
   return {
@@ -72,10 +78,21 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
 function normalizeSurvey(survey: Survey): Survey {
   const nextModules = { ...(survey.modules ?? {}) };
 
-  for (const mod of getModulesForType(survey.type)) {
-    const current = nextModules[mod.id];
-    nextModules[mod.id] = current ? normalizeModuleState(current) : createModuleState();
+  // Cobre módulos do tipo (builtin) e os módulos vinculados ao tipo personalizado, se houver.
+  const moduleIdsToEnsure = new Set<string>(getModulesForType(survey.type).map((m) => m.id));
+  if (survey.customTypeId) {
+    const ct = (store.db.customSurveyTypes ?? []).find((c) => c.id === survey.customTypeId);
+    ct?.moduleBindings.forEach((b) => moduleIdsToEnsure.add(b.moduleId));
   }
+  for (const id of moduleIdsToEnsure) {
+    const current = nextModules[id];
+    nextModules[id] = current ? normalizeModuleState(current) : createModuleState();
+  }
+  // Mantém módulos preexistentes (mesmo que não estejam em nenhum dos dois conjuntos)
+  for (const [id, mod] of Object.entries(nextModules)) {
+    nextModules[id] = normalizeModuleState(mod);
+  }
+  void getModulesForType; // suprime warning de unused
 
   return {
     ...survey,
@@ -93,6 +110,7 @@ function normalizeDB(raw: Partial<DB> | null | undefined): DB {
     surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
     templates: Array.isArray(raw?.templates) ? raw.templates : [],
     formOverrides: (raw?.formOverrides && typeof raw.formOverrides === "object") ? raw.formOverrides as FormStructureOverrides : {},
+    customSurveyTypes: Array.isArray(raw?.customSurveyTypes) ? raw.customSurveyTypes : [],
   };
 
   // Recupera clientes "órfãos": se um projeto/empreendimento/levantamento referencia
@@ -266,6 +284,7 @@ function mergeDBs(a: DB, b: DB): DB {
     projects: mergeById(a.projects, b.projects),
     surveys: mergeById(a.surveys, b.surveys),
     templates: mergeById(a.templates ?? [], b.templates ?? []),
+    customSurveyTypes: mergeById(a.customSurveyTypes ?? [], b.customSurveyTypes ?? []),
   });
 }
 
@@ -485,10 +504,19 @@ export function deleteProject(pid: string) {
 }
 
 export function addSurvey(data: { projectId: string; type: SurveyType; title: string }) {
+  return addSurveyExt({ ...data });
+}
+
+/** Versão extendida de addSurvey que aceita customTypeId. */
+export function addSurveyExt(data: { projectId: string; type: SurveyType; title: string; customTypeId?: string }) {
   const modules: Record<string, ModuleState> = {};
-  getModulesForType(data.type).forEach((module) => {
-    modules[module.id] = createModuleState();
-  });
+  const moduleIds = new Set<string>();
+  getModulesForType(data.type).forEach((m) => moduleIds.add(m.id));
+  if (data.customTypeId) {
+    const ct = (store.db.customSurveyTypes ?? []).find((c) => c.id === data.customTypeId);
+    ct?.moduleBindings.forEach((b) => moduleIds.add(b.moduleId));
+  }
+  moduleIds.forEach((id) => { modules[id] = createModuleState(); });
 
   // Pré-preenche data e horário de chegada na Identificação.
   const now = new Date();
@@ -521,9 +549,24 @@ export function addSurvey(data: { projectId: string; type: SurveyType; title: st
     pendencias: [],
     signatures: {},
     createdAt: now.toISOString(),
+    customTypeId: data.customTypeId,
   };
+
+  // Para tipos personalizados, define enabledModules a partir dos vínculos.
+  if (data.customTypeId) {
+    const ct = (store.db.customSurveyTypes ?? []).find((c) => c.id === data.customTypeId);
+    if (ct) {
+      survey.enabledModules = Array.from(new Set([
+        ...ct.moduleBindings.map((b) => b.moduleId),
+        "identificacao", "validacao",
+      ]));
+    }
+  }
+
   // Aplica template padrão do tipo, se houver.
-  const def = (store.db.templates ?? []).find((t) => t.type === data.type && t.isDefault);
+  const def = !data.customTypeId
+    ? (store.db.templates ?? []).find((t) => t.type === data.type && t.isDefault)
+    : undefined;
   if (def && def.moduleIds.length) {
     survey.enabledModules = Array.from(new Set([...def.moduleIds, "identificacao", "validacao"]));
     // Aplica overrides de subgrupos: marca como N/A subgrupos desabilitados pelo template.
@@ -865,4 +908,223 @@ export function useEffectiveModulesForType(type: SurveyType) {
     (a, b) => a === b,
   );
   return getEffectiveModulesForType(type, overrides);
+}
+
+/* =================== Tipos de Levantamento Personalizados =================== */
+
+function genTypeId() {
+  return `custom_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function useCustomSurveyTypes(): CustomSurveyType[] {
+  return useDBSelector((s) => s.customSurveyTypes ?? [], (a, b) => a === b);
+}
+
+export function getCustomSurveyType(id: string): CustomSurveyType | undefined {
+  return (store.db.customSurveyTypes ?? []).find((c) => c.id === id);
+}
+
+export function createCustomSurveyType(data: { label?: string; description?: string; color?: string; icon?: string } = {}) {
+  const ct: CustomSurveyType = {
+    id: genTypeId(),
+    label: data.label?.trim() || "Novo tipo de levantamento",
+    description: data.description,
+    color: data.color,
+    icon: data.icon,
+    moduleBindings: [
+      { moduleId: "identificacao", requirement: "obrigatorio" },
+      { moduleId: "validacao", requirement: "obrigatorio" },
+    ],
+    scopedOverrides: {},
+    createdAt: new Date().toISOString(),
+  };
+  store.db = { ...store.db, customSurveyTypes: [ct, ...(store.db.customSurveyTypes ?? [])] };
+  persist();
+  return ct;
+}
+
+export function updateCustomSurveyType(id: string, patch: Partial<Omit<CustomSurveyType, "id" | "createdAt">>) {
+  store.db = {
+    ...store.db,
+    customSurveyTypes: (store.db.customSurveyTypes ?? []).map((c) => c.id === id ? { ...c, ...patch } : c),
+  };
+  persist();
+}
+
+export function deleteCustomSurveyType(id: string) {
+  // Se houver levantamentos vinculados, marca como arquivado.
+  const inUse = store.db.surveys.some((s) => s.customTypeId === id);
+  if (inUse) {
+    updateCustomSurveyType(id, { archivedAt: new Date().toISOString() });
+    return;
+  }
+  store.db = {
+    ...store.db,
+    customSurveyTypes: (store.db.customSurveyTypes ?? []).filter((c) => c.id !== id),
+  };
+  persist();
+}
+
+export function duplicateCustomSurveyType(id: string) {
+  const src = getCustomSurveyType(id);
+  if (!src) return;
+  const copy: CustomSurveyType = {
+    ...src,
+    id: genTypeId(),
+    label: `${src.label} (cópia)`,
+    moduleBindings: src.moduleBindings.map((b) => ({ ...b })),
+    scopedOverrides: src.scopedOverrides ? JSON.parse(JSON.stringify(src.scopedOverrides)) : {},
+    archivedAt: undefined,
+    createdAt: new Date().toISOString(),
+  };
+  store.db = { ...store.db, customSurveyTypes: [copy, ...(store.db.customSurveyTypes ?? [])] };
+  persist();
+  return copy;
+}
+
+/** Aplica um patch parcial ao escopo do tipo personalizado. */
+function mutateScoped(typeId: string, fn: (o: FormStructureOverrides) => FormStructureOverrides) {
+  const list = store.db.customSurveyTypes ?? [];
+  const target = list.find((c) => c.id === typeId);
+  if (!target) return;
+  const next = fn(target.scopedOverrides ?? {});
+  store.db = {
+    ...store.db,
+    customSurveyTypes: list.map((c) => c.id === typeId ? { ...c, scopedOverrides: next } : c),
+  };
+  persist();
+}
+
+export function setTypeModulePatch(typeId: string, moduleId: string, patch: ModulePatch | null) {
+  mutateScoped(typeId, (o) => {
+    const next = { ...(o.modules ?? {}) };
+    if (!patch) delete next[moduleId]; else next[moduleId] = { ...(next[moduleId] ?? {}), ...patch };
+    return { ...o, modules: next };
+  });
+}
+
+export function setTypeSubgroupPatch(typeId: string, moduleId: string, subgroupId: string, patch: SubgroupPatch | null) {
+  const key = `${moduleId}.${subgroupId}`;
+  mutateScoped(typeId, (o) => {
+    const next = { ...(o.subgroups ?? {}) };
+    if (!patch) delete next[key]; else next[key] = { ...(next[key] ?? {}), ...patch };
+    return { ...o, subgroups: next };
+  });
+}
+
+export function setTypeFieldPatch(typeId: string, moduleId: string, subgroupId: string | null, fieldId: string, patch: FieldPatch | null) {
+  const key = `${moduleId}.${subgroupId ?? "_"}.${fieldId}`;
+  mutateScoped(typeId, (o) => {
+    const next = { ...(o.fields ?? {}) };
+    if (!patch) delete next[key]; else next[key] = { ...(next[key] ?? {}), ...patch };
+    return { ...o, fields: next };
+  });
+}
+
+export function addTypeCustomSubgroup(typeId: string, moduleId: string, subgroup: SubgroupDef) {
+  mutateScoped(typeId, (o) => {
+    const next = { ...(o.customSubgroups ?? {}) };
+    next[moduleId] = [...(next[moduleId] ?? []), subgroup];
+    return { ...o, customSubgroups: next };
+  });
+}
+
+export function removeTypeCustomSubgroup(typeId: string, moduleId: string, subgroupId: string) {
+  mutateScoped(typeId, (o) => {
+    const next = { ...(o.customSubgroups ?? {}) };
+    if (next[moduleId]) {
+      next[moduleId] = next[moduleId].filter((s) => s.id !== subgroupId);
+      if (!next[moduleId].length) delete next[moduleId];
+    }
+    return { ...o, customSubgroups: next };
+  });
+}
+
+export function addTypeCustomField(typeId: string, moduleId: string, subgroupId: string, field: FieldDef) {
+  const key = `${moduleId}.${subgroupId}`;
+  mutateScoped(typeId, (o) => {
+    const next = { ...(o.customFields ?? {}) };
+    next[key] = [...(next[key] ?? []), field];
+    return { ...o, customFields: next };
+  });
+}
+
+export function removeTypeCustomField(typeId: string, moduleId: string, subgroupId: string, fieldId: string) {
+  const key = `${moduleId}.${subgroupId}`;
+  mutateScoped(typeId, (o) => {
+    const next = { ...(o.customFields ?? {}) };
+    if (next[key]) {
+      next[key] = next[key].filter((f) => f.id !== fieldId);
+      if (!next[key].length) delete next[key];
+    }
+    return { ...o, customFields: next };
+  });
+}
+
+/** Define cor de uma entidade. scope = "global" usa formOverrides; senão usa scoped do tipo. */
+export function setEntityColor(scope: "global" | string, key: string, color: string | null) {
+  if (scope === "global") {
+    mutateOverrides((o) => {
+      const next = { ...(o.colors ?? {}) };
+      if (!color) delete next[key]; else next[key] = color;
+      return { ...o, colors: next };
+    });
+  } else {
+    mutateScoped(scope, (o) => {
+      const next = { ...(o.colors ?? {}) };
+      if (!color) delete next[key]; else next[key] = color;
+      return { ...o, colors: next };
+    });
+  }
+}
+
+/** Atualiza vínculos de módulo de um tipo personalizado. */
+export function setTypeModuleBindings(typeId: string, bindings: CustomTypeModuleBinding[]) {
+  updateCustomSurveyType(typeId, { moduleBindings: bindings });
+}
+
+export function addTypeModule(typeId: string, moduleId: string, requirement: ModuleRequirement = "opcional") {
+  const ct = getCustomSurveyType(typeId);
+  if (!ct) return;
+  if (ct.moduleBindings.some((b) => b.moduleId === moduleId)) return;
+  setTypeModuleBindings(typeId, [...ct.moduleBindings, { moduleId, requirement }]);
+}
+
+export function removeTypeModule(typeId: string, moduleId: string) {
+  const ct = getCustomSurveyType(typeId);
+  if (!ct) return;
+  setTypeModuleBindings(typeId, ct.moduleBindings.filter((b) => b.moduleId !== moduleId));
+}
+
+export function moveTypeModule(typeId: string, moduleId: string, dir: -1 | 1) {
+  const ct = getCustomSurveyType(typeId);
+  if (!ct) return;
+  const idx = ct.moduleBindings.findIndex((b) => b.moduleId === moduleId);
+  const next = ct.moduleBindings.slice();
+  const target = idx + dir;
+  if (idx < 0 || target < 0 || target >= next.length) return;
+  [next[idx], next[target]] = [next[target], next[idx]];
+  setTypeModuleBindings(typeId, next);
+}
+
+/** Hook: módulos efetivos para um levantamento (resolve builtin e custom). */
+export function useEffectiveModulesForSurvey(survey: Survey) {
+  const overrides = useDBSelector((s) => s.formOverrides ?? {}, (a, b) => a === b);
+  const customTypes = useDBSelector((s) => s.customSurveyTypes ?? [], (a, b) => a === b);
+  if (survey.customTypeId) {
+    const ct = customTypes.find((c) => c.id === survey.customTypeId);
+    if (ct) return getEffectiveModulesForCustomType(ct, overrides);
+  }
+  return getEffectiveModulesForType(survey.type, overrides);
+}
+
+/** Hook: módulos efetivos para um tipo personalizado (para o construtor). */
+export function useEffectiveModulesForCustomTypeId(typeId: string) {
+  const overrides = useDBSelector((s) => s.formOverrides ?? {}, (a, b) => a === b);
+  const ct = useDBSelector(
+    (s) => (s.customSurveyTypes ?? []).find((c) => c.id === typeId),
+    (a, b) => a === b,
+  );
+  if (!ct) return [];
+  return getEffectiveModulesForCustomType(ct, overrides);
 }

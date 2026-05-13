@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -534,7 +534,7 @@ function TipoBuilderPage() {
 function CollapsedRail({
   label, count, icon: Icon, onExpand,
 }: {
-  label: string; count: number; icon: React.ComponentType<{ className?: string }>; onExpand: () => void;
+  label: string; count: number; icon: ComponentType<{ className?: string }>; onExpand: () => void;
 }) {
   return (
     <Card

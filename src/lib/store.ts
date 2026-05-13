@@ -943,6 +943,29 @@ export function createCustomSurveyType(data: { label?: string; description?: str
   return ct;
 }
 
+export function createSurveyTypeFromBase(data: {
+  label: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  moduleBindings: CustomTypeModuleBinding[];
+  scopedOverrides?: FormStructureOverrides;
+}) {
+  const ct: CustomSurveyType = {
+    id: genTypeId(),
+    label: data.label.trim() || "Novo tipo de levantamento",
+    description: data.description,
+    color: data.color,
+    icon: data.icon,
+    moduleBindings: data.moduleBindings.map((binding) => ({ ...binding })),
+    scopedOverrides: data.scopedOverrides ? JSON.parse(JSON.stringify(data.scopedOverrides)) : {},
+    createdAt: new Date().toISOString(),
+  };
+  store.db = { ...store.db, customSurveyTypes: [ct, ...(store.db.customSurveyTypes ?? [])] };
+  persist();
+  return ct;
+}
+
 export function updateCustomSurveyType(id: string, patch: Partial<Omit<CustomSurveyType, "id" | "createdAt">>) {
   store.db = {
     ...store.db,

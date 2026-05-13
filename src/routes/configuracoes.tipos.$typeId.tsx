@@ -229,7 +229,7 @@ function TipoBuilderPage() {
           ) : (
             <button onClick={() => setRenamingHeader(true)} className="text-left group">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-block h-3 w-3 rounded-full" style={{ background: ct.color || "var(--primary)" }} />
+                <span className="inline-block h-3 w-3 rounded-full" style={{ background: ct.color || autoColor(ct.id) }} />
                 <h1 className="text-2xl font-semibold tracking-tight group-hover:underline decoration-dotted underline-offset-4">{ct.label}</h1>
                 <Badge className="text-[10px]"><Sparkles className="h-3 w-3 mr-1" /> Personalizado</Badge>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, getEffectiveModulesForCustomType } from "@/lib/modules";
+import { autoColor } from "@/lib/colors";
 import {
   useDBSelector,
   useCustomSurveyTypes,

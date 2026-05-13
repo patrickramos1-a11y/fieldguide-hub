@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      custom_survey_types: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      empreendimentos: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          data: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      form_overrides: {
+        Row: {
+          data: Json
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          data?: Json
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          data?: Json
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          data: Json
+          empreendimento_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          data: Json
+          empreendimento_id?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          empreendimento_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      survey_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      surveys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data: Json
+          id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data: Json
+          id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

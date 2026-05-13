@@ -13,6 +13,7 @@ import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as LevantamentosIndexRouteImport } from './routes/levantamentos.index'
+import { Route as ConfiguracoesIndexRouteImport } from './routes/configuracoes.index'
 import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as LevantamentosNovoRouteImport } from './routes/levantamentos.novo'
@@ -40,6 +41,11 @@ const LevantamentosIndexRoute = LevantamentosIndexRouteImport.update({
   id: '/levantamentos/',
   path: '/levantamentos/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesIndexRoute = ConfiguracoesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ConfiguracoesRoute,
 } as any)
 const ClientesIndexRoute = ClientesIndexRouteImport.update({
   id: '/clientes/',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/clientes/': typeof ClientesIndexRoute
+  '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/levantamentos/': typeof LevantamentosIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/configuracoes/tipos/$typeId': typeof ConfiguracoesTiposTypeIdRoute
@@ -93,11 +100,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/configuracoes': typeof ConfiguracoesRouteWithChildren
   '/clientes/$id': typeof ClientesIdRoute
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/clientes': typeof ClientesIndexRoute
+  '/configuracoes': typeof ConfiguracoesIndexRoute
   '/levantamentos': typeof LevantamentosIndexRoute
   '/projetos': typeof ProjetosIndexRoute
   '/configuracoes/tipos/$typeId': typeof ConfiguracoesTiposTypeIdRoute
@@ -112,6 +119,7 @@ export interface FileRoutesById {
   '/levantamentos/novo': typeof LevantamentosNovoRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/clientes/': typeof ClientesIndexRoute
+  '/configuracoes/': typeof ConfiguracoesIndexRoute
   '/levantamentos/': typeof LevantamentosIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/configuracoes/tipos/$typeId': typeof ConfiguracoesTiposTypeIdRoute
@@ -127,6 +135,7 @@ export interface FileRouteTypes {
     | '/levantamentos/novo'
     | '/projetos/$id'
     | '/clientes/'
+    | '/configuracoes/'
     | '/levantamentos/'
     | '/projetos/'
     | '/configuracoes/tipos/$typeId'
@@ -135,11 +144,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/configuracoes'
     | '/clientes/$id'
     | '/levantamentos/novo'
     | '/projetos/$id'
     | '/clientes'
+    | '/configuracoes'
     | '/levantamentos'
     | '/projetos'
     | '/configuracoes/tipos/$typeId'
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/levantamentos/novo'
     | '/projetos/$id'
     | '/clientes/'
+    | '/configuracoes/'
     | '/levantamentos/'
     | '/projetos/'
     | '/configuracoes/tipos/$typeId'
@@ -202,6 +212,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/levantamentos/'
       preLoaderRoute: typeof LevantamentosIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes/': {
+      id: '/configuracoes/'
+      path: '/'
+      fullPath: '/configuracoes/'
+      preLoaderRoute: typeof ConfiguracoesIndexRouteImport
+      parentRoute: typeof ConfiguracoesRoute
     }
     '/clientes/': {
       id: '/clientes/'
@@ -256,10 +273,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface ConfiguracoesRouteChildren {
+  ConfiguracoesIndexRoute: typeof ConfiguracoesIndexRoute
   ConfiguracoesTiposTypeIdRoute: typeof ConfiguracoesTiposTypeIdRoute
 }
 
 const ConfiguracoesRouteChildren: ConfiguracoesRouteChildren = {
+  ConfiguracoesIndexRoute: ConfiguracoesIndexRoute,
   ConfiguracoesTiposTypeIdRoute: ConfiguracoesTiposTypeIdRoute,
 }
 

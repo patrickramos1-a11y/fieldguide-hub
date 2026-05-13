@@ -920,6 +920,22 @@ export function useCustomSurveyTypes(): CustomSurveyType[] {
   return useDBSelector((s) => s.customSurveyTypes ?? [], (a, b) => a === b);
 }
 
+export function ensureEditableSurveyType(typeId: SurveyType): CustomSurveyType {
+  const existing = getCustomSurveyType(typeId);
+  if (existing) return existing;
+
+  const builtInLabel = typeId;
+  const modules = getModulesForType(typeId);
+  const minimal = new Set((MODULE_PRESETS[typeId] ?? { minimal: [] }).minimal);
+  return createSurveyTypeFromBase({
+    label: builtInLabel,
+    moduleBindings: modules.map((m) => ({
+      moduleId: m.id,
+      requirement: minimal.has(m.id) ? "recomendado" : "opcional",
+    })),
+  });
+}
+
 export function getCustomSurveyType(id: string): CustomSurveyType | undefined {
   return (store.db.customSurveyTypes ?? []).find((c) => c.id === id);
 }

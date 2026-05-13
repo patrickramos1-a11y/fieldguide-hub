@@ -954,6 +954,7 @@ export function ensureEditableSurveyType(typeId: SurveyType): CustomSurveyType {
   return createSurveyTypeFromBase({
     label: builtInMeta.label,
     description: builtInMeta.description,
+    sourceTypeId: typeId,
     moduleBindings: modules.map((m) => ({
       moduleId: m.id,
       requirement: minimal.has(m.id) ? "recomendado" : "opcional",

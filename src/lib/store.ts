@@ -13,11 +13,8 @@ import {
 } from "./modules";
 import { BUILTIN_SURVEY_TYPE_IDS, SURVEY_TYPES } from "./types";
 import { DEFAULT_BUILTIN_ICONS } from "./typeIcons";
-
-const KEY = "ramos_eng_db_v1";
-const INDEXED_DB_NAME = "ramos-eng-db";
-const INDEXED_DB_STORE = "app-state";
-const INDEXED_DB_RECORD = "snapshot";
+import { supabase } from "@/integrations/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 interface DB {
   clients: Client[];
@@ -33,6 +30,7 @@ interface DBStatus {
   hydrated: boolean;
   persistPending: boolean;
   persistenceError?: string;
+  authed: boolean;
 }
 
 interface StoreRuntime {
@@ -40,9 +38,13 @@ interface StoreRuntime {
   status: DBStatus;
   listeners: Set<() => void>;
   initPromise?: Promise<void>;
-  idbPromise?: Promise<IDBDatabase>;
-  persistTimer?: number;
-  persistChain: Promise<void>;
+  lastSyncedDb: DB;
+  syncTimer?: number;
+  syncChain: Promise<void>;
+  channel?: RealtimeChannel;
+  authBound: boolean;
+  userId?: string;
+  pendingFlush: boolean;
 }
 
 const EMPTY_DB: DB = {
@@ -80,8 +82,6 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
 
 function normalizeSurvey(survey: Survey): Survey {
   const nextModules = { ...(survey.modules ?? {}) };
-
-  // Cobre módulos do tipo (builtin) e os módulos vinculados ao tipo personalizado, se houver.
   const moduleIdsToEnsure = new Set<string>(getModulesForType(survey.type).map((m) => m.id));
   if (survey.customTypeId) {
     const ct = (store.db.customSurveyTypes ?? []).find((c) => c.id === survey.customTypeId);
@@ -91,12 +91,9 @@ function normalizeSurvey(survey: Survey): Survey {
     const current = nextModules[id];
     nextModules[id] = current ? normalizeModuleState(current) : createModuleState();
   }
-  // Mantém módulos preexistentes (mesmo que não estejam em nenhum dos dois conjuntos)
   for (const [id, mod] of Object.entries(nextModules)) {
     nextModules[id] = normalizeModuleState(mod);
   }
-  void getModulesForType; // suprime warning de unused
-
   return {
     ...survey,
     modules: ensureLegacyAdapters(nextModules),
@@ -106,254 +103,265 @@ function normalizeSurvey(survey: Survey): Survey {
 }
 
 function normalizeDB(raw: Partial<DB> | null | undefined): DB {
-  const db: DB = {
-    clients: Array.isArray(raw?.clients) ? raw.clients : [],
-    empreendimentos: Array.isArray(raw?.empreendimentos) ? raw.empreendimentos : [],
-    projects: Array.isArray(raw?.projects) ? raw.projects : [],
-    surveys: Array.isArray(raw?.surveys) ? raw.surveys.map((survey) => normalizeSurvey(survey)) : [],
-    templates: Array.isArray(raw?.templates) ? raw.templates : [],
+  return {
+    clients: Array.isArray(raw?.clients) ? raw!.clients! : [],
+    empreendimentos: Array.isArray(raw?.empreendimentos) ? raw!.empreendimentos! : [],
+    projects: Array.isArray(raw?.projects) ? raw!.projects! : [],
+    surveys: Array.isArray(raw?.surveys) ? raw!.surveys!.map((s) => normalizeSurvey(s)) : [],
+    templates: Array.isArray(raw?.templates) ? raw!.templates! : [],
     formOverrides: (raw?.formOverrides && typeof raw.formOverrides === "object") ? raw.formOverrides as FormStructureOverrides : {},
-    customSurveyTypes: Array.isArray(raw?.customSurveyTypes) ? raw.customSurveyTypes : [],
+    customSurveyTypes: Array.isArray(raw?.customSurveyTypes) ? raw!.customSurveyTypes! : [],
   };
-
-  // Recupera clientes "órfãos": se um projeto/empreendimento/levantamento referencia
-  // um clientId que não existe mais na lista de clientes, recria um placeholder
-  // para que o usuário consiga acessar e renomear depois.
-  const knownClientIds = new Set(db.clients.map((c) => c.id));
-  const orphanClientIds = new Set<string>();
-  for (const e of db.empreendimentos) {
-    if (e.clientId && !knownClientIds.has(e.clientId)) orphanClientIds.add(e.clientId);
-  }
-  for (const p of db.projects) {
-    if (p.clientId && !knownClientIds.has(p.clientId)) orphanClientIds.add(p.clientId);
-  }
-  if (orphanClientIds.size > 0) {
-    const recovered: Client[] = Array.from(orphanClientIds).map((cid, idx) => ({
-      id: cid,
-      name: `Cliente recuperado ${idx + 1}`,
-      personType: "PJ",
-      notes: "Registro reconstruído automaticamente — confira e atualize os dados.",
-      createdAt: new Date().toISOString(),
-    }));
-    db.clients = [...recovered, ...db.clients];
-  }
-
-  return db;
-}
-
-function isEmptyDB(nextDB: DB) {
-  return nextDB.clients.length === 0
-    && nextDB.empreendimentos.length === 0
-    && nextDB.projects.length === 0
-    && nextDB.surveys.length === 0
-    && nextDB.templates.length === 0;
-}
-
-function loadLegacyLocalStorage(): DB {
-  if (typeof window === "undefined") return EMPTY_DB;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return EMPTY_DB;
-    return normalizeDB(JSON.parse(raw));
-  } catch {
-    return EMPTY_DB;
-  }
-}
-
-function saveLegacyLocalStorage(nextDB: DB) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(nextDB));
-  } catch (error) {
-    console.error("Falha ao criar backup local dos dados", error);
-  }
 }
 
 const runtimeGlobal = globalThis as typeof globalThis & {
   __ramosStoreRuntime?: StoreRuntime;
-  __ramosPersistLifecycleBound?: boolean;
 };
 
-const store = runtimeGlobal.__ramosStoreRuntime ??= {
+const store: StoreRuntime = runtimeGlobal.__ramosStoreRuntime ??= {
   db: EMPTY_DB,
-  status: { hydrated: typeof window === "undefined", persistPending: false },
+  status: { hydrated: typeof window === "undefined", persistPending: false, authed: false },
   listeners: new Set<() => void>(),
-  persistChain: Promise.resolve(),
+  syncChain: Promise.resolve(),
+  authBound: false,
+  pendingFlush: false,
+  lastSyncedDb: EMPTY_DB,
 };
 
 function emit() {
-  store.listeners.forEach((listener) => listener());
+  store.listeners.forEach((l) => l());
 }
 
 function syncGlobalOverrides() {
   setGlobalFormOverrides(store.db.formOverrides);
 }
 
-function openIndexedDB() {
-  if (typeof window === "undefined" || !("indexedDB" in window)) {
-    return Promise.reject(new Error("IndexedDB indisponível neste navegador."));
+/* =================== Supabase sync =================== */
+
+type TableName = "clients" | "empreendimentos" | "projects" | "surveys" | "survey_templates" | "custom_survey_types";
+
+function rowFor(table: TableName, item: any): Record<string, any> {
+  switch (table) {
+    case "clients": return { id: item.id, data: item };
+    case "empreendimentos": return { id: item.id, client_id: item.clientId, data: item };
+    case "projects": return { id: item.id, client_id: item.clientId, empreendimento_id: item.empreendimentoId ?? null, data: item };
+    case "surveys": return { id: item.id, project_id: item.projectId, data: item };
+    case "survey_templates": return { id: item.id, data: item };
+    case "custom_survey_types": return { id: item.id, data: item };
   }
+}
 
-  if (!store.idbPromise) {
-    store.idbPromise = new Promise<IDBDatabase>((resolve, reject) => {
-      const request = window.indexedDB.open(INDEXED_DB_NAME, 1);
-
-      request.onupgradeneeded = () => {
-        const database = request.result;
-        if (!database.objectStoreNames.contains(INDEXED_DB_STORE)) {
-          database.createObjectStore(INDEXED_DB_STORE);
-        }
-      };
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error ?? new Error("Não foi possível abrir o armazenamento local."));
-    });
+async function diffTable<T extends { id: string }>(
+  table: TableName,
+  before: T[],
+  after: T[],
+) {
+  const beforeMap = new Map(before.map((x) => [x.id, x]));
+  const afterMap = new Map(after.map((x) => [x.id, x]));
+  const upserts: any[] = [];
+  for (const [id, item] of afterMap) {
+    const prev = beforeMap.get(id);
+    if (prev !== item) upserts.push(rowFor(table, item));
   }
-
-  return store.idbPromise;
+  const deletes: string[] = [];
+  for (const id of beforeMap.keys()) if (!afterMap.has(id)) deletes.push(id);
+  if (upserts.length) {
+    const { error } = await supabase.from(table).upsert(upserts);
+    if (error) console.error(`[sync] upsert ${table}`, error);
+  }
+  if (deletes.length) {
+    const { error } = await supabase.from(table).delete().in("id", deletes);
+    if (error) console.error(`[sync] delete ${table}`, error);
+  }
 }
 
-async function readIndexedDB(): Promise<DB | null> {
-  const database = await openIndexedDB();
-
-  return new Promise<DB | null>((resolve, reject) => {
-    const transaction = database.transaction(INDEXED_DB_STORE, "readonly");
-    const request = transaction.objectStore(INDEXED_DB_STORE).get(INDEXED_DB_RECORD);
-
-    request.onsuccess = () => {
-      resolve(request.result ? normalizeDB(request.result as Partial<DB>) : null);
-    };
-    request.onerror = () => reject(request.error ?? new Error("Não foi possível ler os dados locais."));
-  });
-}
-
-async function writeIndexedDB(nextDB: DB) {
-  const database = await openIndexedDB();
-
-  await new Promise<void>((resolve, reject) => {
-    const transaction = database.transaction(INDEXED_DB_STORE, "readwrite");
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error ?? new Error("Não foi possível salvar os dados locais."));
-    transaction.objectStore(INDEXED_DB_STORE).put(nextDB, INDEXED_DB_RECORD);
-  });
-}
-
-async function loadPersistedDB() {
-  let indexed: DB | null = null;
+async function flushSync() {
+  if (!store.userId) return;
+  const before = store.lastSyncedDb;
+  const after = store.db;
+  store.lastSyncedDb = after;
   try {
-    indexed = await readIndexedDB();
-  } catch (error) {
-    console.warn("Falha ao ler IndexedDB, usando backup legado.", error);
-  }
-
-  const legacy = loadLegacyLocalStorage();
-
-  // Mescla IndexedDB e backup legado priorizando o snapshot mais "rico" para cada
-  // coleção. Isso recupera clientes/projetos que ficaram apenas no backup legado
-  // após uma migração parcial para o IndexedDB.
-  if (indexed && !isEmptyDB(legacy)) {
-    const merged = mergeDBs(indexed, legacy);
-    if (!isEmptyDB(merged)) {
-      try { await writeIndexedDB(merged); } catch { /* ignore */ }
-      return merged;
+    await Promise.all([
+      diffTable("clients", before.clients, after.clients),
+      diffTable("empreendimentos", before.empreendimentos, after.empreendimentos),
+      diffTable("projects", before.projects, after.projects),
+      diffTable("surveys", before.surveys, after.surveys),
+      diffTable("survey_templates", before.templates, after.templates),
+      diffTable("custom_survey_types", before.customSurveyTypes, after.customSurveyTypes),
+    ]);
+    if (before.formOverrides !== after.formOverrides) {
+      const { error } = await supabase.from("form_overrides").upsert({ id: "singleton", data: after.formOverrides as any });
+      if (error) console.error("[sync] upsert form_overrides", error);
     }
-  }
-
-  if (indexed && !isEmptyDB(indexed)) return indexed;
-
-  if (!isEmptyDB(legacy)) {
-    try {
-      await writeIndexedDB(legacy);
-    } catch (error) {
-      console.warn("Falha ao migrar dados legados para IndexedDB.", error);
-    }
-    return legacy;
-  }
-
-  return EMPTY_DB;
-}
-
-function mergeById<T extends { id: string }>(a: T[], b: T[]): T[] {
-  const map = new Map<string, T>();
-  for (const item of a) map.set(item.id, item);
-  for (const item of b) if (!map.has(item.id)) map.set(item.id, item);
-  return Array.from(map.values());
-}
-
-function mergeDBs(a: DB, b: DB): DB {
-  return normalizeDB({
-    clients: mergeById(a.clients, b.clients),
-    empreendimentos: mergeById(a.empreendimentos, b.empreendimentos),
-    projects: mergeById(a.projects, b.projects),
-    surveys: mergeById(a.surveys, b.surveys),
-    templates: mergeById(a.templates ?? [], b.templates ?? []),
-    customSurveyTypes: mergeById(a.customSurveyTypes ?? [], b.customSurveyTypes ?? []),
-  });
-}
-
-async function flushPersist(snapshot: DB) {
-  try {
-    await writeIndexedDB(snapshot);
     store.status = { ...store.status, persistPending: false, persistenceError: undefined };
-  } catch (error) {
-    console.error("Falha ao persistir dados no navegador", error);
-    saveLegacyLocalStorage(snapshot);
-    store.status = {
-      ...store.status,
-      persistPending: false,
-      persistenceError: "Alguns dados foram mantidos em backup local por segurança.",
-    };
+  } catch (err) {
+    console.error("[sync] flush failed", err);
+    store.status = { ...store.status, persistPending: false, persistenceError: "Falha ao sincronizar com o servidor." };
   }
   emit();
 }
 
-function queuePersist(immediate = false) {
+function queueSync(immediate = false) {
   if (typeof window === "undefined") return;
-
-  const schedule = () => {
-    store.persistTimer = undefined;
-    const snapshot = store.db;
-    store.persistChain = store.persistChain.then(() => flushPersist(snapshot));
-  };
-
+  if (!store.userId) return;
   store.status = { ...store.status, persistPending: true, persistenceError: undefined };
   emit();
-
-  if (store.persistTimer) {
-    window.clearTimeout(store.persistTimer);
+  if (store.syncTimer) {
+    window.clearTimeout(store.syncTimer);
+    store.syncTimer = undefined;
   }
-
-  if (immediate) {
-    schedule();
-    return;
-  }
-
-  store.persistTimer = window.setTimeout(schedule, 120);
+  const schedule = () => {
+    store.syncTimer = undefined;
+    store.syncChain = store.syncChain.then(() => flushSync());
+  };
+  if (immediate) schedule();
+  else store.syncTimer = window.setTimeout(schedule, 200);
 }
 
-function ensureInitialized() {
-  if (typeof window === "undefined" || store.initPromise) return;
+/* =================== Realtime in =================== */
 
-  store.status = { ...store.status, hydrated: false };
-  store.initPromise = loadPersistedDB()
-    .then((loaded) => {
-      store.db = loaded;
-      setGlobalFormOverrides(store.db.formOverrides);
-    })
-    .catch((error) => {
-      console.error("Falha ao carregar dados locais", error);
-      store.status = {
-        ...store.status,
-        persistenceError: "Não foi possível carregar o armazenamento local salvo.",
-      };
-    })
-    .finally(() => {
-      store.status = { ...store.status, hydrated: true };
-      emit();
+function applyRealtimeChange(table: TableName | "form_overrides", payload: any) {
+  const event: "INSERT" | "UPDATE" | "DELETE" = payload.eventType;
+  const newRow = payload.new;
+  const oldRow = payload.old;
+  const next: DB = { ...store.db };
+
+  const upsertItem = <T extends { id: string }>(arr: T[], item: T): T[] => {
+    const idx = arr.findIndex((x) => x.id === item.id);
+    if (idx === -1) return [item, ...arr];
+    const copy = arr.slice();
+    copy[idx] = item;
+    return copy;
+  };
+  const removeItem = <T extends { id: string }>(arr: T[], id: string): T[] => arr.filter((x) => x.id !== id);
+
+  if (table === "form_overrides") {
+    if (event === "DELETE") next.formOverrides = {};
+    else next.formOverrides = (newRow?.data ?? {}) as FormStructureOverrides;
+  } else {
+    const id = (newRow?.id ?? oldRow?.id) as string;
+    const item = newRow?.data;
+    const apply = <K extends keyof DB>(key: K) => {
+      const arr = next[key] as any[];
+      if (event === "DELETE") next[key] = removeItem(arr as any, id) as any;
+      else if (item) {
+        const value = key === "surveys" ? normalizeSurvey(item) : item;
+        next[key] = upsertItem(arr as any, value) as any;
+      }
+    };
+    switch (table) {
+      case "clients": apply("clients"); break;
+      case "empreendimentos": apply("empreendimentos"); break;
+      case "projects": apply("projects"); break;
+      case "surveys": apply("surveys"); break;
+      case "survey_templates": apply("templates"); break;
+      case "custom_survey_types": apply("customSurveyTypes"); break;
+    }
+  }
+
+  store.db = next;
+  store.lastSyncedDb = next; // remote already authoritative
+  syncGlobalOverrides();
+  emit();
+}
+
+function subscribeRealtime() {
+  if (store.channel) return;
+  const ch = supabase.channel("workspace");
+  const tables: (TableName | "form_overrides")[] = [
+    "clients", "empreendimentos", "projects", "surveys",
+    "survey_templates", "custom_survey_types", "form_overrides",
+  ];
+  for (const t of tables) {
+    ch.on("postgres_changes", { event: "*", schema: "public", table: t }, (payload) => {
+      applyRealtimeChange(t, payload);
     });
+  }
+  ch.subscribe();
+  store.channel = ch;
 }
 
-ensureInitialized();
+function unsubscribeRealtime() {
+  if (store.channel) {
+    supabase.removeChannel(store.channel);
+    store.channel = undefined;
+  }
+}
+
+/* =================== Initial load =================== */
+
+async function fetchAll(): Promise<DB> {
+  const [clients, emp, projects, surveys, templates, custom, fo] = await Promise.all([
+    supabase.from("clients").select("data"),
+    supabase.from("empreendimentos").select("data"),
+    supabase.from("projects").select("data"),
+    supabase.from("surveys").select("data"),
+    supabase.from("survey_templates").select("data"),
+    supabase.from("custom_survey_types").select("data"),
+    supabase.from("form_overrides").select("data").eq("id", "singleton").maybeSingle(),
+  ]);
+  return normalizeDB({
+    clients: (clients.data ?? []).map((r: any) => r.data),
+    empreendimentos: (emp.data ?? []).map((r: any) => r.data),
+    projects: (projects.data ?? []).map((r: any) => r.data),
+    surveys: (surveys.data ?? []).map((r: any) => r.data),
+    templates: (templates.data ?? []).map((r: any) => r.data),
+    customSurveyTypes: (custom.data ?? []).map((r: any) => r.data),
+    formOverrides: (fo.data?.data ?? {}) as FormStructureOverrides,
+  });
+}
+
+async function initForUser(userId: string) {
+  store.userId = userId;
+  store.status = { ...store.status, hydrated: false, authed: true };
+  emit();
+  try {
+    const loaded = await fetchAll();
+    store.db = loaded;
+    store.lastSyncedDb = loaded;
+    syncGlobalOverrides();
+    subscribeRealtime();
+    seedBuiltInSurveyTypes();
+  } catch (err) {
+    console.error("[sync] initial load failed", err);
+    store.status = { ...store.status, persistenceError: "Falha ao carregar dados do servidor." };
+  } finally {
+    store.status = { ...store.status, hydrated: true };
+    emit();
+  }
+}
+
+function clearForLogout() {
+  store.userId = undefined;
+  unsubscribeRealtime();
+  store.db = EMPTY_DB;
+  store.lastSyncedDb = EMPTY_DB;
+  store.status = { ...store.status, hydrated: true, authed: false, persistPending: false, persistenceError: undefined };
+  syncGlobalOverrides();
+  emit();
+}
+
+function bindAuth() {
+  if (typeof window === "undefined" || store.authBound) return;
+  store.authBound = true;
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) {
+      void initForUser(session.user.id);
+    } else {
+      store.status = { ...store.status, hydrated: true, authed: false };
+      emit();
+    }
+  });
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user && session.user.id !== store.userId) {
+      void initForUser(session.user.id);
+    } else if (!session?.user && store.userId) {
+      clearForLogout();
+    }
+  });
+}
+
+bindAuth();
 
 /** Garante que cada tipo embutido exista como CustomSurveyType editável. */
 function seedBuiltInSurveyTypes() {
@@ -391,33 +399,8 @@ function seedBuiltInSurveyTypes() {
   }
 }
 
-if (typeof window !== "undefined") {
-  if (store.status.hydrated) {
-    seedBuiltInSurveyTypes();
-  } else if (store.initPromise) {
-    store.initPromise.then(() => seedBuiltInSurveyTypes());
-  }
-}
-
-if (typeof window !== "undefined" && !runtimeGlobal.__ramosPersistLifecycleBound) {
-  const flushBeforeExit = () => {
-    if (store.persistTimer) {
-      window.clearTimeout(store.persistTimer);
-      store.persistTimer = undefined;
-    }
-    saveLegacyLocalStorage(store.db);
-    queuePersist(true);
-  };
-
-  window.addEventListener("pagehide", flushBeforeExit);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushBeforeExit();
-  });
-  runtimeGlobal.__ramosPersistLifecycleBound = true;
-}
-
 function persist() {
-  queuePersist();
+  queueSync();
   emit();
 }
 
@@ -441,7 +424,7 @@ function getStatusSnapshot() {
 }
 
 function getServerStatusSnapshot(): DBStatus {
-  return { hydrated: false, persistPending: false };
+  return { hydrated: false, persistPending: false, authed: false };
 }
 
 export function useDB() {
@@ -483,6 +466,7 @@ export function useDBSelector<T>(selector: (state: DB) => T, isEqual: (a: T, b: 
 }
 
 const id = () => Math.random().toString(36).slice(2, 11);
+
 
 export function addClient(data: Omit<Client, "id" | "createdAt">) {
   const client: Client = { ...data, id: id(), createdAt: new Date().toISOString() };

@@ -4,9 +4,13 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useLocation,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 
@@ -117,7 +121,35 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <AuthGate>
+        <Outlet />
+      </AuthGate>
     </QueryClientProvider>
   );
+}
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const [authed, setAuthed] = useState<boolean | undefined>(undefined);
+  const loc = useLocation();
+  const navigate = useNavigate();
+  const isPublic = loc.pathname === "/login" || loc.pathname === "/reset-password";
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setAuthed(!!session?.user);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => setAuthed(!!session?.user));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (authed === false && !isPublic) navigate({ to: "/login" });
+    if (authed === true && loc.pathname === "/login") navigate({ to: "/" });
+  }, [authed, isPublic, loc.pathname, navigate]);
+
+  if (authed === undefined) {
+    return <div className="min-h-screen grid place-items-center text-sm text-muted-foreground">Carregando...</div>;
+  }
+  if (!authed && !isPublic) return null;
+  return <>{children}</>;
 }

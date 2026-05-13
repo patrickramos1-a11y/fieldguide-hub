@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import {
 import {
   ArrowLeft, ChevronRight, Layers, ListTree, Pencil, Plus, EyeOff, Eye,
   Trash2, ChevronUp, ChevronDown, RotateCcw, Search, Palette,
+  PanelLeftClose, PanelLeftOpen, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, getEffectiveModulesForCustomType } from "@/lib/modules";
@@ -83,8 +84,27 @@ const REQUIREMENT_LABEL: Record<ModuleRequirement, string> = {
   opcional: "Opcional",
 };
 
+const REQ_SHORT: Record<ModuleRequirement, string> = {
+  obrigatorio: "Obr",
+  recomendado: "Rec",
+  opcional: "Opc",
+};
+
+const REQ_CYCLE: Record<ModuleRequirement, ModuleRequirement> = {
+  obrigatorio: "recomendado",
+  recomendado: "opcional",
+  opcional: "obrigatorio",
+};
+
+const REQ_STYLE: Record<ModuleRequirement, string> = {
+  obrigatorio: "bg-destructive/15 text-destructive border-destructive/30",
+  recomendado: "bg-primary/10 text-primary border-primary/30",
+  opcional: "bg-muted text-muted-foreground border-border",
+};
+
 function TipoBuilderPage() {
   const { typeId } = Route.useParams();
+  const navigate = useNavigate();
   const customs = useCustomSurveyTypes();
   const ct = customs.find((c) => c.id === typeId);
   const globalOverrides = useDBSelector((s) => s.formOverrides ?? {}, (a, b) => a === b);
@@ -97,6 +117,13 @@ function TipoBuilderPage() {
   const [renamingHeader, setRenamingHeader] = useState(false);
   const [labelDraft, setLabelDraft] = useState("");
   const [descDraft, setDescDraft] = useState("");
+
+  const [collapsed, setCollapsed] = useState<Record<"avail" | "mods" | "subs" | "fields", boolean>>({
+    avail: false, mods: false, subs: false, fields: false,
+  });
+  function toggleCol(k: "avail" | "mods" | "subs" | "fields") {
+    setCollapsed((c) => ({ ...c, [k]: !c[k] }));
+  }
 
   useEffect(() => {
     if (ct) { setLabelDraft(ct.label); setDescDraft(ct.description ?? ""); }
@@ -250,15 +277,38 @@ function TipoBuilderPage() {
             </div>
           )}
         </div>
+        <Button
+          size="sm"
+          onClick={() => { toast.success("Edições salvas."); navigate({ to: "/configuracoes" }); }}
+          className="mt-0.5 shrink-0"
+        >
+          <Check className="h-4 w-4 mr-1" /> Salvar e voltar
+        </Button>
       </header>
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_1.4fr] min-h-[64vh]">
+      <div
+        className="grid gap-3 min-h-[64vh]"
+        style={{
+          gridTemplateColumns: [
+            collapsed.avail ? "44px" : "minmax(0,1.05fr)",
+            collapsed.mods ? "44px" : "minmax(0,1.15fr)",
+            collapsed.subs ? "44px" : "minmax(0,0.95fr)",
+            collapsed.fields ? "44px" : "minmax(0,1fr)",
+          ].join(" "),
+        }}
+      >
         {/* Coluna 1 — Módulos disponíveis */}
+        {collapsed.avail ? (
+          <CollapsedRail label="Disponíveis" count={availableModules.length} icon={Plus} onExpand={() => toggleCol("avail")} />
+        ) : (
         <Card className="flex flex-col overflow-hidden">
           <div className="px-3 py-2 border-b bg-muted/30 flex items-center gap-2">
             <Plus className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Disponíveis</span>
             <Badge variant="outline" className="ml-auto text-[10px]">{availableModules.length}</Badge>
+            <button onClick={() => toggleCol("avail")} className="text-muted-foreground hover:text-foreground" title="Recolher">
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </button>
           </div>
           <div className="px-2 py-1.5 border-b">
             <div className="relative">
@@ -295,13 +345,20 @@ function TipoBuilderPage() {
             )}
           </ul>
         </Card>
+        )}
 
         {/* Coluna 2 — Módulos do tipo */}
+        {collapsed.mods ? (
+          <CollapsedRail label="Módulos do tipo" count={ct.moduleBindings.length} icon={Layers} onExpand={() => toggleCol("mods")} />
+        ) : (
         <Card className="flex flex-col overflow-hidden">
           <div className="px-3 py-2 border-b bg-muted/30 flex items-center gap-2">
             <Layers className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Módulos do tipo</span>
             <Badge variant="outline" className="ml-auto text-[10px]">{ct.moduleBindings.length}</Badge>
+            <button onClick={() => toggleCol("mods")} className="text-muted-foreground hover:text-foreground" title="Recolher">
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </button>
           </div>
           <ul className="flex-1 overflow-y-auto divide-y max-h-[58vh]">
             {ct.moduleBindings.length === 0 && (
@@ -315,26 +372,21 @@ function TipoBuilderPage() {
               const active = m.id === moduleId;
               return (
                 <li key={b.moduleId}>
-                  <div className={`flex items-stretch ${active ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-secondary/50"}`}>
-                    <div className="flex-1 min-w-0 px-3 py-2">
-                      <button onClick={() => { setModuleId(m.id); setSubgroupId(null); }} className="w-full text-left min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono text-muted-foreground w-5">{String(idx + 1).padStart(2, "0")}</span>
-                          <span className="text-sm font-medium truncate flex-1">{m.title}</span>
-                        </div>
-                      </button>
-                      <div className="flex items-center gap-1.5 mt-1 ml-7">
-                        <Select value={b.requirement} onValueChange={(v) => changeRequirement(m.id, v as ModuleRequirement)}>
-                          <SelectTrigger className="h-6 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {(["obrigatorio","recomendado","opcional"] as ModuleRequirement[]).map((r) => (
-                              <SelectItem key={r} value={r} className="text-xs">{REQUIREMENT_LABEL[r]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                  <div className={`flex items-center ${active ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-secondary/50"}`}>
+                    <button onClick={() => { setModuleId(m.id); setSubgroupId(null); }} className="flex-1 text-left min-w-0 px-2.5 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-muted-foreground w-5 shrink-0">{String(idx + 1).padStart(2, "0")}</span>
+                        <span className="text-[13px] font-medium truncate flex-1">{m.title}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); changeRequirement(m.id, REQ_CYCLE[b.requirement]); }}
+                          title={`Requisito: ${REQUIREMENT_LABEL[b.requirement]} (clique para alternar)`}
+                          className={`text-[9px] uppercase tracking-wide rounded border px-1.5 py-0.5 ${REQ_STYLE[b.requirement]}`}
+                        >
+                          {REQ_SHORT[b.requirement]}
+                        </button>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-center justify-center gap-0.5 px-1.5 border-l">
+                    </button>
+                    <div className="flex flex-col items-center justify-center px-1 border-l">
                       <button onClick={() => moveTypeModule(ct.id, m.id, -1)} className="p-0.5 text-muted-foreground hover:text-foreground" title="Subir">
                         <ChevronUp className="h-3 w-3" />
                       </button>
@@ -355,13 +407,20 @@ function TipoBuilderPage() {
             })}
           </ul>
         </Card>
+        )}
 
         {/* Coluna 3 — Subgrupos */}
+        {collapsed.subs ? (
+          <CollapsedRail label="Subgrupos" count={subgroups.length} icon={ListTree} onExpand={() => toggleCol("subs")} />
+        ) : (
         <Card className="flex flex-col overflow-hidden">
           <div className="px-3 py-2 border-b bg-muted/30 flex items-center gap-2">
             <ListTree className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Subgrupos</span>
             <Badge variant="outline" className="ml-auto text-[10px]">{subgroups.length}</Badge>
+            <button onClick={() => toggleCol("subs")} className="text-muted-foreground hover:text-foreground" title="Recolher">
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </button>
           </div>
           {selectedModule ? (
             <>
@@ -403,13 +462,20 @@ function TipoBuilderPage() {
             <div className="p-6 text-center text-xs text-muted-foreground">Selecione um módulo</div>
           )}
         </Card>
+        )}
 
         {/* Coluna 4 — Campos */}
+        {collapsed.fields ? (
+          <CollapsedRail label="Campos / Perguntas" count={selectedSub?.fields.length ?? 0} icon={Pencil} onExpand={() => toggleCol("fields")} />
+        ) : (
         <Card className="flex flex-col overflow-hidden">
           <div className="px-3 py-2 border-b bg-muted/30 flex items-center gap-2">
             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Campos / Perguntas</span>
             <Badge variant="outline" className="ml-auto text-[10px]">{selectedSub?.fields.length ?? 0}</Badge>
+            <button onClick={() => toggleCol("fields")} className="text-muted-foreground hover:text-foreground" title="Recolher">
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </button>
           </div>
           {selectedSub && selectedModule ? (
             <>
@@ -452,6 +518,7 @@ function TipoBuilderPage() {
             <div className="p-6 text-center text-xs text-muted-foreground">Selecione um subgrupo</div>
           )}
         </Card>
+        )}
       </div>
 
       <ScopedFieldEditorSheet
@@ -461,6 +528,30 @@ function TipoBuilderPage() {
         onClose={() => setEditingField(null)}
       />
     </AppShell>
+  );
+}
+
+function CollapsedRail({
+  label, count, icon: Icon, onExpand,
+}: {
+  label: string; count: number; icon: React.ComponentType<{ className?: string }>; onExpand: () => void;
+}) {
+  return (
+    <Card
+      className="flex flex-col items-center py-2 gap-2 cursor-pointer hover:bg-secondary/40 transition-colors"
+      onClick={onExpand}
+      title={`Expandir: ${label}`}
+    >
+      <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <Badge variant="outline" className="text-[10px] px-1.5">{count}</Badge>
+      <div
+        className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold whitespace-nowrap"
+        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+      >
+        {label}
+      </div>
+    </Card>
   );
 }
 

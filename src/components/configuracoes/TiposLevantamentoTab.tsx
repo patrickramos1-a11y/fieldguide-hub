@@ -146,6 +146,7 @@ function BuiltinDetail({ typeId, onOpenStructure }: { typeId: SurveyType; onOpen
   const t = SURVEY_TYPES.find((x) => x.id === typeId)!;
   const modules = getModulesForType(typeId);
   const minimal = new Set(MODULE_PRESETS[typeId].minimal);
+  const navigate = useNavigate();
 
   return (
     <>

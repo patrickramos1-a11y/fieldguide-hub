@@ -78,10 +78,21 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
 function normalizeSurvey(survey: Survey): Survey {
   const nextModules = { ...(survey.modules ?? {}) };
 
-  for (const mod of getModulesForType(survey.type)) {
-    const current = nextModules[mod.id];
-    nextModules[mod.id] = current ? normalizeModuleState(current) : createModuleState();
+  // Cobre módulos do tipo (builtin) e os módulos vinculados ao tipo personalizado, se houver.
+  const moduleIdsToEnsure = new Set<string>(getModulesForType(survey.type).map((m) => m.id));
+  if (survey.customTypeId) {
+    const ct = (store.db.customSurveyTypes ?? []).find((c) => c.id === survey.customTypeId);
+    ct?.moduleBindings.forEach((b) => moduleIdsToEnsure.add(b.moduleId));
   }
+  for (const id of moduleIdsToEnsure) {
+    const current = nextModules[id];
+    nextModules[id] = current ? normalizeModuleState(current) : createModuleState();
+  }
+  // Mantém módulos preexistentes (mesmo que não estejam em nenhum dos dois conjuntos)
+  for (const [id, mod] of Object.entries(nextModules)) {
+    nextModules[id] = normalizeModuleState(mod);
+  }
+  void getModulesForType; // suprime warning de unused
 
   return {
     ...survey,

@@ -294,6 +294,8 @@ export interface Survey {
   closedAt?: string;
   /** Horário de saída registrado no encerramento. */
   closedAtSaida?: string;
+  /** Quando preenchido, o levantamento usa um tipo personalizado em vez do builtin. */
+  customTypeId?: string;
 }
 
 /** Template de configuração de módulos (reutilizável entre levantamentos). */

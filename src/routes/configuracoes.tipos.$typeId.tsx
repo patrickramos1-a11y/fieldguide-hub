@@ -616,7 +616,7 @@ function ScopedFieldEditorSheet({
       canBePending: canBePending || undefined,
       inReport: inReport ? undefined : false,
     };
-    setTypeFieldPatch(typeId, moduleId, editing!.subgroupId, editing!.field.id, patch);
+    setTypeFieldPatch(typeId, moduleId!, editing!.subgroupId, editing!.field.id, patch);
     toast.success("Campo atualizado neste tipo.");
     onClose();
   }

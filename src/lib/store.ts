@@ -988,6 +988,7 @@ export function createCustomSurveyType(data: { label?: string; description?: str
 export function createSurveyTypeFromBase(data: {
   label: string;
   description?: string;
+  sourceTypeId?: SurveyType;
   color?: string;
   icon?: string;
   moduleBindings: CustomTypeModuleBinding[];
@@ -997,6 +998,7 @@ export function createSurveyTypeFromBase(data: {
     id: genTypeId(),
     label: data.label.trim() || "Novo tipo de levantamento",
     description: data.description,
+    sourceTypeId: data.sourceTypeId,
     color: data.color,
     icon: data.icon,
     moduleBindings: data.moduleBindings.map((binding) => ({ ...binding })),

@@ -6,7 +6,7 @@ import {
   removeAttachment, addPendencia, removePendencia, setFieldNote, setFieldNA,
   setEnabledModules, useDBStatus, setModuleNA, setSubgroupNA, enableModule,
   closeSurvey, reopenSurvey, addTemplate, setSubgroupNote, setModuleDone,
-  setSubgroupDone,
+  setSubgroupDone, useEffectiveModulesForSurvey, useSurveyTypeMeta,
 } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import {
 import { FieldRenderer } from "@/components/FieldRenderer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ModuleConfigStep } from "@/components/ModuleConfigStep";
-import { SURVEY_TYPES, type FieldStatus, type FieldDef, type SubgroupDef, type ModuleState } from "@/lib/types";
+import { type FieldStatus, type FieldDef, type SubgroupDef, type ModuleState } from "@/lib/types";
 
 export const Route = createFileRoute("/levantamentos/$id/")({
   component: SurveyEditor,
@@ -92,7 +92,7 @@ function SurveyEditor() {
 function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActiveTab, persistPending, persistenceError }: {
   survey: any; projectName: string; clientName: string; activeTab: string; setActiveTab: (t: string) => void; persistPending?: boolean; persistenceError?: string;
 }) {
-  const allModules = getModulesForType(survey.type);
+  const allModules = useEffectiveModulesForSurvey(survey);
   const enabled: string[] = survey.enabledModules ?? allModules.map((m: any) => m.id);
   const enabledSet = useMemo(() => new Set(enabled), [enabled]);
   // Tabs comuns (módulos habilitados que não são centralizados)
@@ -119,7 +119,8 @@ function SurveyEditorReady({ survey, projectName, clientName, activeTab, setActi
     return c;
   }, [regularTabs, survey.modules]);
 
-  const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
+  const typeMeta = useSurveyTypeMeta(survey.type, survey.customTypeId);
+  const typeLabel = typeMeta.label;
 
   const isVirtual = activeTab === "__documentos" || activeTab === "__pendencias" || activeTab === "__encerramento";
   const activeModule = !isVirtual ? regularTabs.find((m) => m.id === activeTab) ?? regularTabs[0] : null;

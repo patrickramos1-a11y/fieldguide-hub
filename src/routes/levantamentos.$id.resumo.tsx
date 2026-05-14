@@ -1,10 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB, useDBStatus } from "@/lib/store";
+import { useDB, useDBStatus, useEffectiveModulesForSurvey, useSurveyTypeMeta } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
-import { getModulesForType } from "@/lib/modules";
-import { SURVEY_TYPES } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useEffect, useState } from "react";
 
@@ -50,8 +48,8 @@ function ResumoPage() {
   if (!survey) return <AppShell><p>Não encontrado.</p></AppShell>;
   const project = db.projects.find((p) => p.id === survey.projectId);
   const client = project ? db.clients.find((c) => c.id === project.clientId) : null;
-  const modules = getModulesForType(survey.type);
-  const typeLabel = SURVEY_TYPES.find((t) => t.id === survey.type)!.label;
+  const modules = useEffectiveModulesForSurvey(survey);
+  const typeLabel = useSurveyTypeMeta(survey.type, survey.customTypeId).label;
 
   return (
     <AppShell>

@@ -584,7 +584,7 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
   const dias = v.dias ?? ["Seg", "Ter", "Qua", "Qui", "Sex"];
 
   function applyPreset(next: HoursPreset) {
-    onChange({ ...v, preset: next, turnos: HOURS_PRESET_DEFAULTS[next] });
+    onChange({ ...v, preset: next, turnos: HOURS_PRESET_DEFAULTS[next], dias: HOURS_PRESET_DIAS[next] });
   }
   function updateTurno(idx: number, patch: Partial<HoursTurno>) {
     onChange({ ...v, turnos: turnos.map((t, i) => (i === idx ? { ...t, ...patch } : t)) });

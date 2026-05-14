@@ -157,7 +157,7 @@ export interface FieldDef {
   /** repeater item: campo opcional acessível via balão "Comentar". */
   commentable?: boolean;
   /** number: sugere valor calculado a partir de outros campos do módulo. */
-  suggestFrom?: { kind: "areaFromDims" };
+  suggestFrom?: { kind: "areaFromDims" | "areaFromVazao" };
   /** repeater: não memoriza presets globais (cada empresa é única). */
   noPresetMemory?: boolean;
 }

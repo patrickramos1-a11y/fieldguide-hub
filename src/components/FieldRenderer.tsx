@@ -822,6 +822,13 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           {value?.accuracy && <div className="text-xs text-muted-foreground">Precisão ~{Math.round(value.accuracy)}m</div>}
         </div>
       )}
+      {field.type === "geometries" && (
+        <GeometryManager
+          value={Array.isArray(value) ? (value as SurveyGeometry[]) : []}
+          onChange={onChange}
+          exportName={field.label || field.id}
+        />
+      )}
       {field.type === "people" && (
         <PeopleEditor value={value as Person[] | undefined} onChange={onChange} />
       )}

@@ -80,6 +80,37 @@ function normalizeModuleState(module?: Partial<ModuleState> | null): ModuleState
   };
 }
 
+function normalizeModuleBindings(bindings: unknown): CustomTypeModuleBinding[] {
+  if (!Array.isArray(bindings)) return [];
+  return bindings
+    .filter(
+      (binding): binding is { moduleId?: unknown; requirement?: unknown; color?: unknown } =>
+        !!binding && typeof binding === "object",
+    )
+    .map((binding) => ({
+      moduleId: typeof binding.moduleId === "string" ? binding.moduleId : "",
+      requirement:
+        binding.requirement === "obrigatorio"
+        || binding.requirement === "recomendado"
+        || binding.requirement === "opcional"
+          ? binding.requirement
+          : "opcional",
+      color: typeof binding.color === "string" ? binding.color : undefined,
+    }))
+    .filter((binding) => binding.moduleId);
+}
+
+function normalizeCustomSurveyType(type: CustomSurveyType): CustomSurveyType {
+  return {
+    ...type,
+    moduleBindings: normalizeModuleBindings(type.moduleBindings),
+    scopedOverrides:
+      type.scopedOverrides && typeof type.scopedOverrides === "object"
+        ? type.scopedOverrides
+        : {},
+  };
+}
+
 function normalizeSurvey(survey: Survey): Survey {
   const nextModules = { ...(survey.modules ?? {}) };
   const moduleIdsToEnsure = new Set<string>(getModulesForType(survey.type).map((m) => m.id));
@@ -110,7 +141,9 @@ function normalizeDB(raw: Partial<DB> | null | undefined): DB {
     surveys: Array.isArray(raw?.surveys) ? raw!.surveys!.map((s) => normalizeSurvey(s)) : [],
     templates: Array.isArray(raw?.templates) ? raw!.templates! : [],
     formOverrides: (raw?.formOverrides && typeof raw.formOverrides === "object") ? raw.formOverrides as FormStructureOverrides : {},
-    customSurveyTypes: Array.isArray(raw?.customSurveyTypes) ? raw!.customSurveyTypes! : [],
+    customSurveyTypes: Array.isArray(raw?.customSurveyTypes)
+      ? raw!.customSurveyTypes!.map((type) => normalizeCustomSurveyType(type))
+      : [],
   };
 }
 

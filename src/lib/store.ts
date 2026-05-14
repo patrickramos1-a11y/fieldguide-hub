@@ -87,16 +87,20 @@ function normalizeModuleBindings(bindings: unknown): CustomTypeModuleBinding[] {
       (binding): binding is { moduleId?: unknown; requirement?: unknown; color?: unknown } =>
         !!binding && typeof binding === "object",
     )
-    .map((binding) => ({
-      moduleId: typeof binding.moduleId === "string" ? binding.moduleId : "",
-      requirement:
+    .map((binding) => {
+      const requirement: ModuleRequirement =
         binding.requirement === "obrigatorio"
         || binding.requirement === "recomendado"
         || binding.requirement === "opcional"
           ? binding.requirement
-          : "opcional",
-      color: typeof binding.color === "string" ? binding.color : undefined,
-    }))
+          : "opcional";
+
+      return {
+        moduleId: typeof binding.moduleId === "string" ? binding.moduleId : "",
+        requirement,
+        color: typeof binding.color === "string" ? binding.color : undefined,
+      };
+    })
     .filter((binding) => binding.moduleId);
 }
 

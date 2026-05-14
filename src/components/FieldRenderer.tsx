@@ -564,8 +564,20 @@ function PeopleEditor({ value, onChange }: { value: Person[] | undefined; onChan
           </div>
           <div className="grid sm:grid-cols-2 gap-1.5">
             <div className="flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="Cargo / função" value={p.cargo ?? ""} onChange={(e) => update(idx, { cargo: e.target.value })} /></div>
-            <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="Telefone" value={p.telefone ?? ""} onChange={(e) => update(idx, { telefone: e.target.value })} /></div>
-            <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="E-mail" value={p.email ?? ""} onChange={(e) => update(idx, { email: e.target.value })} /></div>
+            <div className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <Input className="h-8" placeholder="Telefone (DDD) 9 9999-9999" value={p.telefone ?? ""} onChange={(e) => update(idx, { telefone: formatPhoneBR(e.target.value) })} />
+              {p.telefone && onlyDigits(p.telefone).length >= 10 && (
+                <a href={`https://wa.me/55${onlyDigits(p.telefone)}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline shrink-0" title="Abrir no WhatsApp">WhatsApp</a>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <Input className="h-8" placeholder="E-mail" value={p.email ?? ""} onChange={(e) => update(idx, { email: e.target.value })} />
+              {p.email && p.email.includes("@") && (
+                <a href={`mailto:${p.email}`} className="text-[11px] text-primary hover:underline shrink-0" title="Enviar e-mail">E-mail</a>
+              )}
+            </div>
             <div className="flex items-center gap-1.5"><IdCard className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="Documento / registro" value={p.registro ?? p.documento ?? ""} onChange={(e) => update(idx, { registro: e.target.value })} /></div>
           </div>
         </div>
@@ -581,7 +593,7 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
   const v: HoursValue = value && typeof value === "object" ? value : {};
   const preset: HoursPreset = (v.preset as HoursPreset) ?? "comercial";
   const turnos = v.turnos ?? [];
-  const dias = v.dias ?? ["Seg", "Ter", "Qua", "Qui", "Sex"];
+  const dias = v.dias ?? ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
   function applyPreset(next: HoursPreset) {
     onChange({ ...v, preset: next, turnos: HOURS_PRESET_DEFAULTS[next], dias: HOURS_PRESET_DIAS[next] });

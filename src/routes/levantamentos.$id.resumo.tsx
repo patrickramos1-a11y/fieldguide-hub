@@ -157,8 +157,8 @@ function ResumoPage() {
           <h2 className="font-semibold mb-3">Validação e Encerramento</h2>
             <div className="grid sm:grid-cols-3 gap-4 text-sm">
               <div><div className="text-muted-foreground">Cliente</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.modules.validacao?.values.assinatura_cliente ?? "—"}</div></div>
-              <div><div className="text-muted-foreground">Técnico</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.modules.validacao?.values.assinatura_tecnico ?? "—"}</div></div>
-              <div><div className="text-muted-foreground">Data</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.modules.validacao?.values.data_validacao ?? "—"}</div></div>
+              <div><div className="text-muted-foreground">Técnico</div><div className="border-t border-border pt-2 mt-8 font-medium">{(survey.modules.pessoas?.values.tecnicos as Array<{ nome?: string }> | undefined)?.map((p) => p?.nome).filter(Boolean).join(", ") || "—"}</div></div>
+              <div><div className="text-muted-foreground">Data</div><div className="border-t border-border pt-2 mt-8 font-medium">{survey.date ?? "—"}</div></div>
           </div>
         </CardContent></Card>
       </div>

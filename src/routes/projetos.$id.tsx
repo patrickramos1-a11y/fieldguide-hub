@@ -30,6 +30,12 @@ function ProjetoDetail() {
   const [type, setType] = useState<SurveyType>(allTypes[0]?.id ?? "geral");
   const [title, setTitle] = useState("");
 
+  useEffect(() => {
+    if (!allTypes.find((entry) => entry.id === type) && allTypes[0]?.id) {
+      setType(allTypes[0].id);
+    }
+  }, [allTypes, type]);
+
   if (!mounted || !hydrated) return <AppShell><p>Carregando projeto...</p></AppShell>;
   if (!project) return <AppShell><p>Projeto não encontrado.</p></AppShell>;
 

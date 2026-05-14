@@ -4,7 +4,7 @@ import { getSurveyTypeMeta, useCustomSurveyTypes, useDB, addSurveyExt, deleteSur
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2, ClipboardList } from "lucide-react";
-import { SURVEY_TYPES, type SurveyType } from "@/lib/types";
+import { type SurveyType } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

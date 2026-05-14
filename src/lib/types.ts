@@ -160,6 +160,12 @@ export interface FieldDef {
   suggestFrom?: { kind: "areaFromDims" | "areaFromVazao" };
   /** repeater: não memoriza presets globais (cada empresa é única). */
   noPresetMemory?: boolean;
+  /** repeater (primeiro field): mapeia valor → cor (CSS) usada na borda do item. */
+  colorByValue?: Record<string, string>;
+  /** repeater item field: ao mudar o campo `from`, sugere valor pelo `map` se estiver vazio. */
+  autoLink?: { from: string; map: Record<string, string> };
+  /** repeater item field: mostra botão "aplicar a outros" para copiar este valor para os demais itens. */
+  applyToOthers?: boolean;
 }
 
 export interface ModuleDef {

@@ -435,7 +435,24 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
     setPickerSel((cur) => cur.includes(opt) ? cur.filter((x) => x !== opt) : [...cur, opt]);
   }
   function updateItem(idx: number, patch: Record<string, any>) {
-    onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+    onChange(items.map((it, i) => {
+      if (i !== idx) return it;
+      const merged = { ...it, ...patch };
+      // autoLink: para cada itemField com autoLink, se o campo `from` mudou e o destino estiver vazio, preenche pelo map.
+      for (const f of itemFields) {
+        if (!f.autoLink) continue;
+        const fromId = f.autoLink.from;
+        if (!(fromId in patch)) continue;
+        const cur = merged[f.id];
+        if (cur != null && cur !== "") continue;
+        const mapped = f.autoLink.map[String(patch[fromId] ?? "")];
+        if (mapped) merged[f.id] = mapped;
+      }
+      return merged;
+    }));
+  }
+  function applyToOthers(idx: number, fieldId: string, value: any) {
+    onChange(items.map((it, i) => (i === idx ? it : { ...it, [fieldId]: value })));
   }
   function removeItem(idx: number) {
     onChange(items.filter((_, i) => i !== idx));
@@ -444,6 +461,7 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
 
   // Primeiro field é tratado como "rótulo" do item
   const labelField = itemFields[0];
+  const colorByValue = labelField?.colorByValue;
 
   // Picker de presets (se primeiro field for button-select com options)
   const presets: string[] = labelField?.options ?? [];
@@ -454,17 +472,22 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
       {items.map((it, idx) => {
         const open = openIdx === idx;
         const labelVal = labelField ? it[labelField.id] : "";
+        const itemColor = colorByValue?.[String(labelVal ?? "")];
         const summaryParts = itemFields.slice(1).map((f) => {
           const val = it[f.id];
           if (val == null || val === "") return null;
           return `${f.label}: ${Array.isArray(val) ? val.join(", ") : val}${f.unit ? ` ${f.unit}` : ""}`;
         }).filter(Boolean);
         return (
-          <div key={it.__id ?? idx} className="rounded-md border border-border bg-card">
+          <div key={it.__id ?? idx} className="rounded-md border border-border bg-card"
+            style={itemColor ? { borderLeft: `4px solid ${itemColor}` } : undefined}>
             <div className="flex items-center justify-between gap-2 p-2">
               <button type="button" onClick={() => setOpenIdx(open ? null : idx)}
                 className="flex-1 text-left min-w-0">
-                <div className="text-sm font-medium truncate">{labelVal || `Item ${idx + 1}`}</div>
+                <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                  {itemColor && <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: itemColor }} />}
+                  <span className="truncate">{labelVal || `Item ${idx + 1}`}</span>
+                </div>
                 {summaryParts.length > 0 && (
                   <div className="text-[11px] text-muted-foreground truncate">{summaryParts.join(" · ")}</div>
                 )}
@@ -483,6 +506,7 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
                     onChange={(v) => updateItem(idx, { [f.id]: v })}
                     autoFocus={fi === 0 && autoFocusIdx === idx}
                     onEnterAdd={fi === 0 && f.enterToAdd ? () => { setAutoFocusIdx(null); addItem(); } : undefined}
+                    onApplyToOthers={f.applyToOthers && items.length > 1 ? (v) => applyToOthers(idx, f.id, v) : undefined}
                   />
                 ))}
               </div>
@@ -550,7 +574,7 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
 }
 
 // Renderer leve para campos dentro de um item de repeater
-function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { field: FieldDef; value: any; onChange: (v: any) => void; autoFocus?: boolean; onEnterAdd?: () => void }) {
+function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd, onApplyToOthers }: { field: FieldDef; value: any; onChange: (v: any) => void; autoFocus?: boolean; onEnterAdd?: () => void; onApplyToOthers?: (v: any) => void }) {
   const [showComment, setShowComment] = useState<boolean>(!!value);
   const isCommentable = !!field.commentable;
   if (isCommentable && !showComment) {
@@ -563,7 +587,16 @@ function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { 
   }
   return (
     <div className="grid gap-1">
-      <label className="text-[11px] text-muted-foreground">{field.label}{field.unit ? ` (${field.unit})` : ""}</label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[11px] text-muted-foreground">{field.label}{field.unit ? ` (${field.unit})` : ""}</label>
+        {onApplyToOthers && value != null && value !== "" && (
+          <button type="button" onClick={() => onApplyToOthers(value)}
+            className="text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+            title="Aplicar este valor aos demais itens">
+            <Copy className="h-3 w-3" /> aplicar a outros
+          </button>
+        )}
+      </div>
       {field.type === "text" && (
         <Input className="h-8" autoFocus={autoFocus} value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}

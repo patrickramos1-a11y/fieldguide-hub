@@ -232,9 +232,11 @@ async function flushSync() {
       if (error) console.error("[sync] upsert form_overrides", error);
     }
     store.status = { ...store.status, persistPending: false, persistenceError: undefined };
+    if (store.userId) void saveSnapshot(store.userId, store.db);
   } catch (err) {
     console.error("[sync] flush failed", err);
     store.status = { ...store.status, persistPending: false, persistenceError: "Falha ao sincronizar com o servidor." };
+    if (store.userId) void saveSnapshot(store.userId, store.db);
   }
   emit();
 }

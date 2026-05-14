@@ -104,6 +104,17 @@ const HOURS_PRESET_DIAS: Record<HoursPreset, string[]> = {
 
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
+function onlyDigits(s: string): string {
+  return (s ?? "").replace(/\D+/g, "");
+}
+function formatPhoneBR(raw: string): string {
+  const d = onlyDigits(raw).slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 // ============================ NumberField (estrito) ===========================
 function NumberField({ field, value, onChange, onBlur, moduleValues }: { field: FieldDef; value: any; onChange: (v: any) => void; onBlur: () => void; moduleValues?: Record<string, any> }) {
   const allowDecimal = field.decimal !== false;

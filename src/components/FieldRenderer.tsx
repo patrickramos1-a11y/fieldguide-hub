@@ -69,15 +69,18 @@ function summarize(field: FieldDef, value: any): string {
 }
 
 const HOURS_PRESET_LABEL: Record<HoursPreset, string> = {
-  comercial: "Horário comercial (08h–18h)",
-  "2turnos": "2 turnos",
+  comercial: "Padrão (08–12 / 14–18, Seg–Sáb)",
+  "2turnos": "2 turnos (06–14 / 14–22)",
   "3turnos": "3 turnos",
   "24h": "24 horas",
   outro: "Outro / personalizado",
 };
 
 const HOURS_PRESET_DEFAULTS: Record<HoursPreset, HoursTurno[]> = {
-  comercial: [{ id: "t1", inicio: "08:00", fim: "18:00", label: "Expediente" }],
+  comercial: [
+    { id: "t1", inicio: "08:00", fim: "12:00", label: "1º turno" },
+    { id: "t2", inicio: "14:00", fim: "18:00", label: "2º turno" },
+  ],
   "2turnos": [
     { id: "t1", inicio: "06:00", fim: "14:00", label: "1º turno" },
     { id: "t2", inicio: "14:00", fim: "22:00", label: "2º turno" },
@@ -89,6 +92,14 @@ const HOURS_PRESET_DEFAULTS: Record<HoursPreset, HoursTurno[]> = {
   ],
   "24h": [{ id: "t1", inicio: "00:00", fim: "23:59", label: "Operação contínua" }],
   outro: [],
+};
+
+const HOURS_PRESET_DIAS: Record<HoursPreset, string[]> = {
+  comercial: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+  "2turnos": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+  "3turnos": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+  "24h": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+  outro: ["Seg", "Ter", "Qua", "Qui", "Sex"],
 };
 
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];

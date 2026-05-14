@@ -873,8 +873,16 @@ function EncerramentoPanel({ survey }: { survey: any }) {
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Signature className="h-5 w-5" /> Validação e Encerramento</h2>
           <div className="grid sm:grid-cols-3 gap-4 mb-4">
             <div><Label>Assinatura cliente</Label><Input disabled={closed} value={validacao?.values.assinatura_cliente ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_cliente", e.target.value)} placeholder="Nome de quem assinou" /></div>
-            <div><Label>Assinatura técnico</Label><Input disabled={closed} value={validacao?.values.assinatura_tecnico ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "assinatura_tecnico", e.target.value)} /></div>
-            <div><Label>Data</Label><Input disabled={closed} type="date" value={validacao?.values.data_validacao ?? ""} onChange={(e) => setFieldValue(survey.id, "validacao", "data_validacao", e.target.value)} /></div>
+            <div>
+              <Label>Técnico responsável</Label>
+              <Input disabled value={(survey.modules.pessoas?.values.tecnicos as Array<{ nome?: string }> | undefined)?.map((p) => p?.nome).filter(Boolean).join(", ") || "—"} />
+              <p className="text-xs text-muted-foreground mt-1">Preenchido a partir de Pessoas Envolvidas.</p>
+            </div>
+            <div>
+              <Label>Data</Label>
+              <Input disabled value={survey.date ?? ""} />
+              <p className="text-xs text-muted-foreground mt-1">Data da visita.</p>
+            </div>
           </div>
           {blockers > 0 && !closed && (
             <div className="mb-3 text-xs text-muted-foreground">

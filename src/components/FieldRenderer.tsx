@@ -574,7 +574,7 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
 }
 
 // Renderer leve para campos dentro de um item de repeater
-function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { field: FieldDef; value: any; onChange: (v: any) => void; autoFocus?: boolean; onEnterAdd?: () => void }) {
+function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd, onApplyToOthers }: { field: FieldDef; value: any; onChange: (v: any) => void; autoFocus?: boolean; onEnterAdd?: () => void; onApplyToOthers?: (v: any) => void }) {
   const [showComment, setShowComment] = useState<boolean>(!!value);
   const isCommentable = !!field.commentable;
   if (isCommentable && !showComment) {
@@ -587,7 +587,16 @@ function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { 
   }
   return (
     <div className="grid gap-1">
-      <label className="text-[11px] text-muted-foreground">{field.label}{field.unit ? ` (${field.unit})` : ""}</label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[11px] text-muted-foreground">{field.label}{field.unit ? ` (${field.unit})` : ""}</label>
+        {onApplyToOthers && value != null && value !== "" && (
+          <button type="button" onClick={() => onApplyToOthers(value)}
+            className="text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+            title="Aplicar este valor aos demais itens">
+            <Copy className="h-3 w-3" /> aplicar a outros
+          </button>
+        )}
+      </div>
       {field.type === "text" && (
         <Input className="h-8" autoFocus={autoFocus} value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}

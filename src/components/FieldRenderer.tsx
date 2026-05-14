@@ -69,15 +69,18 @@ function summarize(field: FieldDef, value: any): string {
 }
 
 const HOURS_PRESET_LABEL: Record<HoursPreset, string> = {
-  comercial: "Horário comercial (08h–18h)",
-  "2turnos": "2 turnos",
+  comercial: "Padrão (08–12 / 14–18, Seg–Sáb)",
+  "2turnos": "2 turnos (06–14 / 14–22)",
   "3turnos": "3 turnos",
   "24h": "24 horas",
   outro: "Outro / personalizado",
 };
 
 const HOURS_PRESET_DEFAULTS: Record<HoursPreset, HoursTurno[]> = {
-  comercial: [{ id: "t1", inicio: "08:00", fim: "18:00", label: "Expediente" }],
+  comercial: [
+    { id: "t1", inicio: "08:00", fim: "12:00", label: "1º turno" },
+    { id: "t2", inicio: "14:00", fim: "18:00", label: "2º turno" },
+  ],
   "2turnos": [
     { id: "t1", inicio: "06:00", fim: "14:00", label: "1º turno" },
     { id: "t2", inicio: "14:00", fim: "22:00", label: "2º turno" },
@@ -91,7 +94,26 @@ const HOURS_PRESET_DEFAULTS: Record<HoursPreset, HoursTurno[]> = {
   outro: [],
 };
 
+const HOURS_PRESET_DIAS: Record<HoursPreset, string[]> = {
+  comercial: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+  "2turnos": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+  "3turnos": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+  "24h": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+  outro: ["Seg", "Ter", "Qua", "Qui", "Sex"],
+};
+
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+function onlyDigits(s: string): string {
+  return (s ?? "").replace(/\D+/g, "");
+}
+function formatPhoneBR(raw: string): string {
+  const d = onlyDigits(raw).slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
 
 // ============================ NumberField (estrito) ===========================
 function NumberField({ field, value, onChange, onBlur, moduleValues }: { field: FieldDef; value: any; onChange: (v: any) => void; onBlur: () => void; moduleValues?: Record<string, any> }) {
@@ -553,8 +575,20 @@ function PeopleEditor({ value, onChange }: { value: Person[] | undefined; onChan
           </div>
           <div className="grid sm:grid-cols-2 gap-1.5">
             <div className="flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="Cargo / função" value={p.cargo ?? ""} onChange={(e) => update(idx, { cargo: e.target.value })} /></div>
-            <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="Telefone" value={p.telefone ?? ""} onChange={(e) => update(idx, { telefone: e.target.value })} /></div>
-            <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="E-mail" value={p.email ?? ""} onChange={(e) => update(idx, { email: e.target.value })} /></div>
+            <div className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <Input className="h-8" placeholder="Telefone (DDD) 9 9999-9999" value={p.telefone ?? ""} onChange={(e) => update(idx, { telefone: formatPhoneBR(e.target.value) })} />
+              {p.telefone && onlyDigits(p.telefone).length >= 10 && (
+                <a href={`https://wa.me/55${onlyDigits(p.telefone)}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary hover:underline shrink-0" title="Abrir no WhatsApp">WhatsApp</a>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <Input className="h-8" placeholder="E-mail" value={p.email ?? ""} onChange={(e) => update(idx, { email: e.target.value })} />
+              {p.email && p.email.includes("@") && (
+                <a href={`mailto:${p.email}`} className="text-[11px] text-primary hover:underline shrink-0" title="Enviar e-mail">E-mail</a>
+              )}
+            </div>
             <div className="flex items-center gap-1.5"><IdCard className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><Input className="h-8" placeholder="Documento / registro" value={p.registro ?? p.documento ?? ""} onChange={(e) => update(idx, { registro: e.target.value })} /></div>
           </div>
         </div>
@@ -570,10 +604,10 @@ function HoursPresetEditor({ value, onChange }: { value: HoursValue | undefined;
   const v: HoursValue = value && typeof value === "object" ? value : {};
   const preset: HoursPreset = (v.preset as HoursPreset) ?? "comercial";
   const turnos = v.turnos ?? [];
-  const dias = v.dias ?? ["Seg", "Ter", "Qua", "Qui", "Sex"];
+  const dias = v.dias ?? ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
   function applyPreset(next: HoursPreset) {
-    onChange({ ...v, preset: next, turnos: HOURS_PRESET_DEFAULTS[next] });
+    onChange({ ...v, preset: next, turnos: HOURS_PRESET_DEFAULTS[next], dias: HOURS_PRESET_DIAS[next] });
   }
   function updateTurno(idx: number, patch: Partial<HoursTurno>) {
     onChange({ ...v, turnos: turnos.map((t, i) => (i === idx ? { ...t, ...patch } : t)) });

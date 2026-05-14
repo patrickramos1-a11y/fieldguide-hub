@@ -138,8 +138,43 @@ export const MODULES: ModuleDef[] = [
   {
     id: "localizacao",
     title: "Localização e Coordenadas",
-    fields: [
-      { id: "coord_emp", label: "Coordenadas do empreendimento", type: "coords" },
+    description: "Coordenadas do empreendimento e captura de pontos, linhas e polígonos com GPS de alta precisão.",
+    fields: [],
+    subgroups: [
+      {
+        id: "coordenadas",
+        title: "Coordenadas do empreendimento",
+        fields: [
+          { id: "coord_emp", label: "Coordenadas (latitude / longitude)", type: "coords" },
+        ],
+      },
+      {
+        id: "pontos",
+        title: "Pontos GPS",
+        description: "Pontos individuais capturados com GPS estabilizado.",
+        fields: [
+          { id: "pontos_gps", label: "Pontos capturados", type: "geometries" },
+        ],
+        optional: true,
+      },
+      {
+        id: "linhas",
+        title: "Linhas / Trajetos",
+        description: "Cercas, ruas, divisas, trajetos hidráulicos.",
+        fields: [
+          { id: "linhas_gps", label: "Linhas capturadas", type: "geometries" },
+        ],
+        optional: true,
+      },
+      {
+        id: "poligonos",
+        title: "Polígonos / Áreas",
+        description: "Talhões, áreas construídas, lagoas, APP.",
+        fields: [
+          { id: "poligonos_gps", label: "Polígonos capturados", type: "geometries" },
+        ],
+        optional: true,
+      },
     ],
   },
   {

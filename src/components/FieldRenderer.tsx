@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { MapPin, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock, Copy, Check, MoreHorizontal } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
+import { GeometryManager } from "./geom/GeometryManager";
+import type { SurveyGeometry } from "@/lib/geometryTypes";
 
 interface Props {
   field: FieldDef;
@@ -43,6 +45,17 @@ function summarize(field: FieldDef, value: any): string {
   if (!hasValue(value)) return "—";
   if (field.type === "boolean") return value ? "Sim" : "Não";
   if (field.type === "coords" && typeof value === "object") return `${value.lat ?? "?"}, ${value.lng ?? "?"}`;
+  if (field.type === "geometries" && Array.isArray(value)) {
+    const arr = value as SurveyGeometry[];
+    const p = arr.filter((g) => g.kind === "point").length;
+    const l = arr.filter((g) => g.kind === "line").length;
+    const pl = arr.filter((g) => g.kind === "polygon").length;
+    const parts: string[] = [];
+    if (p) parts.push(`${p} ponto(s)`);
+    if (l) parts.push(`${l} linha(s)`);
+    if (pl) parts.push(`${pl} polígono(s)`);
+    return parts.join(" · ") || "—";
+  }
   if (field.type === "people" && Array.isArray(value)) {
     const names = (value as Person[]).map((p) => p.nome).filter(Boolean);
     return `${value.length} pessoa(s)${names.length ? `: ${names.slice(0, 3).join(", ")}${names.length > 3 ? "…" : ""}` : ""}`;
@@ -543,6 +556,13 @@ function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { 
           <Input className="h-8" placeholder="Longitude" value={value?.lng ?? ""} onChange={(e) => onChange({ ...(value || {}), lng: e.target.value })} />
         </div>
       )}
+      {field.type === "geometries" && (
+        <GeometryManager
+          value={Array.isArray(value) ? (value as SurveyGeometry[]) : []}
+          onChange={onChange}
+          exportName={field.label || field.id}
+        />
+      )}
       {isCommentable && (
         <button type="button" onClick={() => { onChange(""); setShowComment(false); }} className="self-end text-[10px] text-muted-foreground hover:text-destructive">Remover</button>
       )}
@@ -801,6 +821,13 @@ function FieldRendererComponent({ field, value, status, note, na, onChange, onSt
           <Button type="button" size="sm" variant="outline" onClick={captureCoords}><MapPin className="h-4 w-4 mr-1" /> Capturar agora</Button>
           {value?.accuracy && <div className="text-xs text-muted-foreground">Precisão ~{Math.round(value.accuracy)}m</div>}
         </div>
+      )}
+      {field.type === "geometries" && (
+        <GeometryManager
+          value={Array.isArray(value) ? (value as SurveyGeometry[]) : []}
+          onChange={onChange}
+          exportName={field.label || field.id}
+        />
       )}
       {field.type === "people" && (
         <PeopleEditor value={value as Person[] | undefined} onChange={onChange} />

@@ -62,6 +62,7 @@ export type FieldType =
   | "multiselect"
   | "boolean"
   | "coords"
+  | "geometries"
   | "people"
   | "hours-presets"
   | "button-select"

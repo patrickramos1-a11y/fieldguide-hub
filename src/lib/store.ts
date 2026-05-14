@@ -15,6 +15,7 @@ import { BUILTIN_SURVEY_TYPE_IDS, SURVEY_TYPES } from "./types";
 import { DEFAULT_BUILTIN_ICONS } from "./typeIcons";
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { saveSnapshot, loadSnapshot } from "./offlineSnapshot";
 
 interface DB {
   clients: Client[];
@@ -231,9 +232,11 @@ async function flushSync() {
       if (error) console.error("[sync] upsert form_overrides", error);
     }
     store.status = { ...store.status, persistPending: false, persistenceError: undefined };
+    if (store.userId) void saveSnapshot(store.userId, store.db);
   } catch (err) {
     console.error("[sync] flush failed", err);
     store.status = { ...store.status, persistPending: false, persistenceError: "Falha ao sincronizar com o servidor." };
+    if (store.userId) void saveSnapshot(store.userId, store.db);
   }
   emit();
 }
@@ -359,9 +362,19 @@ async function initForUser(userId: string) {
     syncGlobalOverrides();
     subscribeRealtime();
     seedBuiltInSurveyTypes();
+    void saveSnapshot(userId, store.db);
   } catch (err) {
     console.error("[sync] initial load failed", err);
-    store.status = { ...store.status, persistenceError: "Falha ao carregar dados do servidor." };
+    // Tenta recuperar do snapshot offline
+    const snap = await loadSnapshot(userId);
+    if (snap) {
+      store.db = normalizeDB(snap as any);
+      store.lastSyncedDb = store.db;
+      syncGlobalOverrides();
+      store.status = { ...store.status, persistenceError: "Modo offline — usando dados locais." };
+    } else {
+      store.status = { ...store.status, persistenceError: "Falha ao carregar dados do servidor." };
+    }
   } finally {
     store.status = { ...store.status, hydrated: true };
     emit();

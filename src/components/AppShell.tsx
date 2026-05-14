@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { LayoutDashboard, Users, FolderKanban, ClipboardList, Settings, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { OfflineIndicator } from "./OfflineIndicator";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -31,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
           <nav className="hidden md:flex items-center gap-1">
+            <OfflineIndicator />
             {nav.map((n) => {
               const active = n.to === "/" ? loc.pathname === "/" : loc.pathname.startsWith(n.to);
               return (

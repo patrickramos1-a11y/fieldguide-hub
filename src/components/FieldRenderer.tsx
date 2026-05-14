@@ -198,6 +198,15 @@ function NumberField({ field, value, onChange, onBlur, moduleValues }: { field: 
         value={cur}
         placeholder={field.placeholder}
         onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => {
+          // Evita que Enter dispare submits/handlers do pai (bug do "Enter duplo"
+          // que em alguns layouts terminava commitando valor parcial). Enter
+          // apenas confirma o valor atual via blur.
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
         onBlur={onBlur}
       />
       {field.presets && field.presets.length > 0 && (

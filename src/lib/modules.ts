@@ -1384,7 +1384,9 @@ export function getEffectiveModulesForCustomType(
   customType: CustomSurveyType,
   globalOverrides?: FormStructureOverrides,
 ): ModuleDef[] {
-  const orderedIds = customType.moduleBindings.map((b) => b.moduleId);
+  const orderedIds = Array.isArray(customType.moduleBindings)
+    ? customType.moduleBindings.map((b) => b.moduleId)
+    : [];
   const base: ModuleDef[] = [];
   for (const id of orderedIds) {
     const m = MODULES_INDEX.get(id);
@@ -1392,7 +1394,9 @@ export function getEffectiveModulesForCustomType(
   }
   // Aplica overrides globais primeiro, depois os do tipo (scoped tem precedência).
   const afterGlobal = globalOverrides ? applyFormOverrides(base, globalOverrides) : base;
-  const afterScoped = customType.scopedOverrides ? applyFormOverrides(afterGlobal, customType.scopedOverrides) : afterGlobal;
+  const afterScoped = customType.scopedOverrides && typeof customType.scopedOverrides === "object"
+    ? applyFormOverrides(afterGlobal, customType.scopedOverrides)
+    : afterGlobal;
   return afterScoped;
 }
 

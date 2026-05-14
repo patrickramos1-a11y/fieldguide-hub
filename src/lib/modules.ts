@@ -1138,7 +1138,7 @@ export function setGlobalFormOverrides(overrides: FormStructureOverrides | undef
 }
 
 export function getModulesForType(type: SurveyType): ModuleDef[] {
-  const base = MODULES_BY_TYPE_CACHE[type];
+  const base = MODULES_BY_TYPE_CACHE[type] ?? [];
   if (!_globalOverrides || !hasAnyOverride(_globalOverrides)) return base;
   if (_overriddenCache[type]) return _overriddenCache[type]!;
   const computed = applyFormOverrides(base, _globalOverrides);
@@ -1354,6 +1354,7 @@ export function applyFormOverrides(
   list: ModuleDef[],
   overrides?: FormStructureOverrides,
 ): ModuleDef[] {
+  if (!Array.isArray(list)) return [];
   if (!overrides) return list;
   const out: ModuleDef[] = [];
   for (const m of list) {

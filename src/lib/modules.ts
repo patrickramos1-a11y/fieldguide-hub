@@ -484,7 +484,7 @@ export const MODULES: ModuleDef[] = [
         title: "Comprimento e área",
         fields: [
           { id: "comprimento", label: "Comprimento", type: "number", unit: "m" },
-          { id: "area_secao", label: "Área da seção", type: "number", unit: "m²" },
+          { id: "area_secao", label: "Área da seção", type: "number", unit: "m²", suggestFrom: { kind: "areaFromVazao" } },
         ],
       },
       {

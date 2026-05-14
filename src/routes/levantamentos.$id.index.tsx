@@ -603,7 +603,7 @@ function SubgroupBlock({ subgroup, renderField, state, isNA, onToggleNA, isDone,
             >
               <Unlock className="h-3.5 w-3.5" />
             </button>
-          ) : (
+          ) : effective === "concluido" ? null : (
             <button
               type="button"
               className="px-2 text-xs hover:bg-secondary/40 border-l border-border inline-flex items-center gap-1"

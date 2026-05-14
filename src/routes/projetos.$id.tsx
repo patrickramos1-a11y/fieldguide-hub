@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB, addSurvey, deleteSurvey, useDBStatus } from "@/lib/store";
+import { getSurveyTypeMeta, useCustomSurveyTypes, useDB, addSurveyExt, deleteSurvey, useDBStatus } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2, ClipboardList } from "lucide-react";
-import { SURVEY_TYPES, type SurveyType } from "@/lib/types";
+import { type SurveyType } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,17 +23,32 @@ function ProjetoDetail() {
   const client = project ? db.clients.find((c) => c.id === project.clientId) : null;
   const empreendimento = project?.empreendimentoId ? db.empreendimentos.find((e) => e.id === project.empreendimentoId) : null;
   const surveys = db.surveys.filter((s) => s.projectId === id);
+  const allTypes = useCustomSurveyTypes().filter((c) => !c.archivedAt);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const [type, setType] = useState<SurveyType>("geral");
+  const [type, setType] = useState<SurveyType>(allTypes[0]?.id ?? "geral");
   const [title, setTitle] = useState("");
+
+  useEffect(() => {
+    if (!allTypes.find((entry) => entry.id === type) && allTypes[0]?.id) {
+      setType(allTypes[0].id);
+    }
+  }, [allTypes, type]);
 
   if (!mounted || !hydrated) return <AppShell><p>Carregando projeto...</p></AppShell>;
   if (!project) return <AppShell><p>Projeto não encontrado.</p></AppShell>;
 
   function create() {
-    const s = addSurvey({ projectId: id, type, title: title || SURVEY_TYPES.find((t) => t.id === type)!.label });
+    const selected = allTypes.find((entry) => entry.id === type);
+    if (!selected) return;
+    const effectiveType: SurveyType = (selected.sourceTypeId as SurveyType | undefined) ?? selected.id;
+    const s = addSurveyExt({
+      projectId: id,
+      type: effectiveType,
+      title: title || selected.label,
+      customTypeId: selected.id,
+    });
     setOpen(false); setTitle("");
     nav({ to: "/levantamentos/$id", params: { id: s.id } });
   }
@@ -64,7 +79,7 @@ function ProjetoDetail() {
               <div>
                 <Label>Tipo</Label>
                 <div className="grid gap-2 mt-1">
-                  {SURVEY_TYPES.map((t) => (
+                  {allTypes.map((t) => (
                     <label key={t.id} className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer ${type === t.id ? "border-primary bg-primary/5" : "border-border"}`}>
                       <input type="radio" checked={type === t.id} onChange={() => setType(t.id)} />
                       <div>
@@ -87,7 +102,7 @@ function ProjetoDetail() {
       ) : (
         <div className="grid gap-3">
           {surveys.map((s) => {
-            const t = SURVEY_TYPES.find((t) => t.id === s.type)!;
+            const t = getSurveyTypeMeta(s.type, s.customTypeId);
             return (
               <Card key={s.id}>
                 <CardContent className="flex items-center justify-between p-4">

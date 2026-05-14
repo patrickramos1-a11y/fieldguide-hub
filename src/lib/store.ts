@@ -951,6 +951,48 @@ export function useCustomSurveyTypes(): CustomSurveyType[] {
   return useDBSelector((s) => s.customSurveyTypes ?? [], (a, b) => a === b);
 }
 
+export function getSurveyTypeMeta(typeId: SurveyType, customTypeId?: string) {
+  const custom = customTypeId
+    ? (store.db.customSurveyTypes ?? []).find((c) => c.id === customTypeId)
+    : undefined;
+  if (custom) {
+    return {
+      id: custom.id,
+      label: custom.label,
+      description: custom.description,
+      color: custom.color,
+      icon: custom.icon,
+      sourceTypeId: custom.sourceTypeId,
+      isCustom: true,
+    };
+  }
+
+  const builtIn = SURVEY_TYPES.find((t) => t.id === typeId);
+  return {
+    id: typeId,
+    label: builtIn?.label ?? typeId,
+    description: builtIn?.description,
+    color: undefined,
+    icon: undefined,
+    sourceTypeId: builtIn?.id,
+    isCustom: false,
+  };
+}
+
+export function useSurveyTypeMeta(typeId: SurveyType, customTypeId?: string) {
+  return useDBSelector(
+    () => getSurveyTypeMeta(typeId, customTypeId),
+    (a, b) =>
+      a.id === b.id
+      && a.label === b.label
+      && a.description === b.description
+      && a.color === b.color
+      && a.icon === b.icon
+      && a.sourceTypeId === b.sourceTypeId
+      && a.isCustom === b.isCustom,
+  );
+}
+
 export function ensureEditableSurveyType(typeId: SurveyType): CustomSurveyType {
   const existing = getCustomSurveyType(typeId)
     ?? (store.db.customSurveyTypes ?? []).find((c) => c.sourceTypeId === typeId);

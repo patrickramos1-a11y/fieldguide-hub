@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB } from "@/lib/store";
+import { getSurveyTypeMeta, useDB } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardList } from "lucide-react";
-import { SURVEY_TYPES } from "@/lib/types";
 
 export const Route = createFileRoute("/levantamentos/")({
   head: () => ({ meta: [{ title: "Levantamentos — Ramos Engenharia" }] }),
@@ -29,7 +28,7 @@ function ListPage() {
       ) : (
         <div className="grid gap-3">
           {db.surveys.map((s) => {
-            const t = SURVEY_TYPES.find((t) => t.id === s.type)!;
+            const t = getSurveyTypeMeta(s.type, s.customTypeId);
             const proj = db.projects.find((p) => p.id === s.projectId);
             const client = proj ? db.clients.find((c) => c.id === proj.clientId) : null;
             const total = Object.keys(s.modules).length;

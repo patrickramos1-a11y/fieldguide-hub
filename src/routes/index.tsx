@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDBSelector } from "@/lib/store";
+import { getSurveyTypeMeta, useCustomSurveyTypes, useDBSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, FolderKanban, Users, Plus, ArrowRight, Building2 } from "lucide-react";
-import { SURVEY_TYPES } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,6 +17,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const customTypes = useCustomSurveyTypes().filter((type) => !type.archivedAt);
   const { clientCount, empreendimentoCount, projectCount, surveys, recent } = useDBSelector(
     (state) => ({
       clientCount: state.clients.length,
@@ -77,7 +77,7 @@ function Index() {
               <p className="text-sm text-muted-foreground">Nenhum levantamento ainda. Comece criando um cliente.</p>
             )}
             {recent.map((s) => {
-              const t = SURVEY_TYPES.find((t) => t.id === s.type)!;
+              const t = getSurveyTypeMeta(s.type, s.customTypeId);
               return (
                 <Link key={s.id} to="/levantamentos/$id" params={{ id: s.id }}
                   className="flex items-center justify-between rounded-md border border-border p-3 hover:bg-secondary">
@@ -95,7 +95,7 @@ function Index() {
         <Card>
           <CardHeader><CardTitle>Tipos de levantamento</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {SURVEY_TYPES.map((t) => (
+            {customTypes.map((t) => (
               <div key={t.id} className="rounded-md border border-border p-3">
                 <div className="font-medium text-sm">{t.label}</div>
                 <div className="text-xs text-muted-foreground">{t.description}</div>

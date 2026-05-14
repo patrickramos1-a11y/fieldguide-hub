@@ -166,6 +166,30 @@ function NumberField({ field, value, onChange, onBlur, moduleValues }: { field: 
     const comp = (ld && le) ? (ld + le) / 2 : (ld || le);
     if (larg > 0 && comp > 0) suggestion = Math.round(larg * comp);
   }
+  // Sugestão de área da seção (vazão): média das larguras × comprimento.
+  // Quando aplicável, preenche automaticamente se o campo estiver vazio.
+  let autoFillNote: string | null = null;
+  if (field.suggestFrom?.kind === "areaFromVazao" && moduleValues) {
+    const num = (k: string) => {
+      const r = moduleValues[k];
+      const x = typeof r === "object" && r ? r.value : r;
+      const n = parseFloat(String(x ?? "").replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const ws = [num("largura_inicio"), num("largura_meio"), num("largura_fim")].filter((x) => x > 0);
+    const comp = num("comprimento");
+    if (ws.length > 0 && comp > 0) {
+      const avgW = ws.reduce((a, b) => a + b, 0) / ws.length;
+      const calc = Math.round(avgW * comp * 100) / 100;
+      suggestion = calc;
+      // Auto-preenche se o usuário ainda não digitou nada.
+      if ((cur === "" || cur == null) && calc > 0) {
+        autoFillNote = `Calculado automaticamente: largura média (${avgW.toFixed(2)} m) × comprimento (${comp} m)`;
+        // setVal pode disparar render; usamos setTimeout para evitar loop em renders consecutivos.
+        queueMicrotask(() => setVal(String(calc)));
+      }
+    }
+  }
   return (
     <div className="flex flex-col gap-1.5">
     <div className="flex items-center gap-2">

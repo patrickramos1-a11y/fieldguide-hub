@@ -87,9 +87,7 @@ export const MODULES: ModuleDef[] = [
         id: "contato_local",
         title: "Contato no local",
         fields: [
-          { id: "contato_local", label: "Nome do contato no local", type: "text" },
-          { id: "telefone_local", label: "Telefone do local", type: "text" },
-          { id: "email_local", label: "E-mail do local", type: "text" },
+          { id: "contatos_local", label: "Contatos no local", type: "people" },
         ],
       },
       {
@@ -162,13 +160,14 @@ export const MODULES: ModuleDef[] = [
         id: "quadro",
         title: "Quadro de funcionários",
         fields: [
+          { id: "total_colaboradores", label: "Total de colaboradores (sem detalhamento por setor)", type: "number", decimal: false },
           {
             id: "setores",
             label: "Setores e quantidade de funcionários",
             type: "repeater",
             addItemLabel: "Adicionar setor",
             itemFields: [
-              { id: "setor", label: "Setor", type: "button-select", options: ["Administrativo", "Operacional", "Produção", "Manutenção", "Limpeza", "Segurança", "Logística", "Outros"], allowOther: true, learn: true },
+              { id: "setor", label: "Setor", type: "button-select", options: ["Administrativo", "Operacional", "Produção", "Manutenção", "Limpeza", "Segurança", "Logística", "Expedição", "Comercial", "Financeiro", "RH", "TI", "Outros"], allowOther: true, learn: true },
               { id: "quantidade", label: "Quantidade", type: "quantity" },
             ],
           },
@@ -237,7 +236,7 @@ export const MODULES: ModuleDef[] = [
         id: "solo_vegetacao",
         title: "Solo",
         fields: [
-          { id: "tipo_solo", label: "Tipo de solo", type: "button-select", multi: true, allowOther: true, options: ["Arenoso", "Argiloso", "Siltoso", "Pedregoso", "Misto", "Aterro", "Rocha exposta"] },
+          { id: "tipo_solo", label: "Tipo de solo", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Arenoso", "Argiloso", "Siltoso", "Pedregoso", "Misto", "Aterro", "Rocha exposta", "Solo degradado", "Solo não degradado", "Solo com construção", "Solo com vegetação", "Solo compactado", "Solo exposto", "Contaminado"] },
         ],
       },
       {
@@ -275,7 +274,8 @@ export const MODULES: ModuleDef[] = [
         id: "entorno",
         title: "Entorno",
         fields: [
-          { id: "entorno_empresa", label: "Caracterização da área do entorno", type: "textarea" },
+          { id: "entorno_categorias", label: "Caracterização do entorno", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Arborizado", "Vegetação nativa", "Antropizado / urbanizado", "Industrial", "Rural", "Comercial", "Residencial", "Margem de corpo hídrico", "Próximo a APP", "Próximo a unidade de conservação", "Área degradada", "Pasto / agricultura"] },
+          { id: "entorno_obs", label: "Observações sobre o entorno", type: "textarea" },
         ],
       },
     ],
@@ -293,6 +293,7 @@ export const MODULES: ModuleDef[] = [
         fields: [
           { id: "corpo_hidrico", label: "Existe corpo hídrico receptor?", type: "button-select", options: ["Sim", "Não"] },
           { id: "nascente", label: "Há nascente?", type: "button-select", options: ["Sim", "Não"], showIf: { field: "corpo_hidrico", equals: "Sim" } },
+          { id: "nascente_coords", label: "Coordenadas da nascente", type: "coords", showIf: { field: "nascente", equals: "Sim" } },
           { id: "corpo_hidrico_desc", label: "Identificação (nome / tipo)", type: "text", showIf: { field: "corpo_hidrico", equals: "Sim" } },
           { id: "distancia_corpo", label: "Distância do corpo hídrico", type: "number", unit: "m", showIf: { field: "corpo_hidrico", equals: "Sim" } },
           { id: "dentro_propriedade", label: "Localização", type: "button-select", options: ["Dentro da propriedade", "Fora da propriedade"], showIf: { field: "corpo_hidrico", equals: "Sim" } },
@@ -304,16 +305,16 @@ export const MODULES: ModuleDef[] = [
         fields: [
           { id: "tipo_captacao", label: "Tipo(s) de captação", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Superficial", "Subterrânea", "Rede pública", "Caminhão pipa", "Reuso"] },
           { id: "fornecedor_publico", label: "Concessionária (se rede pública)", type: "text", showIf: { field: "tipo_captacao", in: ["Rede pública"] } },
-          { id: "consumo", label: "Estimativa de consumo", type: "number", unit: "m³/dia", presets: [1, 5, 10, 20, 50, 100, 500] },
           {
             id: "pontos_captacao",
             label: "Pontos de captação",
             type: "repeater",
             addItemLabel: "Adicionar ponto de captação",
             itemFields: [
-              { id: "nome", label: "Identificação do ponto", type: "text", enterToAdd: true },
-              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, learn: true, options: ["Poço", "Rio", "Nascente", "Açude", "Cisterna", "Rede pública"] },
+              { id: "tipo", label: "Tipo", type: "button-select", allowOther: true, learn: true, options: ["Poço", "Rio", "Nascente", "Açude", "Cisterna", "Rede pública", "Caminhão pipa", "Reuso"] },
+              { id: "nome", label: "Identificação do ponto (opcional)", type: "text", enterToAdd: true },
               { id: "coords", label: "Coordenadas", type: "coords" },
+              { id: "consumo", label: "Estimativa de consumo", type: "number", unit: "m³/dia", presets: [1, 5, 10, 20, 50, 100, 500] },
             ],
             noPresetMemory: true,
           },
@@ -342,15 +343,14 @@ export const MODULES: ModuleDef[] = [
         id: "uso",
         title: "Uso da água",
         fields: [
-          { id: "usos_agua", label: "Tipos de uso", type: "button-select", multi: true, allowOther: true, learn: true, options: ["Consumo humano", "Sanitário", "Processo industrial", "Limpeza", "Irrigação", "Resfriamento", "Dessedentação animal", "Lavagem de veículos", "Combate a incêndio"] },
           {
             id: "consumo_por_uso",
-            label: "Consumo estimado por uso",
+            label: "Usos da água e estimativa de consumo",
             type: "repeater",
-            addItemLabel: "Adicionar consumo por uso",
+            addItemLabel: "Adicionar uso",
             itemFields: [
-              { id: "uso", label: "Uso", type: "button-select", allowOther: true, learn: true, options: ["Consumo humano", "Sanitário", "Processo industrial", "Limpeza", "Irrigação", "Resfriamento", "Dessedentação animal"] },
-              { id: "consumo", label: "Consumo", type: "number", unit: "m³/dia", presets: [0.5, 1, 5, 10, 20, 50] },
+              { id: "uso", label: "Tipo de uso", type: "button-select", allowOther: true, learn: true, options: ["Consumo humano", "Sanitário", "Processo industrial", "Limpeza", "Irrigação", "Resfriamento", "Dessedentação animal", "Lavagem de veículos", "Combate a incêndio"] },
+              { id: "consumo_dia", label: "Estimativa por dia", type: "number", unit: "m³/dia", presets: [0.5, 1, 5, 10, 20, 50] },
             ],
           },
         ],
@@ -636,11 +636,12 @@ export const MODULES: ModuleDef[] = [
         title: "Emissões líquidas",
         fields: [
           { id: "tipo_efluente_liquido", label: "Tipo de efluente líquido", type: "button-select", multi: true, allowOther: true, options: ["Industrial", "Doméstico", "ETE", "Fossa séptica", "Sumidouro", "Rede pública", "Reuso"] },
+          { id: "volume_liquido", label: "Volume estimado", type: "number", unit: "m³/dia", presets: [0.5, 1, 5, 10, 20, 50, 100], showIf: { field: "tipo_efluente_liquido", truthy: true } },
         ],
       },
       {
         id: "solidos",
-        title: "Emissões sólidas",
+        title: "Geração de resíduos",
         fields: [
           { id: "destinacao_solidos", label: "Destinação dos sólidos", type: "button-select", multi: true, allowOther: true, options: ["Coleta pública", "Empresa terceirizada", "Mistura com demais resíduos", "Reciclagem", "Aterro próprio", "Compostagem"] },
         ],
@@ -650,6 +651,8 @@ export const MODULES: ModuleDef[] = [
         title: "Emissões gasosas",
         fields: [
           { id: "emissao_gasosa", label: "Existência de emissão gasosa", type: "button-select", multi: true, options: ["Há chaminé", "Há emissão difusa", "Vapor", "Material particulado", "Não se aplica"] },
+          { id: "tem_filtro", label: "Há filtro?", type: "button-select", options: ["Sim", "Não", "Não se aplica"] },
+          { id: "tem_lavador", label: "Há lavador de fumaça?", type: "button-select", options: ["Sim", "Não", "Não se aplica"] },
         ],
       },
     ],
@@ -1048,8 +1051,6 @@ export const MODULES: ModuleDef[] = [
     fields: [
       { id: "hora_saida", label: "Horário de saída", type: "time" },
       { id: "assinatura_cliente", label: "Nome de quem assinou pelo cliente", type: "text" },
-      { id: "assinatura_tecnico", label: "Nome do técnico responsável", type: "text" },
-      { id: "data_validacao", label: "Data de validação", type: "date" },
     ],
   },
 ];

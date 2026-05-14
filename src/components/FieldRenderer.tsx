@@ -556,6 +556,13 @@ function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd }: { 
           <Input className="h-8" placeholder="Longitude" value={value?.lng ?? ""} onChange={(e) => onChange({ ...(value || {}), lng: e.target.value })} />
         </div>
       )}
+      {field.type === "geometries" && (
+        <GeometryManager
+          value={Array.isArray(value) ? (value as SurveyGeometry[]) : []}
+          onChange={onChange}
+          exportName={field.label || field.id}
+        />
+      )}
       {isCommentable && (
         <button type="button" onClick={() => { onChange(""); setShowComment(false); }} className="self-end text-[10px] text-muted-foreground hover:text-destructive">Remover</button>
       )}

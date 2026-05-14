@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useDB, addSurvey, deleteSurvey, useDBStatus } from "@/lib/store";
+import { getSurveyTypeMeta, useDB, addSurvey, deleteSurvey, useDBStatus } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Trash2, ClipboardList } from "lucide-react";
@@ -87,7 +87,7 @@ function ProjetoDetail() {
       ) : (
         <div className="grid gap-3">
           {surveys.map((s) => {
-            const t = SURVEY_TYPES.find((t) => t.id === s.type)!;
+            const t = getSurveyTypeMeta(s.type, s.customTypeId);
             return (
               <Card key={s.id}>
                 <CardContent className="flex items-center justify-between p-4">

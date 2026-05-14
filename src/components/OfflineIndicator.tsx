@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Wifi, WifiOff, Loader2 } from "lucide-react";
-import { useDB } from "@/lib/store";
+import { useDBStatus } from "@/lib/store";
 
 export function OfflineIndicator() {
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
-  const { status } = useDB();
+  const status = useDBStatus();
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);

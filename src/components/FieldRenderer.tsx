@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { MapPin, Ban, Pencil, Plus, Trash2, User, Phone, Mail, Briefcase, IdCard, Clock, Copy, Check, MoreHorizontal } from "lucide-react";
+import { toast } from "sonner";
 import { StatusBadge } from "./StatusBadge";
 import { GeometryManager } from "./geom/GeometryManager";
 import type { SurveyGeometry } from "@/lib/geometryTypes";

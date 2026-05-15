@@ -433,7 +433,17 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
   }
   function addManyByLabel(labels: string[]) {
     if (!labels.length || !labelField) return;
-    const novos = labels.map((l) => ({ __id: Math.random().toString(36).slice(2, 9), [labelField.id]: l }));
+    const novos = labels.map((l) => {
+      const item: Record<string, any> = { __id: Math.random().toString(36).slice(2, 9), [labelField.id]: l };
+      // Aplica autoLink no momento da criação (ex.: tipo → classificação NBR).
+      for (const f of itemFields) {
+        if (!f.autoLink) continue;
+        if (f.autoLink.from !== labelField.id) continue;
+        const mapped = f.autoLink.map[String(l)];
+        if (mapped) item[f.id] = mapped;
+      }
+      return item;
+    });
     onChange([...items, ...novos]);
     setPickerSel([]);
     setPicker(false);
@@ -504,7 +514,7 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
                   <span className="truncate">{labelVal || `Item ${idx + 1}`}</span>
                 </div>
                 {summaryParts.length > 0 && (
-                  <div className="text-[11px] text-muted-foreground truncate">{summaryParts.join(" · ")}</div>
+                  <div className="text-[11px] text-muted-foreground whitespace-normal break-words leading-snug">{summaryParts.join(" · ")}</div>
                 )}
               </button>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeItem(idx)} title="Remover">
@@ -530,24 +540,18 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
                   }
                   // 2) Pular Classificação quando o tipo já carrega a classe no nome.
                   if (f.autoLink && isClassOnly) return null;
-                  // 3) Pular Classificação quando auto-linkada e resolvida pelo map.
+                  // 3) Esconder Classificação quando auto-linkada — o sistema já fez a vinculação.
+                  //    Auto-preenche se ainda estiver vazia e existir mapeamento.
                   if (f.autoLink && f.hideWhenAutoLinked) {
-                    const mapped = f.autoLink.map[String(it[f.autoLink.from] ?? "")];
+                    const fromVal = String(it[f.autoLink.from] ?? "");
+                    const mapped = f.autoLink.map[fromVal];
                     const cur = it[f.id];
-                    if (mapped && cur === mapped) {
-                      return (
-                        <div key={f.id} className="text-[11px] text-muted-foreground flex items-center justify-between gap-2">
-                          <span>{f.label}: <span className="text-foreground font-medium">{mapped}</span> <span className="opacity-60">(automática)</span></span>
-                          <button type="button" onClick={() => updateItem(idx, { [f.id]: "__manual__" })}
-                            className="text-[11px] text-primary hover:underline inline-flex items-center gap-1">
-                            <Pencil className="h-3 w-3" /> editar
-                          </button>
-                        </div>
-                      );
-                    }
-                    // Se valor for o sentinela __manual__, limpa para mostrar seletor.
-                    if (cur === "__manual__") {
-                      // exibe seletor abaixo (cai no render padrão), começando vazio.
+                    if (mapped) {
+                      if (cur !== mapped && cur !== "__manual__") {
+                        // efetiva o auto-link na render (sem loop: só se diferente).
+                        queueMicrotask(() => updateItem(idx, { [f.id]: mapped }));
+                      }
+                      if (cur !== "__manual__") return null; // escondido — automático
                     }
                   }
                   return (
@@ -574,11 +578,17 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
             {presets.map((p) => {
               const checked = pickerSel.includes(p);
               const used = usedLabels.has(p);
+              const color = colorByValue?.[p];
+              const icon = iconByValue?.[p];
+              const checkedStyle = checked && color ? { backgroundColor: color, borderColor: color, color: "white" } : undefined;
+              const unstyledColor = !checked && color ? { borderColor: color, color } : undefined;
               return (
                 <button key={p} type="button" onClick={() => !used && togglePickerSel(p)} disabled={used}
-                  className={`text-xs rounded-full px-2.5 py-1 border transition-colors ${used ? "opacity-40 cursor-not-allowed border-border" : checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}
+                  style={used ? undefined : (checkedStyle ?? unstyledColor)}
+                  className={`text-xs rounded-full px-2.5 py-1 border transition-colors inline-flex items-center gap-1 ${used ? "opacity-40 cursor-not-allowed border-border" : checked && !color ? "bg-primary text-primary-foreground border-primary" : !color ? "border-border hover:bg-secondary" : "hover:opacity-90"}`}
                   title={used ? "Já adicionado" : undefined}>
-                  {p}
+                  {icon && <span aria-hidden>{icon}</span>}
+                  <span>{p}</span>
                 </button>
               );
             })}

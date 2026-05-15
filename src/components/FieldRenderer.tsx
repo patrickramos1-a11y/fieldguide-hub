@@ -270,6 +270,8 @@ function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value:
     : (value ? [String(value)] : []);
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherValue, setOtherValue] = useState("");
+  const colorByValue = field.colorByValue;
+  const iconByValue = field.iconByValue;
 
   function toggle(opt: string) {
     if (multi) {
@@ -307,12 +309,17 @@ function ButtonSelectField({ field, value, onChange }: { field: FieldDef; value:
       {options.map((o) => {
         const checked = selected.includes(o);
         const isLearned = learnKey && learned.includes(o) && !baseOptions.includes(o);
+        const color = colorByValue?.[o];
+        const icon = iconByValue?.[o];
+        const checkedStyle = checked && color ? { backgroundColor: color, borderColor: color, color: "white" } : undefined;
         return (
           <span key={o} className="inline-flex items-center">
             <button type="button" onClick={() => toggle(o)}
-              className={`text-xs rounded-full px-3 py-1 border transition-colors ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"} ${isLearned ? "border-dashed" : ""}`}
+              style={checkedStyle}
+              className={`text-xs rounded-full px-3 py-1 border transition-colors inline-flex items-center gap-1 ${checked && !color ? "bg-primary text-primary-foreground border-primary" : ""} ${!checked ? "border-border hover:bg-secondary" : ""} ${isLearned ? "border-dashed" : ""}`}
               title={isLearned ? "Opção aprendida" : undefined}>
-              {o}
+              {icon && <span aria-hidden>{icon}</span>}
+              <span>{o}</span>
             </button>
             {isLearned && !checked && (
               <button type="button" onClick={() => forgetLearned(o)} title="Esquecer"

@@ -460,7 +460,9 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
     }));
   }
   function applyToOthers(idx: number, fieldId: string, value: any) {
+    const targets = items.length - 1;
     onChange(items.map((it, i) => (i === idx ? it : { ...it, [fieldId]: value })));
+    if (targets > 0) toast.success(`Aplicado a ${targets} ${targets === 1 ? "item" : "itens"}`);
   }
   function removeItem(idx: number) {
     onChange(items.filter((_, i) => i !== idx));
@@ -470,6 +472,8 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
   // Primeiro field é tratado como "rótulo" do item
   const labelField = itemFields[0];
   const colorByValue = labelField?.colorByValue;
+  const iconByValue = labelField?.iconByValue;
+  const classOnlyValues = labelField?.classOnlyValues ?? [];
 
   // Picker de presets (se primeiro field for button-select com options)
   const presets: string[] = labelField?.options ?? [];
@@ -481,6 +485,8 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
         const open = openIdx === idx;
         const labelVal = labelField ? it[labelField.id] : "";
         const itemColor = colorByValue?.[String(labelVal ?? "")];
+        const itemIcon = iconByValue?.[String(labelVal ?? "")];
+        const isClassOnly = classOnlyValues.includes(String(labelVal ?? ""));
         const summaryParts = itemFields.slice(1).map((f) => {
           const val = it[f.id];
           if (val == null || val === "") return null;
@@ -494,6 +500,7 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
                 className="flex-1 text-left min-w-0">
                 <div className="text-sm font-medium truncate flex items-center gap-1.5">
                   {itemColor && <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: itemColor }} />}
+                  {itemIcon && <span aria-hidden>{itemIcon}</span>}
                   <span className="truncate">{labelVal || `Item ${idx + 1}`}</span>
                 </div>
                 {summaryParts.length > 0 && (
@@ -506,17 +513,55 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
             </div>
             {open && (
               <div className="border-t border-border p-2 grid gap-2">
-                {itemFields.map((f, fi) => (
-                  <RepeaterItemField
-                    key={f.id}
-                    field={f}
-                    value={it[f.id]}
-                    onChange={(v) => updateItem(idx, { [f.id]: v })}
-                    autoFocus={fi === 0 && autoFocusIdx === idx}
-                    onEnterAdd={fi === 0 && f.enterToAdd ? () => { setAutoFocusIdx(null); addItem(); } : undefined}
-                    onApplyToOthers={f.applyToOthers && items.length > 1 ? (v) => applyToOthers(idx, f.id, v) : undefined}
-                  />
-                ))}
+                {itemFields.map((f, fi) => {
+                  const isLabel = fi === 0;
+                  const labelHasValue = labelVal != null && labelVal !== "";
+                  // 1) Esconde o seletor do tipo quando já escolhido (mostra link "alterar tipo").
+                  if (isLabel && labelHasValue) {
+                    return (
+                      <div key={f.id} className="flex items-center justify-end -mt-1">
+                        <button type="button"
+                          onClick={() => updateItem(idx, { [f.id]: "" })}
+                          className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1">
+                          <Pencil className="h-3 w-3" /> alterar tipo
+                        </button>
+                      </div>
+                    );
+                  }
+                  // 2) Pular Classificação quando o tipo já carrega a classe no nome.
+                  if (f.autoLink && isClassOnly) return null;
+                  // 3) Pular Classificação quando auto-linkada e resolvida pelo map.
+                  if (f.autoLink && f.hideWhenAutoLinked) {
+                    const mapped = f.autoLink.map[String(it[f.autoLink.from] ?? "")];
+                    const cur = it[f.id];
+                    if (mapped && cur === mapped) {
+                      return (
+                        <div key={f.id} className="text-[11px] text-muted-foreground flex items-center justify-between gap-2">
+                          <span>{f.label}: <span className="text-foreground font-medium">{mapped}</span> <span className="opacity-60">(automática)</span></span>
+                          <button type="button" onClick={() => updateItem(idx, { [f.id]: "__manual__" })}
+                            className="text-[11px] text-primary hover:underline inline-flex items-center gap-1">
+                            <Pencil className="h-3 w-3" /> editar
+                          </button>
+                        </div>
+                      );
+                    }
+                    // Se valor for o sentinela __manual__, limpa para mostrar seletor.
+                    if (cur === "__manual__") {
+                      // exibe seletor abaixo (cai no render padrão), começando vazio.
+                    }
+                  }
+                  return (
+                    <RepeaterItemField
+                      key={f.id}
+                      field={f}
+                      value={it[f.id] === "__manual__" ? "" : it[f.id]}
+                      onChange={(v) => updateItem(idx, { [f.id]: v })}
+                      autoFocus={isLabel && autoFocusIdx === idx}
+                      onEnterAdd={isLabel && f.enterToAdd ? () => { setAutoFocusIdx(null); addItem(); } : undefined}
+                      onApplyToOthers={f.applyToOthers && items.length > 1 ? (v) => applyToOthers(idx, f.id, v) : undefined}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>

@@ -27,6 +27,8 @@ import {
 import { FieldRenderer } from "@/components/FieldRenderer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ModuleConfigStep } from "@/components/ModuleConfigStep";
+import { PhotoChecklist } from "@/components/PhotoChecklist";
+import { PhotoAttachmentsPanel } from "@/components/PhotoAttachmentsPanel";
 import { type FieldStatus, type FieldDef, type SubgroupDef, type ModuleState } from "@/lib/types";
 
 export const Route = createFileRoute("/levantamentos/$id/")({
@@ -503,6 +505,12 @@ function ModulePanel({ survey, module: m, onModuleDone }: { survey: any; module:
             </Button>
           </div>
         </div>
+
+        {m.id === "fotos" && (
+          <div className="mb-3">
+            <PhotoChecklist survey={survey} moduleState={state} />
+          </div>
+        )}
 
         {m.fields.length > 0 && <div className="grid gap-2.5">{m.fields.map(renderField)}</div>}
 

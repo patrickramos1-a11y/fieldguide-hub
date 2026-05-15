@@ -260,6 +260,24 @@ export interface Attachment {
   category?: string;
   /** Módulo de origem/contexto (opcional). */
   moduleTag?: string;
+  /** Vincula este anexo a um item do checklist do Relatório Fotográfico. */
+  photoItemId?: string;
+  /** Origem do anexo (informativo). */
+  origin?: "camera" | "biblioteca" | "upload";
+}
+
+/** Resposta de um item do checklist do Relatório Fotográfico. */
+export interface PhotoChecklistAnswer {
+  /** Chave estável do template (ex.: "projeto.fachada_entrada"). */
+  itemId: string;
+  /** Rótulo legível denormalizado (preserva histórico se template mudar). */
+  label: string;
+  /** Chave do template a que o item pertence. */
+  templateKey: string;
+  /** true = Sim, false = Não. */
+  registrado: boolean;
+  observacao?: string;
+  updatedAt: string;
 }
 
 export interface ModuleState {
@@ -282,6 +300,12 @@ export interface ModuleState {
   moduleDone?: boolean;
   /** Marcação manual de conclusão por subgrupo. */
   subgroupDone?: Record<string, boolean>;
+  /** Apenas no módulo "fotos": respostas do checklist de Relatório Fotográfico. */
+  photoChecklist?: PhotoChecklistAnswer[];
+  /** Apenas no módulo "fotos": templates ativos no levantamento. */
+  photoChecklistKeys?: string[];
+  /** Apenas no módulo "fotos" do tipo Post: liberação de divulgação. */
+  photoLiberadoDivulgacao?: boolean;
 }
 
 export interface Pendencia {

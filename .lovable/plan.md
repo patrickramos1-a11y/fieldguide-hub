@@ -1,159 +1,74 @@
-# Plano: Correções no fluxo de preenchimento do levantamento
 
-Vou agrupar todos os pontos que você levantou por módulo, seguindo a ordem em que aparecem no formulário. Em cada grupo, listo exatamente o que será alterado.
+## Diagnóstico do problema "as melhorias não aparecem"
 
----
+Os logs do navegador no celular mostram repetidamente:
 
-## 1. Identificação do levantamento
+```
+TypeError: Importing a module script failed.
+```
 
-**Dados cadastrais – Contato do local**
-- Remover os campos atuais "Nome / Telefone / E-mail" separados.
-- Trocar por uma lista de pessoas (mesmo padrão de "Pessoas envolvidas"): adiciono o **nome** e depois, ao lado, aparecem dois ícones: 📞 telefone e ✉️ e-mail. Clicando neles abre um mini-campo para preencher.
-- Telefone: máscara `(DDD) 9 9999-9999`, validação só dígitos, e depois de salvo vira link clicável para **WhatsApp** (`https://wa.me/55...`).
-- E-mail: clicável (`mailto:`).
+Isso é o sintoma clássico de **chunk JS desatualizado em cache**: o Safari mobile abriu o app numa versão antiga (`index-Lcq2932X.js`), e quando ele tenta carregar dinamicamente uma rota/chunk que já foi substituído pelo novo deploy, a importação falha — e o app mostra "This page didn't load" ou simplesmente fica parado.
 
-**Pessoas envolvidas – Colaborador que acompanhou**
-- Mesmo padrão acima (já é lista, só vou ajustar para começar com **apenas o nome** + ícones para adicionar telefone/cargo/e-mail sob demanda, sem poluir a tela).
+Isso explica todos os sintomas:
 
-**Validação e encerramento**
-- Remover o campo de nome/data do técnico responsável: vai puxar automaticamente do técnico vinculado ao levantamento e da data da visita.
+- Lote 3 (cores de resíduos, NBR auto, "aplicar a outros") está no código, mas o celular continua executando o bundle antigo, então você não vê.
+- "Levantamento não encontrado" → a tela renderiza antes do snapshot offline + sync do Supabase terminarem; o gating atual só espera `hydrated`, não confirma se já houve a primeira sincronização remota.
+- Selects (ex.: "tipo de levantamento geral") "não respondem" → o handler está num chunk que falhou ao carregar.
+- App "lento e travado" no início → `modules.ts` cresceu muito (~1.500 linhas) e é avaliado de forma síncrona no boot.
 
----
+A correção real não é "rebuildar mais uma vez" — é fazer o app **se recuperar sozinho** quando detectar um chunk velho, e melhorar o gating de carregamento.
 
-## 2. Dados operacionais
+## Plano
 
-**Turnos – pré-configuração padrão**
-- Preset "Padrão" atual está errado. Corrigir para:
-  - Turno 1: 08:00 – 12:00
-  - Turno 2: 14:00 – 18:00
-  - Dias: Segunda a Sábado
+### 1. Auto-recuperação de chunk desatualizado (causa raiz #1)
 
----
+- Em `src/router.tsx` (`defaultErrorComponent`) e em `src/routes/__root.tsx` (`errorComponent`), detectar mensagens típicas: `"Importing a module script failed"`, `"Failed to fetch dynamically imported module"`, `"ChunkLoadError"`. Quando detectado, chamar `location.reload()` automaticamente uma única vez (guarda em `sessionStorage` para não criar loop).
+- Adicionar listener global em `src/lib/error-capture.ts` que faz o mesmo em `window.onerror` / `unhandledrejection` para esses tipos de erro.
 
-## 3. Quadro de funcionários
+Resultado: quando você abrir o app numa aba antiga depois de um deploy, ele recarrega sozinho ao invés de mostrar "This page didn't load".
 
-- Quando clico em **Outros** e adiciono um setor novo (ex.: "Expedição"), ele fica **salvo permanentemente** no catálogo de setores (`learn: true` já existe — vou garantir persistência no banco).
-- Ao reabrir, os setores cadastrados aparecem com um **balão de contador** já visível (0 por padrão), com botões **+ / –** para ajustar a quantidade sem precisar entrar em modo edição.
-- O total de colaboradores soma automaticamente.
-- Adicionar um botão **"Colaboradores totais (sem setor)"** ao lado de "Adicionar setor", para registrar headcount sem detalhar por setor.
+### 2. Gating de hidratação mais honesto (causa raiz #2)
 
----
+- Em `src/lib/store.ts`, expor um flag adicional `firstSyncDone` que vira `true` somente após o primeiro `select` do Supabase concluir (não só após carregar snapshot local).
+- Em `src/routes/levantamentos.$id.index.tsx`: enquanto `hydrated && !firstSyncDone && !survey`, mostrar "Sincronizando…" em vez de "Levantamento não encontrado". Só mostrar "não encontrado" depois do primeiro sync completar.
+- Mesma correção em `levantamentos.index.tsx` e `projetos.$id.tsx` para evitar telas vazias falsas durante o boot.
 
-## 4. Produtos e operação
+### 3. Indicador de versão / refresh manual
 
-- Cadastro de produtos com mesma premissa dos setores: adiciono o produto e ele entra na lista zerado.
-- Cada produto aparece como linha com ícones rápidos para preencher **estimativa de produção mensal** + **unidade** (t, kg, L, un) sem abrir modal.
+- Adicionar no `OfflineIndicator` (ou ao lado dele) um pequeno botão circular "↻" que faz `location.reload()` e limpa o cache do service worker se houver. Visível só quando offline ou quando houver erro de sincronia.
+- Mostrar discretamente no rodapé da tela de Configurações a versão de build (`import.meta.env.VITE_BUILD_ID` ou timestamp do build) — quando você abrir o ticket "as mudanças não apareceram", basta olhar o número e comparar.
 
----
+### 4. Verificar visualmente que Lote 3 está realmente no bundle
 
-## 5. Áreas e dimensões
+Após implementar 1–3, abrir um levantamento que tenha o subgrupo de Resíduos no preview e confirmar:
+- O campo "Classificação NBR 10004" aparece com o nome novo;
+- O ícone de cópia "aplicar a outros" aparece quando há valor preenchido;
+- A cor por tipo está visível na linha do repeater.
 
-**Bug do "Concluir 2x"**
-- Hoje quando digito "1500" e aperto **Enter** preciso clicar 2× em concluir, e às vezes o sistema apaga "10" do valor "1000". Corrigir o handler do submit (provavelmente um `onBlur` competindo com o `onSubmit`).
+Se algo não estiver renderizando como esperado mesmo no bundle novo, corrigir nesse passo (provavelmente é um bug do Lote 3, não cache).
 
-**Auto-conclusão**
-- Quando **todos os campos** de "Dimensões do terreno" estiverem preenchidos (valor ou "Não se aplica"), o subgrupo automaticamente fica **verde com "Concluído"** sem precisar clicar no botão.
-- Mesmo comportamento para "Áreas do empreendimento".
-- O botão "Concluir" some quando já está concluído (só fica visível um chevron para reabrir).
+### 5. Lote 4 — finalizar os dois itens pendentes
 
-**Tipos de solo**
-- Adicionar categorias mais práticas (não técnicas):
-  - Solo degradado
-  - Solo não degradado
-  - Solo com construção
-  - Solo com vegetação
-  - Solo compactado
-  - Solo exposto
+5a. **Combustíveis: não pedir para reabrir o tipo após selecionar**
+- Em `src/lib/modules.ts`, no campo `tipo` do subgrupo de combustíveis: remover `requiresConfirmation` / fluxo de "confirmar tipo" e travar o select para apenas atualizar o valor diretamente.
+- No `FieldRenderer`, garantir que selects do tipo `select-with-confirm` fiquem só no modo "salvar direto" para esse campo.
 
-**Construções existentes**
-- Quando adicionar "Outros" no tipo, fica salvo no catálogo para próximos levantamentos.
+5b. **Emissões líquidas: campo "volume estimado (m³/dia)" após escolher o tipo**
+- Em `src/lib/modules.ts`, adicionar campo `volume_estimado_m3_dia` (number, unit "m³/dia", min 0) no subgrupo de emissões líquidas, com `showWhen` baseado no campo `tipo` ter sido preenchido.
+- Sem alteração no `FieldRenderer` — usa o `NumberField` existente.
 
-**Entorno**
-- Adicionar balões de caracterização:
-  - Entorno arborizado
-  - Com vegetação nativa
-  - Com civilização/urbanizado
-  - Industrial
-  - Rural
-  - Margem de corpo hídrico
-  - Próximo a APP
+### 6. Performance no boot (mitigação leve, não refactor)
 
----
+- Em `src/lib/modules.ts`, mover a montagem dos `MODULE_PRESETS` "pesados" (resíduos com cor/NBR, vazão, etc.) para funções memoizadas que rodam só na primeira leitura, em vez de tudo no top-level do módulo. Reduz o tempo até a primeira tela.
+- Não vou refatorar `store.ts` agora — só anotar como follow-up.
 
-## 6. Água
+## Detalhes técnicos
 
-**Captação e reservatório**
+- Detecção do erro de chunk: `if (/Importing a module script failed|Failed to fetch dynamically imported module|Loading chunk \d+ failed/i.test(error?.message ?? ""))`.
+- Guarda anti-loop: `if (!sessionStorage.getItem("chunk-reload-once")) { sessionStorage.setItem("chunk-reload-once","1"); location.reload(); }`. Limpar a chave depois de 30s para permitir nova auto-recuperação em um deploy futuro.
+- `firstSyncDone` é setado no callback do primeiro `select` em `hydrateFromSupabase` no `store.ts` (independente de sucesso/erro — em caso de erro também vira `true` para não travar a UI).
 
-- **Nascente**: ao marcar "Sim, existe nascente", aparece campo para **coordenada geográfica**.
-- **Captação de água**: tipos (subterrânea, superficial, concessionária, caminhão-pipa) viram itens dinâmicos. Para cada ponto adicionado:
-  - Coordenada geográfica
-  - Estimativa de consumo
-  - Posso adicionar **vários pontos** (ex: 3 poços + 2 captações superficiais).
-- **Reservatório**: ao escolher "Caixa elevada" não preciso reabrir para editar o tipo. Adiciono direto **quantidade + capacidade**, e posso adicionar **outra caixa elevada** com capacidade diferente (ex: 1× 5.000 L + 2× 10.000 L).
+## Fora de escopo
 
-**Uso da água**
-- Remover separação "tipo de uso" × "consumo". Vira um item único:
-  - Seleciono o tipo (catálogo aprendido: "Sanitário", "Lavagem", "Processo", etc.)
-  - Digito **estimativa por dia**
-  - Sistema calcula automaticamente **estimativa por mês** (× 30) e por mês útil.
-
-**Auto-conclusão**: mesma regra dos outros módulos.
-
----
-
-## 7. Matéria-prima e insumos
-
-- Corrigir bug do campo de digitação (perda de foco / dificuldade ao escrever).
-- **Combustíveis**: não pedir para alterar tipo após selecionar.
-
----
-
-## 8. Efluentes / Emissões
-
-- **Emissões líquidas**: após escolher o tipo de efluente, aparece campo "Volume estimado (m³/dia)".
-- **Emissões sólidas** → renomear para **"Geração de resíduos"** (vou unificar com o módulo de resíduos sólidos).
-- **Emissões gasosas**: adicionar dois toggles:
-  - Há filtro?
-  - Há lavador de fumaça?
-
----
-
-## 9. Resíduos sólidos
-
-- Cada tipo (papel, plástico, vidro, metal, orgânico, rejeito) recebe **cor de identificação** padrão (azul, vermelho, verde, amarelo, marrom, cinza).
-- Classificação NBR já **pré-vinculada** automaticamente ao tipo (ex: papel → Classe II A não-inerte; lâmpada → Classe I).
-- Permitir adicionar manualmente também: **Classe I**, **Classe II-A**, **Classe II-B (inerte)**, **Reciclável**.
-- **Aplicar em outros**: depois de preencher acondicionamento/destinação/coleta de um resíduo, aparece "Aplicar a outros resíduos?" com checkbox para replicar.
-- Comportamento "encolher": ao preencher periodicidade marcando "Todos", só fica visível o item escolhido (UI compacta).
-
----
-
-## 10. Medição de vazão
-
-- Área calculada **automaticamente** = comprimento × largura. Campo "Área" fica readonly.
-
----
-
-## 11. Validação e encerramento
-
-- Remover campos redundantes do técnico (já coberto no item 1).
-
----
-
-## Mudanças técnicas (resumo p/ referência)
-
-- `src/lib/modules.ts`: schema dos campos (novo tipo `contacts`, ajustes em `sectors`, `products`, `water-sources`, `reservoirs`, `water-uses`, `waste-types`, adição de `auto-coordinates`, presets de turno corretos).
-- `src/components/FieldRenderer.tsx`: novos renderers para contatos com ícones, lista de setores com contador inline, auto-conclusão de subgrupos, cálculo automático de área, link WhatsApp.
-- `src/lib/store.ts`: catálogo aprendido persistido para setores, tipos de solo, tipos de construção, tipos de uso de água.
-- `src/routes/levantamentos.$id.index.tsx`: lógica de auto-conclusão (subgrupo verde sem clique) e remoção do botão duplicado.
-- Correção do bug do Enter duplo (debounce do submit + remoção do blur conflitante).
-
----
-
-## Como prefere que eu prossiga?
-
-A lista é grande. Posso:
-- **(A) Implementar tudo de uma vez** num único turno (mais demorado, mas resolve em uma rodada).
-- **(B) Dividir em 3 entregas**: (1) Identificação + Operacional + Quadro/Produtos, (2) Áreas + Água, (3) Resíduos + Efluentes + Encerramento — testando após cada uma.
-
-Recomendo **(B)** para você conseguir validar parte por parte sem perder o fio. Confirma qual prefere e eu já começo.
+- Não vou reescrever a camada de sincronização agora. Os ajustes acima são suficientes para o sintoma reportado.
+- Não vou trocar o stack de PWA / adicionar service worker novo.

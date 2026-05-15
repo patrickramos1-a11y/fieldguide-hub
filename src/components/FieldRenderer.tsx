@@ -578,11 +578,17 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
             {presets.map((p) => {
               const checked = pickerSel.includes(p);
               const used = usedLabels.has(p);
+              const color = colorByValue?.[p];
+              const icon = iconByValue?.[p];
+              const checkedStyle = checked && color ? { backgroundColor: color, borderColor: color, color: "white" } : undefined;
+              const unstyledColor = !checked && color ? { borderColor: color, color } : undefined;
               return (
                 <button key={p} type="button" onClick={() => !used && togglePickerSel(p)} disabled={used}
-                  className={`text-xs rounded-full px-2.5 py-1 border transition-colors ${used ? "opacity-40 cursor-not-allowed border-border" : checked ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"}`}
+                  style={used ? undefined : (checkedStyle ?? unstyledColor)}
+                  className={`text-xs rounded-full px-2.5 py-1 border transition-colors inline-flex items-center gap-1 ${used ? "opacity-40 cursor-not-allowed border-border" : checked && !color ? "bg-primary text-primary-foreground border-primary" : !color ? "border-border hover:bg-secondary" : "hover:opacity-90"}`}
                   title={used ? "Já adicionado" : undefined}>
-                  {p}
+                  {icon && <span aria-hidden>{icon}</span>}
+                  <span>{p}</span>
                 </button>
               );
             })}

@@ -630,12 +630,39 @@ function RepeaterField({ field, value, onChange }: { field: FieldDef; value: any
 function RepeaterItemField({ field, value, onChange, autoFocus, onEnterAdd, onApplyToOthers }: { field: FieldDef; value: any; onChange: (v: any) => void; autoFocus?: boolean; onEnterAdd?: () => void; onApplyToOthers?: (v: any) => void }) {
   const [showComment, setShowComment] = useState<boolean>(!!value);
   const isCommentable = !!field.commentable;
+  const [editing, setEditing] = useState(false);
+  const hasValue = value != null && value !== "" && !(Array.isArray(value) && value.length === 0);
+  const collapsed = !!field.collapseWhenFilled && hasValue && !editing;
   if (isCommentable && !showComment) {
     return (
       <button type="button" onClick={() => setShowComment(true)}
         className="self-start text-[11px] text-primary hover:underline inline-flex items-center gap-1">
         <Plus className="h-3 w-3" /> {field.label}
       </button>
+    );
+  }
+  if (collapsed) {
+    const display = Array.isArray(value) ? value.join(", ") : String(value);
+    return (
+      <div className="flex items-center justify-between gap-2 text-xs py-1">
+        <div className="min-w-0 truncate">
+          <span className="text-muted-foreground">{field.label}:</span>{" "}
+          <span className="font-medium">{display}{field.unit ? ` ${field.unit}` : ""}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {onApplyToOthers && (
+            <button type="button" onClick={() => onApplyToOthers(value)}
+              className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+              title="Aplicar este valor aos demais itens">
+              <Copy className="h-3 w-3" /> aplicar a outros
+            </button>
+          )}
+          <button type="button" onClick={() => setEditing(true)}
+            className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1">
+            <Pencil className="h-3 w-3" /> editar
+          </button>
+        </div>
+      </div>
     );
   }
   return (

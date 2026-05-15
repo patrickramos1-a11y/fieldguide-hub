@@ -1148,10 +1148,10 @@ export const MODULES: ModuleDef[] = [
   },
   {
     id: "fotos",
-    title: "Levantamento Fotográfico",
-    description: "Anexe as fotos no painel lateral do módulo.",
+    title: "Relatório Fotográfico",
+    description: "Marque Sim ou Não para cada tipo de foto. Os anexos são feitos na etapa de conclusão.",
     fields: [
-      { id: "descricao_fotos", label: "Descrição do conjunto fotográfico", type: "textarea" },
+      { id: "descricao_fotos", label: "Observações gerais sobre as fotos", type: "textarea" },
     ],
   },
   {

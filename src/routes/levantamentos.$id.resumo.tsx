@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { getEffectiveModulesForCustomType, getEffectiveModulesForType } from "@/lib/modules";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PhotoAttachmentsPanel } from "@/components/PhotoAttachmentsPanel";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/levantamentos/$id/resumo")({
@@ -75,6 +76,8 @@ function ResumoPage() {
       </div>
 
       <div className="space-y-4 print:space-y-2">
+        <PhotoAttachmentsPanel survey={survey} readOnly />
+
         {modules.map((m) => {
           const st = survey.modules[m.id];
           return (

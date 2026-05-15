@@ -4,6 +4,7 @@ import type {
   SurveyType, Attachment, SurveyTemplate,
   FormStructureOverrides, FieldPatch, SubgroupPatch, ModulePatch, SubgroupDef, FieldDef,
   CustomSurveyType, CustomTypeModuleBinding, ModuleRequirement,
+  PhotoChecklistAnswer,
 } from "./types";
 import {
   getModulesForType, ensureLegacyAdapters, getEffectiveModulesForType,
@@ -828,6 +829,87 @@ export function removeAttachment(sid: string, modId: string, attId: string) {
   if (!survey) return;
   const moduleState = survey.modules[modId];
   updateModule(sid, modId, { attachments: moduleState.attachments.filter((attachment) => attachment.id !== attId) });
+}
+
+// ============== Relatório Fotográfico (módulo "fotos") ==============
+
+const PHOTOS_MOD = "fotos";
+
+function getPhotosState(sid: string): ModuleState | undefined {
+  const survey = store.db.surveys.find((s) => s.id === sid);
+  return survey?.modules[PHOTOS_MOD];
+}
+
+export function setPhotoChecklistKeys(sid: string, keys: string[]) {
+  const st = getPhotosState(sid);
+  if (!st) return;
+  updateModule(sid, PHOTOS_MOD, { photoChecklistKeys: Array.from(new Set(keys)) });
+}
+
+export function setPhotoAnswer(
+  sid: string,
+  templateKey: string,
+  itemId: string,
+  label: string,
+  registrado: boolean,
+) {
+  const st = getPhotosState(sid);
+  if (!st) return;
+  const composed = `${templateKey}.${itemId}`;
+  const list = st.photoChecklist ?? [];
+  const now = new Date().toISOString();
+  const idx = list.findIndex((a) => a.itemId === composed);
+  let next: PhotoChecklistAnswer[];
+  if (idx >= 0) {
+    next = list.slice();
+    next[idx] = { ...next[idx], label, templateKey, registrado, updatedAt: now };
+  } else {
+    next = [...list, { itemId: composed, label, templateKey, registrado, updatedAt: now }];
+  }
+  updateModule(sid, PHOTOS_MOD, { photoChecklist: next });
+}
+
+export function setPhotoNote(sid: string, composedItemId: string, observacao: string) {
+  const st = getPhotosState(sid);
+  if (!st) return;
+  const list = st.photoChecklist ?? [];
+  const idx = list.findIndex((a) => a.itemId === composedItemId);
+  if (idx < 0) return;
+  const next = list.slice();
+  next[idx] = { ...next[idx], observacao, updatedAt: new Date().toISOString() };
+  updateModule(sid, PHOTOS_MOD, { photoChecklist: next });
+}
+
+export function setPhotoLiberadoDivulgacao(sid: string, value: boolean) {
+  const st = getPhotosState(sid);
+  if (!st) return;
+  updateModule(sid, PHOTOS_MOD, { photoLiberadoDivulgacao: value });
+}
+
+export function bulkSetPhotoAnswers(
+  sid: string,
+  templateKey: string,
+  items: { id: string; label: string }[],
+  registrado: boolean,
+) {
+  const st = getPhotosState(sid);
+  if (!st) return;
+  const list = st.photoChecklist ?? [];
+  const now = new Date().toISOString();
+  const map = new Map(list.map((a) => [a.itemId, a] as const));
+  for (const it of items) {
+    const composed = `${templateKey}.${it.id}`;
+    const prev = map.get(composed);
+    map.set(composed, {
+      itemId: composed,
+      label: it.label,
+      templateKey,
+      registrado,
+      observacao: prev?.observacao,
+      updatedAt: now,
+    });
+  }
+  updateModule(sid, PHOTOS_MOD, { photoChecklist: Array.from(map.values()) });
 }
 
 export function addPendencia(sid: string, pendencia: Omit<Pendencia, "id" | "createdAt">) {

@@ -166,6 +166,14 @@ export interface FieldDef {
   autoLink?: { from: string; map: Record<string, string> };
   /** repeater item field: mostra botão "aplicar a outros" para copiar este valor para os demais itens. */
   applyToOthers?: boolean;
+  /** repeater (labelField): mapeia valor → emoji exibido como prefixo. */
+  iconByValue?: Record<string, string>;
+  /** repeater item field: esconde o seletor quando `autoLink` foi resolvido (mostra só info). */
+  hideWhenAutoLinked?: boolean;
+  /** repeater item field: mostra apenas o valor + editar quando preenchido. */
+  collapseWhenFilled?: boolean;
+  /** repeater (labelField): valores que dispensam campo de classificação (já carregam a classe no nome). */
+  classOnlyValues?: string[];
 }
 
 export interface ModuleDef {

@@ -876,6 +876,8 @@ function EncerramentoPanel({ survey }: { survey: any }) {
         </CardContent>
       </Card>
 
+      <PhotoAttachmentsPanel survey={survey} readOnly={closed} />
+
       <Card>
         <CardContent className="p-5">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Signature className="h-5 w-5" /> Validação e Encerramento</h2>
